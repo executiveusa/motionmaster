@@ -9,10 +9,11 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test": "node scripts/check-config-table.mjs && node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "validate": "node --experimental-strip-types validate-timeline.ts",
-    "validate:example": "node --experimental-strip-types validate-timeline.ts examples/footage-title.timeline.json"
+    "validate:example": "node --experimental-strip-types validate-timeline.ts examples/footage-title.timeline.json",
+    "check:config": "node scripts/check-config-table.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1"
