@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://motion-master.example/schemas/montage-explainer-timeline.schema.json",
+  "$id": "https://motionmaster/schemas/montage-explainer-timeline.schema.json",
   "title": "Montage Explainer timeline (Motion Master bridge subset)",
   "description": "The subset of the Montage Explainer composition timeline the Motion Master bridge emits: real-footage cuts with in/out points, motion-graphics overlays, and the theme override. Rendered by Montage, never by the bridge.",
   "$comment": "SPDX-License-Identifier: AGPL-3.0-only | Copyright (C) 2026 Motion Master. This directory is a separate AGPL-3.0 work that talks to a Montage instance over its public HTTP/MCP interfaces. It is NOT part of the proprietary Motion Master product and is excluded from its licence by design.",

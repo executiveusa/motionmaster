@@ -19,7 +19,7 @@ export const SourceClip: React.FC = () => {
   const bandY = 120 - t * 40;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#141418" }}>
+    <AbsoluteFill style={{ backgroundColor: "#1B1B22" }}>
       {/* faint horizontal rule grid */}
       {Array.from({ length: 8 }).map((_, i) => (
         <div
@@ -30,12 +30,12 @@ export const SourceClip: React.FC = () => {
             right: 0,
             top: i * 140 + ((frame * 0.2) % 140),
             height: 1,
-            backgroundColor: "rgba(244,244,242,0.06)",
+            backgroundColor: "rgba(244,244,242,0.09)",
           }}
         />
       ))}
 
-      {/* travelling band */}
+      {/* travelling band — the "shot" */}
       <div
         style={{
           position: "absolute",
@@ -45,7 +45,7 @@ export const SourceClip: React.FC = () => {
           height: 1000,
           transform: "rotate(-28deg)",
           background:
-            "radial-gradient(closest-side, rgba(244,244,242,0.20) 0%, rgba(244,244,242,0.07) 42%, rgba(244,244,242,0) 78%)",
+            "radial-gradient(closest-side, rgba(244,244,242,0.42) 0%, rgba(244,244,242,0.16) 40%, rgba(244,244,242,0) 76%)",
         }}
       />
       <div
@@ -57,7 +57,21 @@ export const SourceClip: React.FC = () => {
           height: 620,
           transform: "rotate(-28deg)",
           background:
-            "radial-gradient(closest-side, rgba(255,74,28,0.26) 0%, rgba(255,74,28,0.07) 46%, rgba(255,74,28,0) 80%)",
+            "radial-gradient(closest-side, rgba(255,74,28,0.52) 0%, rgba(255,74,28,0.16) 44%, rgba(255,74,28,0) 78%)",
+        }}
+      />
+
+      {/* a hard light sweep, so the frame reads as a moving image and not a still */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${-60 + ((frame / durationInFrames) * 200)}%`,
+          top: "-30%",
+          width: 260,
+          height: "160%",
+          transform: "rotate(18deg)",
+          background:
+            "linear-gradient(90deg, rgba(244,244,242,0) 0%, rgba(244,244,242,0.10) 50%, rgba(244,244,242,0) 100%)",
         }}
       />
 
@@ -65,7 +79,7 @@ export const SourceClip: React.FC = () => {
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.62) 100%)",
+            "radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.5) 100%)",
         }}
       />
     </AbsoluteFill>

@@ -52,6 +52,8 @@ export interface MontageConfig {
   baseUrl: string;
   /** Optional bearer token for the Montage instance (never persisted). */
   token?: string;
+  /** Tenant that owns the projects (local auth mode). */
+  tenant: string;
   /** Request timeout in milliseconds. */
   timeoutMs: number;
 }
@@ -65,6 +67,8 @@ export interface Config {
   tokensPath: string;
   clipsPath: string;
   skillsDir: string;
+  /** The single file that records the product domain. */
+  brandPath: string;
   montage: MontageConfig;
 }
 
@@ -91,9 +95,16 @@ export function loadConfig(): Config {
     skillsDir:
       env("MOTION_MASTER_SKILLS_DIR") ??
       join(repoRoot, "plugins", "motion-master", "skills"),
+    brandPath:
+      env("MOTION_MASTER_BRAND_PATH") ??
+      join(repoRoot, "plugins", "motion-master", "assets", "brand.json"),
     montage: {
       baseUrl: montageBase,
       token: env("MOTION_MASTER_MONTAGE_TOKEN"),
+      tenant:
+        env("MOTION_MASTER_MONTAGE_TENANT") ??
+        env("MONTAGE_TENANT_ID") ??
+        "tenant_owner",
       timeoutMs: intEnv("MOTION_MASTER_MONTAGE_TIMEOUT_MS", 8000),
     },
   };

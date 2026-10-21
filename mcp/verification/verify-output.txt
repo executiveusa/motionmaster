@@ -1,0 +1,205 @@
+
+=== server start-up ===
+Motion Master MCP 1.0.0 listening on http://127.0.0.1:8799
+  MCP endpoint : http://127.0.0.1:8799/mcp
+  health       : http://127.0.0.1:8799/health
+  tools        : list_skills, get_motion_tokens, list_clips, get_clip_prompt, plan_video, build_composition, mix_footage
+  skills       : 21 bundled in /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/skills
+  tokens       : /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/assets/motion-tokens.json
+  montage      : http://127.0.0.1:35645
+  licence      : Motion Master is a paid, one-time licence: $99 Solo or $399 Studio. One payment, no subscription, no per-render billing.
+  rendering    : local (Remotion) — no hosted render service
+
+=== tools/list ===
+- list_skills: List the motion skills bundled with the Motion Master plugin and what each one teaches. Us…
+- get_motion_tokens: Return the Motion Master timing, easing, duration, spring, stagger, palette and typography…
+- list_clips: List the rendered example clips in the Motion Master gallery, each with the exact prompt t…
+- get_clip_prompt: Return the exact prompt, stack and duration of one gallery clip, so it can be adapted into…
+- plan_video: Turn a brief into a storyboard: numbered beats with in/out times, per-beat easing roles an…
+- build_composition: Emit a runnable Remotion composition (TSX) for a storyboard, using the Motion Master motio…
+- mix_footage: Validate a Montage timeline (cuts + overlays) and hand it to the user's own Montage instan…
+PASS  all seven tools are advertised — 7 tools
+
+=== list_skills ===
+count=21 total=21 source=/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/skills
+  gsap-core [gsap] MIT
+  gsap-frameworks [gsap] MIT
+  gsap-performance [gsap] MIT
+  gsap-plugins [gsap] MIT
+  gsap-react [gsap] MIT
+  gsap-scrolltrigger [gsap] MIT
+  gsap-timeline [gsap] MIT
+  gsap-utils [gsap] MIT
+  motion-design [motion-design] MIT
+  motion-master [motion-master] SEE LICENSE IN ../../LICENSE.md
+  remotion-captions [remotion] —
+  remotion-create [remotion] —
+  remotion-docs [remotion] —
+  remotion-interactivity [remotion] —
+  remotion-maps [remotion] —
+  remotion-markup [remotion] —
+  remotion-multimedia [remotion] —
+  remotion-render [remotion] —
+  remotion-saas [remotion] —
+  remotion-studio [remotion] —
+  remotion-upgrade [remotion] —
+PASS  list_skills returns the bundled skills — 21 skills
+PASS  the router is listed
+PASS  the upstream skills keep their MIT licence
+
+=== get_motion_tokens ===
+entrance=ease-out exit=ease-in onScreen=ease-in-out budget=500ms
+easing.entrance=[0.05,0.7,0.1,1] accent=#FF4A1C
+PASS  the doctrine comes back
+PASS  the stagger budget is 500ms
+PASS  the palette is inlined
+
+=== list_clips ===
+- launch-title · Launch title · remotion · 0:14
+- kinetic-type · Kinetic type · remotion · 0:09
+- product-loop · Product loop · remotion + ffmpeg · 0:21
+- footage-title · Footage + title · remotion + montage bridge · 0:16
+PASS  the four gallery clips come back — 4 clips
+
+=== get_clip_prompt ===
+id=launch-title
+stack=remotion duration=0:14 (14s)
+prompt=A 14s launch title. The wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds for 2s, then fades out and lifts. One accent, no decoration, hairline rules top and bottom.
+PASS  the prompt is the real one
+PASS  the stack is present
+PASS  the duration is present
+
+=== plan_video (called twice with the same brief) ===
+brief="15s launch film, name reveal, hold 2s, calm exit"
+first  response: 5241 bytes
+second response: 5241 bytes
+byte-identical: true
+sha256(first)  = 05527df027c38ccc02dc4f93f080927e7912f4d89cacc9985e826f894d53e830
+sha256(second) = 05527df027c38ccc02dc4f93f080927e7912f4d89cacc9985e826f894d53e830
+PASS  plan_video is byte-identical across two calls
+template=launch-title style=calm fps=30 duration=15s (450 frames)
+  1. Establish — setup — onScreen (standard) 0s→4.9s f0→f147 stagger 45ms × 1 = 0ms
+  2. Wordmark reveal — reveal — entrance (emphasized) 4.9s→9.9s f147→f297 stagger 45ms × 1 = 0ms
+  3. Hold — hold — onScreen (standard) 9.9s→12.4s f297→f372 stagger 45ms × 2 = 45ms
+  4. Exit — exit — exit (accelerate) 12.4s→15s f372→f450 stagger 45ms × 2 = 45ms
+stagger plan: budget=500ms max=45ms allWithinBudget=true
+PASS  the beats are numbered and contiguous
+PASS  the in/out times are ordered
+PASS  the easing roles follow the doctrine
+PASS  the total stagger stays under 500ms — 45ms
+
+=== build_composition ===
+file=src/index.tsx id=launch-title
+composition=1920x1080 @30fps, 450 frames
+tsx=10777 bytes
+parse errors: none
+PASS  the TSX contains a Composition registration
+PASS  the TSX calls registerRoot
+PASS  the TSX carries the motion tokens
+PASS  the TSX parses
+written: /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/mcp/verification/src/index.tsx
+
+=== mix_footage (against a local Montage test double) ===
+delivered=true
+montage={"projectId":"demo-project","expectedVersion":3,"storedVersion":4,"health":{"ok":true,"app":"backlot"}}
+requests the Montage instance actually received:
+  GET /api/health
+  GET /api/projects
+  GET /api/v1/projects/demo-project/timeline
+  PUT /api/v1/projects/demo-project/timeline
+  POST /api/v1/projects/demo-project/validate
+PASS  the timeline was delivered
+PASS  the instance received the documented routes
+
+=== health document ===
+{
+  "name": "motion-master",
+  "version": "1.0.0",
+  "status": "ok",
+  "mcpEndpoint": "http://127.0.0.1:8799/mcp",
+  "tools": [
+    "list_skills",
+    "get_motion_tokens",
+    "list_clips",
+    "get_clip_prompt",
+    "plan_video",
+    "build_composition",
+    "mix_footage"
+  ],
+  "skills": {
+    "count": 21,
+    "directory": "/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/skills",
+    "router": "skills/motion-master/SKILL.md"
+  },
+  "clips": {
+    "available": true,
+    "source": "/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/site/src/clips.json",
+    "count": 4
+  },
+  "tokens": {
+    "source": "/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/assets/motion-tokens.json",
+    "canonicalPath": "/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/assets/motion-tokens.json"
+  },
+  "montage": {
+    "configured": true,
+    "baseUrl": "http://127.0.0.1:35645",
+    "tenant": "tenant_owner",
+    "tokenConfigured": false
+  },
+  "licence": {
+    "type": "paid-one-time",
+    "currency": "USD",
+    "cadence": "one-time",
+    "tiers": [
+      {
+        "id": "solo",
+        "price": 99,
+        "currency": "USD",
+        "cadence": "one-time",
+        "label": "Solo — $99 one-time",
+        "includes": [
+          "The Motion Master plugin: the router, the motion doctrine and the tokens",
+          "All 20 upstream MIT motion skills (GSAP, Remotion, motion-design)",
+          "The MCP server: plan_video, build_composition, mix_footage and the clip library",
+          "Every future update of the plugin and the server"
+        ]
+      },
+      {
+        "id": "studio",
+        "price": 399,
+        "currency": "USD",
+        "cadence": "one-time",
+        "label": "Studio — $399 one-time",
+        "includes": [
+          "Everything in Solo",
+          "Footage mixing with the user's own Montage instance (mix_footage)",
+          "Priority support and the studio onboarding walkthrough",
+          "Every future update of the plugin and the server"
+        ]
+      }
+    ],
+    "summary": "Motion Master is a paid, one-time licence: $99 Solo or $399 Studio. One payment, no subscription, no per-render billing.",
+    "licenceKey": "The licence key is delivered by email after checkout. It unlocks the paid tier of the plugin; nothing in this server phones home to check it.",
+    "hostedRenderService": false,
+    "renderingNote": "Motion Master does not run a hosted render service. Compositions are rendered on your own machine with Remotion (npx remotion render ...), and footage is mixed by a Montage instance you run yourself.",
+    "domainNote": "The product domain is recorded in plugins/motion-master/assets/brand.json. Its TLD has not been chosen yet, so no URL is published by this server."
+  },
+  "domain": {
+    "recordedIn": "/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/motion-master/plugins/motion-master/assets/brand.json",
+    "tld": null,
+    "url": null,
+    "note": "The TLD has not been chosen. No URL is published by this server."
+  },
+  "rendering": {
+    "hostedRenderService": false,
+    "note": "Motion Master does not run a hosted render service. Compositions are rendered on your own machine with Remotion (npx remotion render ...), and footage is mixed by a Montage instance you run yourself."
+  }
+}
+PASS  the licence is a paid one-time licence
+PASS  Solo is $99
+PASS  Studio is $399
+PASS  there is no hosted render service
+PASS  no URL is published
+
+=== summary ===
+27/27 checks passed

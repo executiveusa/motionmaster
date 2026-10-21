@@ -1,0 +1,481 @@
+### list_skills
+title: List motion skills
+description: List the motion skills bundled with the Motion Master plugin and what each one teaches. Use this to decide which specialised skill to load before writing animation code.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "enum": [
+        "all",
+        "motion-master",
+        "motion-design",
+        "gsap",
+        "remotion"
+      ],
+      "description": "Only return skills from this group."
+    },
+    "name": {
+      "type": "string",
+      "description": "Return only the skill with this name."
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### get_motion_tokens
+title: Get motion tokens
+description: Return the Motion Master timing, easing, duration, spring, stagger, palette and typography tokens. These are the values every generated composition must use.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "enum": [
+        "all",
+        "palette",
+        "typography",
+        "easing",
+        "duration",
+        "styleDurations",
+        "spring",
+        "stagger",
+        "motion"
+      ],
+      "description": "Which part of the token set to return. Defaults to everything."
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### list_clips
+title: List example clips
+description: List the rendered example clips in the Motion Master gallery, each with the exact prompt that produced it.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Return only the clip with this id."
+    },
+    "stack": {
+      "type": "string",
+      "description": "Return only clips built with this stack."
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### get_clip_prompt
+title: Get the prompt behind a clip
+description: Return the exact prompt, stack and duration of one gallery clip, so it can be adapted into new work.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The clip id, for example \"launch-title\"."
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### plan_video
+title: Plan a video
+description: Turn a brief into a storyboard: numbered beats with in/out times, per-beat easing roles and a stagger plan that follows the Motion Master doctrine (entrance eases out, exit eases in, on-screen eases in-out, total stagger under 500ms). Deterministic: the same brief always returns the same storyboard.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "brief": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The brief, e.g. \"15s launch film, name reveal, hold 2s, calm exit\"."
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Target length. Parsed from the brief when omitted."
+    },
+    "style": {
+      "type": "string",
+      "enum": [
+        "premium",
+        "calm",
+        "energetic",
+        "snappy"
+      ],
+      "description": "Timing personality. Inferred from the brief when omitted."
+    },
+    "fps": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Frames per second (default 30)."
+    },
+    "width": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Frame width (default 1920)."
+    },
+    "height": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Frame height (default 1080)."
+    },
+    "element_count": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "How many elements the main group has (\"9 words\"). Parsed from the brief when omitted."
+    },
+    "hold_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Length of the readable hold. Parsed from the brief when omitted."
+    }
+  },
+  "required": [
+    "brief"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### build_composition
+title: Build a Remotion composition
+description: Emit a runnable Remotion composition (TSX) for a storyboard, using the Motion Master motion, palette and type tokens and a real <Composition> registration.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "brief": {
+      "type": "string",
+      "description": "A brief to plan and build from. Optional when a storyboard is supplied."
+    },
+    "storyboard": {
+      "type": "object",
+      "properties": {
+        "brief": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string"
+        },
+        "fps": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "duration": {
+          "type": "object",
+          "properties": {
+            "seconds": {
+              "type": "number"
+            },
+            "frames": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "beats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "number"
+              },
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "easingRole": {
+                "type": "string",
+                "enum": [
+                  "entrance",
+                  "exit",
+                  "onScreen"
+                ]
+              },
+              "easing": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "cubicBezier": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "role",
+                  "cubicBezier"
+                ],
+                "additionalProperties": false
+              },
+              "inSeconds": {
+                "type": "number"
+              },
+              "outSeconds": {
+                "type": "number"
+              },
+              "inFrame": {
+                "type": "number"
+              },
+              "outFrame": {
+                "type": "number"
+              },
+              "durationSeconds": {
+                "type": "number"
+              },
+              "animationMs": {
+                "type": "number"
+              },
+              "holdMs": {
+                "type": "number"
+              },
+              "elements": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "shape",
+                        "clip",
+                        "graphic"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "stagger": {
+                "type": "object",
+                "properties": {
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "elementCount": {
+                    "type": "number"
+                  },
+                  "intervalMs": {
+                    "type": "number"
+                  },
+                  "totalMs": {
+                    "type": "number"
+                  },
+                  "budgetMs": {
+                    "type": "number"
+                  },
+                  "withinBudget": {
+                    "type": "boolean"
+                  },
+                  "clamped": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "elementCount",
+                  "intervalMs",
+                  "totalMs",
+                  "budgetMs",
+                  "withinBudget",
+                  "clamped"
+                ],
+                "additionalProperties": false
+              },
+              "transition": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "easing": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "easing",
+                  "note"
+                ],
+                "additionalProperties": false
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "index",
+              "key",
+              "label",
+              "role",
+              "easingRole",
+              "easing",
+              "inSeconds",
+              "outSeconds",
+              "inFrame",
+              "outFrame",
+              "durationSeconds",
+              "animationMs",
+              "holdMs",
+              "elements",
+              "stagger",
+              "transition",
+              "notes"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "A storyboard produced by plan_video. Takes priority over brief."
+    },
+    "id": {
+      "type": "string",
+      "description": "Composition id (default: derived from the template)."
+    },
+    "filename": {
+      "type": "string",
+      "description": "Target filename (default src/index.tsx)."
+    },
+    "fps": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "width": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "height": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "style": {
+      "type": "string",
+      "enum": [
+        "premium",
+        "calm",
+        "energetic",
+        "snappy"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+
+### mix_footage
+title: Mix real footage with motion graphics
+description: Validate a Montage timeline (cuts + overlays) and hand it to the user's own Montage instance over its public API: the timeline is written with PUT /api/v1/projects/{project_id}/timeline against the version the instance reports, and the project is validated afterwards. Motion Master never renders footage itself and there is no hosted render service — Montage renders, on the user's own machine.
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "timeline": {
+      "type": "object",
+      "properties": {
+        "cuts": {
+          "type": "array"
+        },
+        "overlays": {
+          "type": "array"
+        },
+        "scenes": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true,
+      "description": "A Montage timeline: cuts (video/image with in/out seconds) and overlays."
+    },
+    "project_id": {
+      "type": "string",
+      "description": "Target Montage project. Resolved from the instance when omitted."
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "Validate only; never contact the Montage instance."
+    },
+    "fps": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Canvas fps (default 30)."
+    },
+    "width": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Canvas width (default 1920)."
+    },
+    "height": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Canvas height (default 1080)."
+    }
+  },
+  "required": [
+    "timeline"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+

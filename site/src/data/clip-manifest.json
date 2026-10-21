@@ -3,29 +3,35 @@
   "clips": {
     "launch-title": {
       "video": true,
-      "poster": false,
+      "poster": true,
       "videoSrc": "/clips/launch-title.mp4",
       "posterSrc": "/clips/launch-title.jpg",
-      "videoBytes": 119703
+      "posterBytes": 29688,
+      "videoBytes": 118156
     },
     "kinetic-type": {
       "video": true,
-      "poster": false,
+      "poster": true,
       "videoSrc": "/clips/kinetic-type.mp4",
       "posterSrc": "/clips/kinetic-type.jpg",
-      "videoBytes": 124022
+      "posterBytes": 31547,
+      "videoBytes": 124092
     },
     "product-loop": {
-      "video": false,
-      "poster": false,
+      "video": true,
+      "poster": true,
       "videoSrc": "/clips/product-loop.mp4",
-      "posterSrc": "/clips/product-loop.jpg"
+      "posterSrc": "/clips/product-loop.jpg",
+      "posterBytes": 30075,
+      "videoBytes": 220327
     },
     "footage-title": {
-      "video": false,
-      "poster": false,
+      "video": true,
+      "poster": true,
       "videoSrc": "/clips/footage-title.mp4",
-      "posterSrc": "/clips/footage-title.jpg"
+      "posterSrc": "/clips/footage-title.jpg",
+      "posterBytes": 26858,
+      "videoBytes": 653752
     }
   }
 }

@@ -412,7 +412,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 4px 16px;
   margin-top: 20px;
 }
 
@@ -425,11 +426,14 @@
 .clip__sub {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--ink-muted);
-  white-space: nowrap;
+  /* The stack list can be long ("remotion + montage bridge"). Let it wrap
+     rather than push the page wide on a 320px screen. */
+  white-space: normal;
 }
 
 .prompt {
@@ -484,6 +488,13 @@
   border-bottom: 1px solid var(--hairline);
 }
 
+/* Grid and flex children default to min-width:auto, which stops the code
+   block and the storyboard board from shrinking and lets them widen the
+   page. Both need to be allowed to shrink so their own scroll boxes work. */
+.step__body {
+  min-width: 0;
+}
+
 .step__no {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -512,6 +523,7 @@
 }
 
 .artifact {
+  min-width: 0;
   border: 1px solid var(--hairline);
   background: var(--surface);
   padding: 20px;
@@ -528,8 +540,16 @@
   color: var(--ink);
 }
 
+/* The board has nowrap cells, so it needs a minimum width. It scrolls inside
+   its own box on narrow screens rather than widening the page. */
+.artifact--board {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .board {
   width: 100%;
+  min-width: 440px;
   border-collapse: collapse;
   font-family: var(--font-mono);
   font-size: 13px;

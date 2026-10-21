@@ -39,6 +39,20 @@ ruined reputation. If a section would need a number we do not have, cut the sect
 
 ## Status of competitor claims (for our internal reasoning only — NOT for the page)
 
-- motionvideo.xyz: $29 one-time skill pack; **$58 verified all-time revenue** (TrustMRR).
+- motionvideo.xyz: **$29 launch offer, $49 after the first 100 purchases**, one-time.
+  Read from source at HEAD (`apps/web/src/constants/pricing.ts`:
+  `BASE_PRICE_CENTS = 4900`, `LAUNCH_PRICE_CENTS = 2900`, `LAUNCH_LIMIT = 100`).
+  Their pricing block ships a live "spots remaining" counter against that 100 limit.
+  **$58 verified all-time revenue** (TrustMRR) — roughly two launch sales.
 - Their MCP is free, public, read-only catalog browsing. It does not generate video.
 - Their public site is MIT-licensed and open source. The skill pack is sold separately.
+- Their catalogue holds **247** videos; the landing page shows the newest 35. Eleven
+  categories, ten languages. Their TrustMRR profile screenshot shows their landing page
+  at 12,831px tall / 1920 wide.
+- They have a `motionvideo-mcp` repo and their own agent skill bundle. Their GitHub org
+  has 22 stars on the site repo.
+
+**Never claim we beat them on price.** They are cheaper. The case for $99/$399 is that
+the bundle is strictly larger (plugin for 16 hosts, MCP server, the Montage footage
+bridge, hosted rendering) and that we sell to a different buyer — and that their own
+launch with a large audience produced $58. See `docs/08-GAUNTLET-RESULT.md` §5.

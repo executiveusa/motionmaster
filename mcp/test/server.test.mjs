@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import ts from "typescript";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const mcpDir = resolve(here, "..");
@@ -247,4 +248,27 @@ test("mix_footage rejects an invalid Montage timeline", async () => {
   const issues = result.structuredContent.issues;
   assert.ok(issues.some((issue) => issue.message.includes("out_seconds")));
   assert.ok(issues.some((issue) => issue.message.includes("Unknown overlay type")));
+});
+
+test("the generated TSX parses as a TSX module", async () => {
+  const result = await client.callTool({
+    name: "build_composition",
+    arguments: { brief: "15s launch film, name reveal, hold 2s, calm exit" },
+  });
+  const tsx = result.structuredContent.tsx;
+  assert.ok(tsx.length > 2000, "the composition looks truncated");
+
+  const source = ts.createSourceFile(
+    "src/index.tsx",
+    tsx,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const parseErrors = source.parseDiagnostics ?? [];
+  assert.deepEqual(
+    parseErrors.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")),
+    [],
+    "the generated TSX does not parse",
+  );
 });

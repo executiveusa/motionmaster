@@ -4,8 +4,7 @@
   "description": "Motion Master MCP server \u2014 storyboard planning, motion tokens, clip prompts, Remotion composition generation and the Montage footage bridge.",
   "license": "SEE LICENSE IN ../plugins/motion-master/LICENSE.md",
   "author": {
-    "name": "Motion Master",
-    "url": "https://motionmaster.xyz"
+    "name": "Motion Master"
   },
   "type": "module",
   "main": "dist/index.js",
@@ -22,7 +21,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "sync:tokens": "node scripts/sync-tokens.mjs",
     "check:tokens": "node scripts/sync-tokens.mjs --check",
-    "test": "npm run build && node --test test/"
+    "test": "npm run build && node --test test/*.mjs",
+    "sync:licence": "node scripts/sync-licence.mjs",
+    "check:licence": "node scripts/sync-licence.mjs --check"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

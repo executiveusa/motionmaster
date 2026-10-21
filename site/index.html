@@ -8,6 +8,10 @@
       name="description"
       content="Motion Master teaches an AI agent to storyboard, choreograph and render motion design in code. You get the video, the project and the source. One-time licence, renders on your own machine."
     />
+    <!-- The product domain word is confirmed; the TLD is not, and the domain is
+         not purchased. This meta tag is the ONE place it is written. No URL
+         with a suffix may appear on this page until a domain is secured. -->
+    <meta name="site-domain" content="motionmaster" />
     <meta name="theme-color" content="#F4F4F2" />
     <meta name="color-scheme" content="light" />
     <meta property="og:type" content="website" />
@@ -59,7 +63,7 @@
             <li><a class="nav__link" href="#faq">FAQ</a></li>
           </ul>
         </nav>
-        <a class="btn btn--primary btn--sm topbar__cta" href="#pricing">Buy the license</a>
+        <a class="btn btn--primary btn--sm topbar__cta" href="#pricing">Buy the licence</a>
         <button
           class="menu-toggle"
           type="button"
@@ -83,7 +87,7 @@
         <a class="mobile-menu__link" href="#pricing">Pricing</a>
         <a class="mobile-menu__link" href="#faq">FAQ</a>
       </nav>
-      <a class="btn btn--primary mobile-menu__cta" href="#pricing">Buy the license — $149</a>
+      <a class="btn btn--primary mobile-menu__cta" href="#pricing">Buy the licence — $99</a>
     </div>
 
     <main id="main">
@@ -97,7 +101,7 @@
             code — Remotion, GSAP and ffmpeg. You get the video, the project and the source.
           </p>
           <div class="hero__actions">
-            <a class="btn btn--primary" href="#pricing">Buy the license — $149</a>
+            <a class="btn btn--primary" href="#pricing">Buy the licence — $99</a>
             <a class="btn btn--ghost" href="#proof">
               See it make one
               <svg class="btn__icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
@@ -122,7 +126,7 @@
             <div class="player__stage" data-hero-stage>
               <div class="stage__brief">
                 <span class="stage__label">Brief</span>
-                <span class="stage__prompt">15s launch film, name reveal, hold 2s, calm exit</span>
+                <span class="stage__prompt">14s launch film, name reveal, hold 2s, calm exit</span>
               </div>
               <div class="stage__scene">
                 <div class="stage__beat stage__beat--line" data-beat="line">
@@ -161,7 +165,7 @@
                     <span class="stage__bar"><i></i></span>
                     <span class="stage__bar"><i></i></span>
                   </div>
-                  <p class="stage__file">launch-title.mp4 · 1920×1080 · h264</p>
+                  <p class="stage__file">launch-title.mp4 · 1280×720 · h264</p>
                 </div>
               </div>
               <p class="stage__foot">The agent writes the code. You get the file.</p>
@@ -169,7 +173,7 @@
             <figcaption class="player__caption">
               <span class="player__time" role="timer" aria-live="off" data-hero-time>00:00:11:24</span>
               <span class="player__sep" aria-hidden="true">·</span>
-              <span>1920×1080</span>
+              <span>1280×720</span>
               <span class="player__sep" aria-hidden="true">·</span>
               <span>remotion + gsap</span>
             </figcaption>
@@ -201,7 +205,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Launch title. Title card that reveals a wordmark, holds for two seconds, then exits."
+                    aria-label="A white title card. A wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds, then fades out."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -218,7 +222,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>A 14s launch title: wordmark reveals from a blur, holds 2s on the logo, then a calm fade exit. Inter Tight, one accent, no decoration.</code></pre>
+                <pre class="prompt__text"><code>A 14s launch title on a white canvas. The wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds for 2s, then fades out and lifts. Hairline rules top and bottom, one accent, no decoration.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -236,7 +240,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Kinetic type. Nine words arriving one at a time in a tight typographic sequence."
+                    aria-label="Six words arrive one at a time on a black canvas, one word per line, alternating white and accent, then exit in reverse."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -253,7 +257,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>Kinetic type, 9 words, one line each, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), word mask reveal, no bounce.</code></pre>
+                <pre class="prompt__text"><code>Kinetic type on a black canvas. Six words, one word per line, each arriving on its own with a masked reveal, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), no bounce. Every second word is the accent colour. The words exit in reverse order.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -271,7 +275,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Product loop. Three-beat product loop: a counter, a bar chart and a closing title."
+                    aria-label="Four pipeline stages fill in sequence, each with a progress bar, then a closing card that reads four stages, one file."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -288,7 +292,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>A 21s product loop, 3 beats: (1) 0:00 big number counts up, (2) 0:08 bar chart staggers in, (3) 0:16 title card and exit. 8px bar gaps, one accent.</code></pre>
+                <pre class="prompt__text"><code>A 21s product loop. Four stages fill in sequence, staggered 90ms, each with its own progress bar and percentage. Then the finished frame: a stat panel and a rule. Then a closing card that reads "Four stages. One file." One accent, 8px rhythm.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -306,7 +310,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Footage and title. Real footage with a motion title sequence burned in over the top."
+                    aria-label="A dark moving source clip with a title sequence burned in over the top and a cut-and-overlay readout along the bottom."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -323,7 +327,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14.</code></pre>
+                <pre class="prompt__text"><code>Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14. Kicker above, headline, a source-in and out readout, and a cut + overlay line along the bottom.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -358,7 +362,7 @@
                 <h3 class="step__title">You describe it</h3>
                 <div class="artifact artifact--brief">
                   <p class="artifact__label">The brief</p>
-                  <p class="artifact__brief">15s launch film, name reveal, hold 2s, calm exit</p>
+                  <p class="artifact__brief">14s launch film, name reveal, hold 2s, calm exit</p>
                 </div>
                 <p class="step__text">
                   A sentence, a brief, or a screenshot of what you want. The agent reads it the way a
@@ -643,7 +647,7 @@
 
           <div class="qa">
             <article class="qa__item">
-              <h3 class="qa__question">“AI video is $15 a month. Why $149 once?”</h3>
+              <h3 class="qa__question">“AI video tools charge every month. Why $99 once?”</h3>
               <p class="qa__answer">
                 You pay once and the file is yours forever. No credits, no watermark, no model that
                 can be retired underneath you. Your project renders on your own machine, so the
@@ -693,32 +697,30 @@
           </header>
 
           <div class="tiers">
-            <article class="tier" aria-labelledby="tier-solo-title">
+            <article class="tier" data-tier="solo" aria-labelledby="tier-solo-title">
               <p class="tier__name">Solo</p>
-              <p class="tier__price"><span class="tier__amount">$149</span> <span class="tier__once">once</span></p>
-              <ul class="tier__list">
-                <li>20 motion skills, MIT with attribution</li>
+              <p class="tier__price"><span class="tier__amount">$99</span> <span class="tier__once">once</span></p>
+              <ul class="tier__list" data-tier-list="solo">
+                <li>20 MIT motion skills — motion-design, GSAP and Remotion</li>
                 <li>One plugin package, 16 agent hosts</li>
-                <li>Local render on your own machine, unlimited</li>
+                <li>The MCP server: plan_video, build_composition, mix_footage, clip library</li>
                 <li>Motion tokens and four scene starters</li>
-                <li>Lifetime updates</li>
-                <li>Commercial use, no attribution required</li>
+                <li>Renders on your own machine, no per-minute fee</li>
+                <li>Commercial use — upstream MIT notices stay in the package</li>
               </ul>
-              <a class="btn btn--primary btn--block" href="#buy" data-buy="solo">Buy Solo — $149</a>
+              <a class="btn btn--primary btn--block" href="#buy" data-buy="solo" data-buy-label="solo">Buy Solo — $99</a>
             </article>
 
-            <article class="tier tier--studio" aria-labelledby="tier-studio-title">
+            <article class="tier tier--studio" data-tier="studio" aria-labelledby="tier-studio-title">
               <p class="tier__name">Studio <span class="tier__flag">includes the footage bridge</span></p>
-              <p class="tier__price"><span class="tier__amount">$599</span> <span class="tier__once">once</span></p>
-              <ul class="tier__list">
+              <p class="tier__price"><span class="tier__amount">$399</span> <span class="tier__once">once</span></p>
+              <ul class="tier__list" data-tier-list="studio">
                 <li>Everything in Solo</li>
-                <li>Montage bridge (AGPL-3.0) for your own footage</li>
-                <li>Hosted rendering, billed only if you use it</li>
-                <li>Team seats for collaborators</li>
-                <li>Commercial licence, work for clients</li>
-                <li>Priority support</li>
+                <li>The Montage bridge (AGPL-3.0) for footage you own</li>
+                <li>Hosted rendering, with an allowance in your licence</li>
+                <li>Commercial use, and the bridge ships under AGPL-3.0</li>
               </ul>
-              <a class="btn btn--primary btn--block" href="#buy" data-buy="studio">Buy Studio — $599</a>
+              <a class="btn btn--primary btn--block" href="#buy" data-buy="studio" data-buy-label="studio">Buy Studio — $399</a>
             </article>
           </div>
 
@@ -726,13 +728,14 @@
             <p class="buy__label">Checkout</p>
             <div class="buy__body">
               <p class="buy__line">
-                One payment of <strong data-buy-amount>$149</strong>. You get the licence key, the
+                One payment of <strong data-buy-amount>$99</strong>. You get the licence key, the
                 install command for your host and the skill pack. Nothing renews and nothing renews by
                 default.
               </p>
               <p class="buy__line buy__line--muted">
-                The hosted render allowance in Studio is optional and is only charged if you ask for a
-                cloud render. You are never charged automatically.
+                Studio includes a hosted render allowance, and the size of it is confirmed in your
+                checkout receipt. You are never charged automatically — if you want more than the
+                allowance, you choose it and you pay for it.
               </p>
               <p class="buy__status" role="status" aria-live="polite" data-buy-status></p>
             </div>
@@ -851,7 +854,7 @@
     </footer>
 
     <div class="mobile-bar" data-mobile-bar hidden>
-      <a class="btn btn--primary btn--block" href="#pricing">Buy the license — $149</a>
+      <a class="btn btn--primary btn--block" href="#pricing">Buy the licence — $99</a>
     </div>
 
     <p class="visually-hidden" role="status" aria-live="polite" data-live-region></p>

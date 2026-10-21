@@ -4,11 +4,8 @@
   "version": "1.0.0",
   "description": "Motion design for AI agents: 20 MIT motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion composition generator.",
   "author": {
-    "name": "Motion Master",
-    "url": "https://github.com/executiveusa"
+    "name": "Motion Master"
   },
-  "homepage": "https://github.com/executiveusa/motion-master-",
-  "repository": "https://github.com/executiveusa/motion-master-",
   "license": "SEE LICENSE IN LICENSE.md",
   "keywords": [
     "motion design",

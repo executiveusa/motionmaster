@@ -157,6 +157,29 @@ if (existsSync(clipsDir)) {
   }
 }
 
+/* ---- 9. the offer: prices and tier lists match licence.json --------------- */
+
+const offer = JSON.parse(readFileSync(join(siteDir, '..', 'licence.json'), 'utf8'));
+for (const tier of offer.tiers) {
+  if (!text.includes(tier.display)) fail(`price "${tier.display}" missing from dist/index.html`);
+  if (!text.includes(tier.label)) fail(`tier name "${tier.label}" missing from dist/index.html`);
+  for (const item of tier.includes) {
+    if (!text.includes(item)) fail(`tier item missing for "${tier.id}": "${item}"`);
+  }
+}
+for (const stale of ['$149', '$599']) {
+  if (text.includes(stale)) fail(`stale price ${stale} still on the page`);
+}
+notes.push(`checked ${offer.tiers.length} tiers, their prices and ${offer.tiers.reduce((n, t) => n + t.includes.length, 0)} tier items against licence.json`);
+
+/* ---- 10. the domain: one place, no TLD -------------------------------------- */
+
+const domainTags = html.match(/<meta[^>]+name="site-domain"[^>]*>/g) ?? [];
+if (domainTags.length !== 1) fail(`expected exactly one site-domain meta tag, found ${domainTags.length}`);
+if (!html.includes('content="motionmaster"')) fail('site-domain meta tag does not carry the domain word');
+if (/motionmaster\.[a-z]{2,6}/i.test(html)) fail('a domain with a TLD appears on the page');
+if (/rel="canonical"/.test(html)) fail('canonical link present — the domain is not secured yet');
+
 /* ---- report ----------------------------------------------------------------- */
 
 for (const note of notes) console.log(`[check] ${note}`);

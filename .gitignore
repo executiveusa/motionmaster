@@ -4,10 +4,10 @@ build/
 .cache/
 *.log
 
-# Rendered proof media is produced by clips/render-all.sh — reproducible, not source.
-site/public/clips/*.mp4
-site/public/clips/*.jpg
-clips/public/
+# The four proof clips DO ship: they are the landing page's product proof, and a
+# clone that cannot show a real rendered clip cannot show the page. They are
+# reproducible with clips/render-all.sh, which also documents the poster times.
+# clips/public/ (the footage stand-in source) stays out — it is an input.
 
 # Local review artefacts
 .review/

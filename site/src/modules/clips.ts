@@ -1,4 +1,5 @@
 import clipManifest from '../data/clip-manifest.json';
+import clipSource from '../clips.json';
 import { copyText, qs, qsa } from '../lib/dom';
 
 interface ManifestEntry {
@@ -12,7 +13,18 @@ interface Manifest {
   clips?: Record<string, ManifestEntry>;
 }
 
+interface ClipSource {
+  id: string;
+  title: string;
+  duration: string;
+  stack: string;
+  alt: string;
+  prompt: string;
+}
+
 const manifest = clipManifest as Manifest;
+const source = (clipSource as { clips: ClipSource[] }).clips;
+const byId = new Map(source.map((clip) => [clip.id, clip]));
 
 const live = (): HTMLElement | null => qs<HTMLElement>('[data-live-region]');
 
@@ -90,6 +102,37 @@ function wireCopy(clip: HTMLElement): void {
 }
 
 /**
+ * Puts the manifest text on the page: the title, the duration + stack line,
+ * the prompt and the video's accessible name all come from src/clips.json.
+ * The markup carries the same strings as a no-JS fallback — this keeps the
+ * two from drifting apart, and it means the prompt you copy is the prompt
+ * the manifest records.
+ */
+function applySourceText(clip: HTMLElement): void {
+  const id = clip.dataset.clip ?? '';
+  const record = byId.get(id);
+  if (!record) return;
+
+  const title = qs<HTMLElement>('.clip__title', clip);
+  if (title) title.textContent = record.title;
+
+  const sub = qs<HTMLElement>('.clip__sub', clip);
+  if (sub) {
+    // The accent mark is decorative; the text after it is the real content.
+    const mark = sub.querySelector('.mark');
+    sub.textContent = '';
+    if (mark) sub.appendChild(mark);
+    sub.appendChild(document.createTextNode(`${record.duration} · ${record.stack}`));
+  }
+
+  const code = qs<HTMLElement>('.prompt__text code', clip);
+  if (code) code.textContent = record.prompt;
+
+  const video = qs<HTMLVideoElement>('[data-clip-video]', clip);
+  if (video) video.setAttribute('aria-label', record.alt);
+}
+
+/**
  * Wires the gallery. The clips themselves are real rendered files; when a file
  * is missing the block shows its poster (if there is one) and an explicit
  * "not yet rendered" state instead of a broken player.
@@ -100,6 +143,8 @@ export function initClips(): void {
     const entry = manifest.clips?.[id];
     const video = qs<HTMLVideoElement>('[data-clip-video]', clip);
     const state = qs<HTMLElement>('[data-clip-state]', clip);
+
+    applySourceText(clip);
 
     if (entry && entry.video && video) {
       video.src = entry.videoSrc;

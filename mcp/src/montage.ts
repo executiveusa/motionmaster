@@ -11,8 +11,16 @@
  *   GET /api/project/{project_id}/state
  *   GET /api/project/{project_id}/events        (SSE)
  *
+ *   GET  /api/v1/projects/{project_id}/timeline
+ *   PUT  /api/v1/projects/{project_id}/timeline   body: { expected_version, timeline }
+ *   POST /api/v1/projects/{project_id}/validate
+ *
  *   MCP tools: project_create, project_list, project_get, project_validate,
  *              timeline_get, timeline_replace
+ *
+ * The board API is read-only by design; the timeline routes are the studio
+ * API and are the write path. In local auth mode the studio routes also want
+ * the `X-Yappy-Tenant` header.
  *
  * Anything this file cannot verify from a fetched source is marked UNVERIFIED.
  */
@@ -290,7 +298,7 @@ export interface MontageRequestResult {
 export class MontageClient {
   constructor(
     private readonly baseUrl: string,
-    private readonly options: { token?: string; timeoutMs?: number } = {},
+    private readonly options: { token?: string; timeoutMs?: number; tenant?: string } = {},
   ) {}
 
   get configured(): boolean {
@@ -316,6 +324,7 @@ export class MontageClient {
     );
     const headers: Record<string, string> = { accept: "application/json" };
     if (this.options.token) headers.authorization = `Bearer ${this.options.token}`;
+    if (this.options.tenant) headers["X-Yappy-Tenant"] = this.options.tenant;
     if (init.body !== undefined) headers["content-type"] = "application/json";
 
     try {
@@ -355,5 +364,34 @@ export class MontageClient {
 
   projectState(projectId: string): Promise<MontageRequestResult> {
     return this.request(`/api/project/${encodeURIComponent(projectId)}/state`);
+  }
+
+  /** `GET /api/v1/projects/{project_id}/timeline` — the stored document. */
+  getTimeline(projectId: string): Promise<MontageRequestResult> {
+    return this.request(`/api/v1/projects/${encodeURIComponent(projectId)}/timeline`);
+  }
+
+  /**
+   * `PUT /api/v1/projects/{project_id}/timeline` — the handover.
+   *
+   * The write is optimistic: the stored document's version must equal
+   * `expectedVersion`, and the saved document becomes version + 1.
+   */
+  replaceTimeline(
+    projectId: string,
+    expectedVersion: number,
+    timeline: Record<string, unknown>,
+  ): Promise<MontageRequestResult> {
+    return this.request(`/api/v1/projects/${encodeURIComponent(projectId)}/timeline`, {
+      method: "PUT",
+      body: { expected_version: expectedVersion, timeline },
+    });
+  }
+
+  /** `POST /api/v1/projects/{project_id}/validate` — validate the project. */
+  validateProject(projectId: string): Promise<MontageRequestResult> {
+    return this.request(`/api/v1/projects/${encodeURIComponent(projectId)}/validate`, {
+      method: "POST",
+    });
   }
 }

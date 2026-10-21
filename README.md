@@ -20,6 +20,7 @@ Remotion · GSAP · ffmpeg. No subscription for the software. You own the output
 | `mcp/` | The MCP server — `plan_video`, `build_composition`, `mix_footage`, and the clip library. | proprietary |
 | `bridge/` | The client that drives a Montage instance over its public HTTP/MCP interfaces. | **AGPL-3.0-only**, isolated on purpose |
 | `clips/` | The Remotion project that renders the proof clips. | proprietary |
+| `licence.json` | **The offer.** Prices, tier lists and the rendering policy. The site imports it; the MCP server generates from it. One copy, so the two cannot disagree. | proprietary |
 | `docs/` | The lock documents. Read these before changing anything. | proprietary |
 
 ### Marketplace catalogs
@@ -46,6 +47,8 @@ These are not notes. They are the contract, and the build follows them.
 | [`docs/05-MONTAGE-INTEGRATION.md`](docs/05-MONTAGE-INTEGRATION.md) | The verified Montage surface and the AGPL boundary. |
 | [`docs/06-GO-TO-MARKET.md`](docs/06-GO-TO-MARKET.md) | Who we sell to, the channels, the unit economics, the risks. |
 | [`docs/07-GAUNTLET-PLAN.md`](docs/07-GAUNTLET-PLAN.md) | The bar, the measurable half, the reviewer council, the release gates. |
+| [`docs/08-GAUNTLET-RESULT.md`](docs/08-GAUNTLET-RESULT.md) | The run. What was measured, what was won, what is still open, and the $29–$49 price the market actually charges. |
+| [`docs/09-RELEASE-REPORT.md`](docs/09-RELEASE-REPORT.md) | What exists, what is proven, what was wrong and got fixed, and the decisions that are the founder's. |
 
 ---
 

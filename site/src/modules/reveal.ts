@@ -15,7 +15,6 @@ export function initReveals(): void {
     return;
   }
 
-  document.documentElement.classList.add('motion-ok');
   for (const item of items) item.setAttribute('data-reveal', '');
 
   const observer = new IntersectionObserver(
@@ -35,4 +34,10 @@ export function initReveals(): void {
   window.setTimeout(() => {
     for (const item of items) item.classList.add('is-visible');
   }, 2500);
+
+  // The class goes on LAST, and only after the observer and the safety net
+  // exist. Everything above happens in one task, so the browser never paints
+  // the hidden state — and if any of it had thrown, the content would have
+  // stayed visible instead of being hidden with nothing to bring it back.
+  document.documentElement.classList.add('motion-ok');
 }

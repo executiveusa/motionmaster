@@ -1,0 +1,25 @@
+{
+  "name": "motion-master",
+  "interface": {
+    "displayName": "Motion Master"
+  },
+  "plugins": [
+    {
+      "name": "motion-master",
+      "source": {
+        "source": "local",
+        "path": "./plugins/motion-master"
+      },
+      "interface": {
+        "displayName": "Motion Master",
+        "shortDescription": "Storyboard, choreograph and render motion design in code",
+        "longDescription": "Motion Master teaches an agent to write motion design in code. It ships 20 MIT-licensed motion skills (LottieFiles motion-design, the official GreenSock GSAP skills, the official Remotion skills), a Motion Master router with the motion doctrine, the palette and type tokens and the anti-slop rules, plus an MCP server with a deterministic storyboard planner, the motion token set, the exact prompt behind every gallery clip, a runnable Remotion composition generator, and a handover to a Montage instance the user runs for mixing real footage with motion graphics. It plans the shot list, writes the animation, renders the file on your own machine, and hands the creator a video they own. Motion Master is a paid, one-time licence: $99 Solo, $399 Studio. It is not a subscription. Studio can render on our machines with an allowance in your licence; nothing is ever charged automatically."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

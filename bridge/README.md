@@ -42,15 +42,21 @@ badge) composited over the footage, in the Motion Master palette and type.
 
 ## Configuration
 
-| Variable | Required | Default | Meaning |
-|---|---|---|---|
-| `MONTAGE_URL` | yes | – | Base URL of **your** Montage instance, e.g. `http://127.0.0.1:8000`. |
-| `MONTAGE_TENANT_ID` | no | `tenant_owner` | Tenant that owns the projects (local auth mode expects the `X-Yappy-Tenant` header). |
-| `MONTAGE_MCP_COMMAND` | no | `python` | Command that starts the Montage MCP server. |
-| `MONTAGE_MCP_ARGS` | no | `-m yappy_clipz.mcp_server` | Arguments for that command. |
-| `MONTAGE_TOKEN` | no | – | Bearer token, only needed if your instance runs in hosted auth mode. |
+| Variable | Read by | Required | Default | What it does |
+|---|---|---|---|---|
+| `MONTAGE_URL` | `src/http-client.ts` | no* | `http://127.0.0.1:8000` | Base URL of **your** Montage instance, e.g. `http://127.0.0.1:8000`. |
+| `MONTAGE_TENANT_ID` | `src/index.ts`, `src/timeline-store.ts` | no | `tenant_owner` | Tenant that owns the projects. Sent as the `X-Yappy-Tenant` header (local auth mode) and as the `tenant_id` argument of the MCP studio tools. In hosted auth mode the tenant comes from the token instead. |
+| `MONTAGE_MCP_COMMAND` | `src/index.ts` | no | `python` | Command that starts the Montage MCP server. |
+| `MONTAGE_MCP_ARGS` | `src/index.ts` | no | `-m yappy_clipz.mcp_server` | Arguments for that command. Split on spaces. |
+| `MONTAGE_TOKEN` | `src/http-client.ts` | no | – (none) | Bearer token, only needed if your instance runs in hosted auth mode. Sent as `Authorization: Bearer <token>` on every HTTP request: the board API, the SSE feeds and the studio HTTP transport. Not used by the MCP transport — Montage's MCP server is local-stdio only. |
 
-`MONTAGE_URL` is the only variable you must set.
+\* `MONTAGE_URL` falls back to the local default `http://127.0.0.1:8000`. If
+you want the bridge to fail fast instead of falling back, call
+`montageUrlFromEnv()`, which throws when the variable is unset.
+
+In practice you set `MONTAGE_URL` and nothing else. Every variable in this
+table is read by the code — the table is checked against `process.env` in
+`src/`, so a documented variable that does nothing cannot slip in.
 
 ## How to run it
 
@@ -134,6 +140,8 @@ document (`cuts` / `overlays` / `themeConfig`).
 | `validate-timeline.ts` | Runnable validator (schema + rules, non-zero exit on failure). |
 | `examples/footage-title.timeline.json` | The "footage + title" artifact: 3s clean cut, then title over the footage, ending at 0:16. |
 | `test/fixtures/*.timeline.json` | Fixture set: valid, missing field, overlapping cuts, out before in. |
+| `test/regressions.test.ts` | Regression tests for the three defects found in review (stored version, cut media path on the round trip, bearer token). |
+| `LICENSING.md` | Licensing note: the AGPL posture that ships today and the commercial dual-licence upgrade path. |
 | `NOTES-FOR-DOCS.md` | Bullet facts for the documentation writer. |
 
 Every file in this directory carries the AGPL header (JSON files carry it in a
@@ -171,7 +179,10 @@ sandbox. Treat these as assumptions to re-check on a real machine.
   render path reads `extensions.explainer` was not verified.
 * **UNVERIFIED — HTTP fallback transport.** `PUT /api/v1/projects/{id}/timeline`
   with an `X-Yappy-Tenant` header was read from the Montage source and is
-  implemented here, but never run against a live instance.
+  implemented here, but never run against a live instance. Read from that
+  source: in local auth mode the tenant header is required, in hosted auth
+  mode the call is authenticated with `Authorization: Bearer` — which is why
+  `MONTAGE_TOKEN` is sent on this path too.
 * **UNVERIFIED — fonts.** `themeConfig` asks for `IBM Plex Sans` /
   `IBM Plex Mono`. The Montage composer loads Space Grotesk by default;
   whether the IBM Plex families are installed in your render container is up
@@ -195,3 +206,10 @@ it carries AGPL-3.0. It is **not** part of the proprietary Motion Master
 product, it lives in its own directory, and it is excluded from the product's
 licence by design. The source of the Montage repository was read, never
 copied; no Montage code, assets or fixtures are redistributed here.
+
+**See [`LICENSING.md`](./LICENSING.md)** for the full note: the AGPL posture
+that ships today, the AGPL boundary in the shipped product, and the
+commercial dual-licence upgrade path that is available because the Montage
+repository is owner-owned — including the licence text the owner would add to
+that repository. Motion Master does not modify the Montage repository; that
+decision belongs to its owner.

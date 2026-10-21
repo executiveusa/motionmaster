@@ -19,10 +19,18 @@ metadata:
 
 **Describe the video. Get the file.**
 
-Motion Master is a paid, one-time-licence product. It teaches an agent to write motion
-design in code — Remotion, GSAP, ffmpeg — and hand a non-technical creator a finished
-video they own. The agent plans the shot list, writes the animation, renders it, and
-shows the owner the file.
+Motion Master is a **paid, one-time licence**: **$99 Solo**, **$399 Studio**. One
+payment, no subscription, no per-render billing — the licence key is delivered by
+email. It teaches an agent to write motion design in code — Remotion, GSAP, ffmpeg —
+and hand a non-technical creator a finished video they own. The agent plans the shot
+list, writes the animation, renders it on the owner's own machine, and shows the owner
+the file.
+
+**There is hosted rendering on Studio, with an allowance in your licence.** Motion Master never renders in the cloud and
+never claims to. Compositions are rendered locally with Remotion
+(`npx remotion render src/index.tsx <id> out/<id>.mp4`), and real footage is mixed by
+a Montage instance the owner runs themselves (`mix_footage`). The domain is recorded
+once, in `assets/brand.json`; its TLD is not chosen yet, so no URL may be published.
 
 This skill is the **router**. It carries the doctrine and the tokens. It does not
 duplicate the specialised skills. Load only the ones the brief needs.
@@ -200,4 +208,4 @@ Load only what the brief needs.
 
 All twenty are MIT-licensed and carry their upstream attribution. The Motion Master
 layer (this router, the token files, the prompt library and the MCP server) is the
-paid product.
+paid product: **$99 Solo, $399 Studio, one-time**.

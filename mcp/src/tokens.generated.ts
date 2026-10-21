@@ -4,7 +4,7 @@
  * Regenerate: npm run sync:tokens     Verify: npm run check:tokens
  */
 export const GENERATED_TOKENS = {
-  "$schema": "https://motionmaster.xyz/schemas/motion-tokens-v1.json",
+  "$schema": "motion-master.tokens/v1",
   "id": "motion-master.tokens",
   "name": "Motion Master",
   "version": "1.0.0",

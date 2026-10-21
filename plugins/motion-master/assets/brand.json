@@ -1,0 +1,26 @@
+{
+  "productName": "Motion Master",
+  "domain": "motionmaster",
+  "tld": null,
+  "domainStatus": "The domain word is confirmed. The TLD has not been chosen and the domain has not been purchased, so no URL with a TLD may be published yet. This file is the only place the domain is recorded — do not repeat it in a manifest, a skill, a doc or the MCP server output.",
+  "website": null,
+  "offer": {
+    "source": "licence.json (repo root)",
+    "note": "Prices, tier lists and the rendering policy live in licence.json at the repo root. Read them from there; do not restate them here."
+  },
+  "rendering": {
+    "local": {
+      "available": true,
+      "tier": "solo",
+      "note": "Compositions render on the buyer's own machine with Remotion; there is no per-minute fee."
+    },
+    "hosted": {
+      "available": true,
+      "tier": "studio",
+      "allowance": null,
+      "allowanceNote": "The size of the hosted render allowance has not been decided, so no number is published anywhere. It is confirmed in the checkout receipt.",
+      "billingNote": "Nothing is ever charged automatically. If the buyer wants more than the allowance, they choose it and they pay for it.",
+      "note": "Studio can render on our machines. The MCP server never renders anything itself."
+    }
+  }
+}

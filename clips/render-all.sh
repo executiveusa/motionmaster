@@ -30,10 +30,19 @@ render KineticType   "$OUT_DIR/kinetic-type.mp4"
 render ProductLoop   "$OUT_DIR/product-loop.mp4"
 render FootageTitle  "$OUT_DIR/footage-title.mp4"
 
-# 3. Posters — first frame of each clip, for the contact sheet.
-for id in launch-title kinetic-type product-loop footage-title; do
-  ffmpeg -v error -y -i "$OUT_DIR/$id.mp4" -vframes 1 -q:v 3 "$OUT_DIR/$id.jpg"
-done
+# 3. Posters — a representative frame of each clip, for the contact sheet.
+#    NOT frame 0: several clips start on an empty canvas, and a poster that
+#    shows an empty frame is a lie about what the clip contains. The second
+#    value is the seek time in seconds.
+while read -r id at; do
+  [ -z "$id" ] && continue
+  ffmpeg -v error -y -ss "$at" -i "$OUT_DIR/$id.mp4" -vframes 1 -q:v 3 "$OUT_DIR/$id.jpg"
+done <<'TIMES'
+launch-title 3.5
+kinetic-type 3.4
+product-loop 10.5
+footage-title 6.0
+TIMES
 
 echo "── done"
 ls -la "$OUT_DIR"

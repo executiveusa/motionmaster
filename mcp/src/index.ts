@@ -13,6 +13,7 @@ import { registerTools } from "./tools.js";
 import { listSkills } from "./skills.js";
 import { readGallery } from "./clips.js";
 import { loadTokens, tokenSource } from "./tokens.js";
+import { LICENCE } from "./licence.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -33,6 +34,8 @@ export function createMcpServer(config: Config): McpServer {
     {
       instructions:
         "Motion Master — motion design skills and a deterministic storyboard planner. " +
+        "Motion Master is a paid, one-time licence ($99 Solo, $399 Studio); it is not a subscription and " +
+        "this server never renders anything — it hands you the plan and the command. " +
         "Start with skills/motion-master/SKILL.md: it routes to the specialised skills, " +
         "states the motion doctrine and the anti-slop rules. " +
         "plan_video turns a brief into a timed storyboard; build_composition turns that " +
@@ -79,8 +82,17 @@ function statusDocument(config: Config): Record<string, unknown> {
     montage: {
       configured: config.montage.baseUrl.length > 0,
       baseUrl: config.montage.baseUrl.length > 0 ? config.montage.baseUrl : null,
+      tenant: config.montage.tenant,
       tokenConfigured: Boolean(config.montage.token),
     },
+    licence: LICENCE,
+    domain: {
+      recordedIn: config.brandPath,
+      tld: null,
+      url: null,
+      note: "The TLD has not been chosen. No URL is published by this server.",
+    },
+    rendering: LICENCE.rendering,
   };
 }
 
@@ -143,6 +155,8 @@ export async function main(): Promise<void> {
       `  montage      : ${
         config.montage.baseUrl.length > 0 ? config.montage.baseUrl : "not configured"
       }`,
+      `  licence      : ${LICENCE.summary}`,
+      `  rendering    : local (Remotion) on your own machine; Studio can also render on ours — never billed automatically`,
       "",
     ].join("\n"),
   );

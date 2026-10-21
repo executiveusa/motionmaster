@@ -17,6 +17,8 @@ import { readGallery } from "./clips.js";
 import { planVideo, type Storyboard } from "./planner.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { MontageClient, validateTimeline } from "./montage.js";
+import { toMontageDocument, isTimelineDocument } from "./montage-timeline.js";
+import { LICENCE, licenceSentence } from "./licence.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -373,7 +375,9 @@ export function registerTools(server: McpServer, config: Config): void {
       title: "Mix real footage with motion graphics",
       description:
         "Validate a Montage timeline (cuts + overlays) and hand it to the user's own Montage instance over its " +
-        "public HTTP API. Motion Master never renders footage itself — Montage renders.",
+        "public API: the timeline is written with PUT /api/v1/projects/{project_id}/timeline against the version " +
+        "the instance reports, and the project is validated afterwards. Motion Master never renders footage " +
+        "itself — Montage renders, on the user's own machine, and this tool never bills anything.",
       inputSchema: {
         timeline: z
           .object({
@@ -391,9 +395,12 @@ export function registerTools(server: McpServer, config: Config): void {
           .boolean()
           .optional()
           .describe("Validate only; never contact the Montage instance."),
+        fps: z.number().int().positive().optional().describe("Canvas fps (default 30)."),
+        width: z.number().int().positive().optional().describe("Canvas width (default 1920)."),
+        height: z.number().int().positive().optional().describe("Canvas height (default 1080)."),
       },
     },
-    async ({ timeline, project_id, dry_run }) => {
+    async ({ timeline, project_id, dry_run, fps, width, height }) => {
       const validation = validateTimeline(timeline);
       if (!validation.valid) {
         return fail("The Montage timeline is not valid.", {
@@ -405,6 +412,7 @@ export function registerTools(server: McpServer, config: Config): void {
       const client = new MontageClient(config.montage.baseUrl, {
         token: config.montage.token,
         timeoutMs: config.montage.timeoutMs,
+        tenant: config.montage.tenant,
       });
 
       if (dry_run) {
@@ -432,7 +440,7 @@ export function registerTools(server: McpServer, config: Config): void {
             "Start a Montage instance (the bridge task documents the setup).",
             "Set MOTION_MASTER_MONTAGE_URL, for example http://127.0.0.1:8000.",
             "Call mix_footage again.",
-            "Writing the timeline into a project goes through Montage's timeline_replace MCP tool — see the bridge README.",
+            "Writing the timeline into a project goes through Montage's studio timeline API — see the bridge README.",
           ],
         });
       }
@@ -459,25 +467,64 @@ export function registerTools(server: McpServer, config: Config): void {
         });
       }
 
-      const state = await client.projectState(projectId);
+      // The write is optimistic: read the version the instance holds, then
+      // replace the timeline against exactly that version.
+      const current = await client.getTimeline(projectId);
+      let expectedVersion = 0;
+      if (current.ok && isTimelineDocument(current.body)) {
+        expectedVersion = current.body.version;
+      } else if (current.status !== 404 && current.status !== 0) {
+        return fail("Montage did not return the project's timeline document.", {
+          status: current.status,
+          detail: current.error ?? current.body,
+        });
+      }
+
+      const document: Record<string, unknown> = isTimelineDocument(timeline)
+        ? { ...(timeline as unknown as Record<string, unknown>), version: expectedVersion }
+        : (toMontageDocument(timeline, expectedVersion, {
+            fps,
+            width,
+            height,
+          }) as unknown as Record<string, unknown>);
+
+      const replaced = await client.replaceTimeline(projectId, expectedVersion, document);
+      if (!replaced.ok) {
+        return fail("Montage refused the timeline replacement.", {
+          status: replaced.status,
+          expectedVersion,
+          detail: replaced.error ?? replaced.body,
+        });
+      }
+
+      const validationResult = await client.validateProject(projectId);
+
       return ok({
-        delivered: false,
+        delivered: true,
         reason:
-          "The Montage instance is reachable and the timeline is valid. Applying the timeline is a write operation " +
-          "that Montage exposes through its timeline_replace MCP tool, not through the public read-only HTTP API, " +
-          "so the payload is returned for the bridge to submit.",
+          "The timeline was written to the Montage instance over its studio timeline API. " +
+          "Montage renders the file; Motion Master does not render and does not run a hosted render service.",
+        licence: licenceSentence(),
         montage: {
           baseUrl: config.montage.baseUrl,
+          tenant: config.montage.tenant,
           health: health.body,
           projectId,
-          stateStatus: state.status,
-          state: state.body,
+          expectedVersion,
+          storedVersion:
+            isTimelineDocument(replaced.body) ? replaced.body.version : expectedVersion + 1,
+          response: replaced.body,
+          validate: {
+            status: validationResult.status,
+            body: validationResult.body,
+            error: validationResult.error ?? null,
+          },
         },
         validation,
-        timeline,
+        timeline: document,
         nextSteps: [
-          "Use the bridge (bridge/README.md) — replaceTimeline(projectId, timeline) applies it via the timeline_replace MCP tool.",
-          "Then render with: npx remotion render src/index.tsx Explainer out/video.mp4",
+          "Render the Montage composer composition: npx remotion render src/index.tsx Explainer out/video.mp4",
+          "The Montage instance holds the timeline; the render happens on your own machine.",
         ],
       });
     },
