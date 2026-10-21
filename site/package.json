@@ -1,0 +1,24 @@
+{
+  "name": "motion-master-site",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MOTION MASTER landing page — Vite + TypeScript (vanilla) + GSAP",
+  "scripts": {
+    "prebuild": "node scripts/sync-clips.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/verify-content.mjs",
+    "dev": "vite",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "check:content": "node scripts/verify-content.mjs"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.2.5",
+    "@fontsource/ibm-plex-sans": "5.2.5",
+    "gsap": "3.13.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "vite": "7.1.3"
+  }
+}

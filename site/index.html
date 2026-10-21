@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Motion Master — Describe the video. Get the file.</title>
+    <meta
+      name="description"
+      content="Motion Master teaches an AI agent to storyboard, choreograph and render motion design in code. You get the video, the project and the source. One-time licence, renders on your own machine."
+    />
+    <meta name="theme-color" content="#F4F4F2" />
+    <meta name="color-scheme" content="light" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Motion Master — Describe the video. Get the file." />
+    <meta
+      property="og:description"
+      content="An agent skills pack for motion design in code. Storyboard, choreography and render, then hand the creator the file they own."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Mobile frame rail: a 2px progress line, fixed to the top. -->
+    <div class="progress-line" aria-hidden="true">
+      <span class="progress-line__fill" data-progress-fill></span>
+    </div>
+
+    <!-- Signature element: the 56px frame rail. Decorative; the live timecode
+         also appears in a labelled element beneath the hero canvas. -->
+    <aside class="rail" aria-hidden="true">
+      <div class="rail__ticks">
+        <svg width="56" height="100%" preserveAspectRatio="none" focusable="false">
+          <defs>
+            <pattern id="rail-tick" width="56" height="32" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="18" y2="0" stroke="#DDDEDA" stroke-width="1" />
+            </pattern>
+          </defs>
+          <rect width="56" height="100%" fill="url(#rail-tick)" />
+        </svg>
+      </div>
+      <div class="rail__stamp" data-rail-stamp>00:00:00:00</div>
+      <div class="rail__time" data-rail-time>00:00:00:00</div>
+    </aside>
+
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="#top" aria-label="Motion Master, back to top">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__name">Motion Master</span>
+        </a>
+        <nav class="nav" aria-label="Sections">
+          <ul class="nav__list">
+            <li><a class="nav__link" href="#proof">Examples</a></li>
+            <li><a class="nav__link" href="#mechanism">How it works</a></li>
+            <li><a class="nav__link" href="#box">In the box</a></li>
+            <li><a class="nav__link" href="#pricing">Pricing</a></li>
+            <li><a class="nav__link" href="#faq">FAQ</a></li>
+          </ul>
+        </nav>
+        <a class="btn btn--primary btn--sm topbar__cta" href="#pricing">Buy the license</a>
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          data-menu-toggle
+        >
+          <span class="menu-toggle__label">Menu</span>
+          <span class="menu-toggle__glyph" aria-hidden="true"><i></i><i></i></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="mobile-menu" id="mobile-menu" data-menu-panel hidden>
+      <nav class="mobile-menu__nav" aria-label="Sections">
+        <a class="mobile-menu__link" href="#proof">Examples</a>
+        <a class="mobile-menu__link" href="#mechanism">How it works</a>
+        <a class="mobile-menu__link" href="#box">In the box</a>
+        <a class="mobile-menu__link" href="#footage">Footage mix</a>
+        <a class="mobile-menu__link" href="#objections">Straight answers</a>
+        <a class="mobile-menu__link" href="#pricing">Pricing</a>
+        <a class="mobile-menu__link" href="#faq">FAQ</a>
+      </nav>
+      <a class="btn btn--primary mobile-menu__cta" href="#pricing">Buy the license — $149</a>
+    </div>
+
+    <main id="main">
+      <!-- ================= HERO ================= -->
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="shell">
+          <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Agent skills for motion design</p>
+          <h1 class="display" id="hero-title">Describe the video.<br />Get the file.</h1>
+          <p class="hero__lede">
+            Motion Master teaches an AI agent to storyboard, choreograph and render motion design in
+            code — Remotion, GSAP and ffmpeg. You get the video, the project and the source.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#pricing">Buy the license — $149</a>
+            <a class="btn btn--ghost" href="#proof">
+              See it make one
+              <svg class="btn__icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+                <path d="M7 1v11M2.5 7.5 7 12l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+            </a>
+          </div>
+          <ul class="hero__assurances">
+            <li><span class="mark" aria-hidden="true"></span>One payment, no subscription</li>
+            <li><span class="mark" aria-hidden="true"></span>Renders on your own machine</li>
+            <li><span class="mark" aria-hidden="true"></span>You own the output</li>
+          </ul>
+
+          <!-- Live in-browser motion composition. GSAP drives it; the markup below
+               is the final frame, so a static render (reduced motion, no JS) is
+               still a complete frame. -->
+          <figure class="player" data-hero-player>
+            <div class="player__bar">
+              <span class="player__tag">Live canvas</span>
+              <span class="player__tag player__tag--right">Remotion + GSAP · in browser</span>
+            </div>
+            <div class="player__stage" data-hero-stage>
+              <div class="stage__brief">
+                <span class="stage__label">Brief</span>
+                <span class="stage__prompt">15s launch film, name reveal, hold 2s, calm exit</span>
+              </div>
+              <div class="stage__scene">
+                <div class="stage__beat stage__beat--line" data-beat="line">
+                  <p class="stage__headline">
+                    <span class="stage__word"><i>Describe</i></span>
+                    <span class="stage__word"><i>the</i></span>
+                    <span class="stage__word"><i>video.</i></span>
+                  </p>
+                </div>
+                <div class="stage__beat stage__beat--list" data-beat="list">
+                  <p class="stage__headline">
+                    <span class="stage__word"><i>It</i></span>
+                    <span class="stage__word"><i>writes</i></span>
+                    <span class="stage__word"><i>the</i></span>
+                    <span class="stage__word"><i>shot</i></span>
+                    <span class="stage__word"><i>list.</i></span>
+                  </p>
+                  <ol class="stage__beats">
+                    <li><span class="stage__beatno">beat 1</span><span class="stage__time">0:00</span><span class="stage__what">title in</span></li>
+                    <li><span class="stage__beatno">beat 2</span><span class="stage__time">0:05</span><span class="stage__what">subtitle</span></li>
+                    <li><span class="stage__beatno">beat 3</span><span class="stage__time">0:09</span><span class="stage__what">cards stagger</span></li>
+                    <li><span class="stage__beatno">beat 4</span><span class="stage__time">0:13</span><span class="stage__what">hold and exit</span></li>
+                  </ol>
+                </div>
+                <div class="stage__beat stage__beat--out" data-beat="out">
+                  <p class="stage__headline">
+                    <span class="stage__word"><i>It</i></span>
+                    <span class="stage__word"><i>renders</i></span>
+                    <span class="stage__word"><i>the</i></span>
+                    <span class="stage__word"><i>file.</i></span>
+                  </p>
+                  <div class="stage__bars" aria-hidden="true">
+                    <span class="stage__bar"><i></i></span>
+                    <span class="stage__bar"><i></i></span>
+                    <span class="stage__bar"><i></i></span>
+                    <span class="stage__bar"><i></i></span>
+                    <span class="stage__bar"><i></i></span>
+                  </div>
+                  <p class="stage__file">launch-title.mp4 · 1920×1080 · h264</p>
+                </div>
+              </div>
+              <p class="stage__foot">The agent writes the code. You get the file.</p>
+            </div>
+            <figcaption class="player__caption">
+              <span class="player__time" role="timer" aria-live="off" data-hero-time>00:00:11:24</span>
+              <span class="player__sep" aria-hidden="true">·</span>
+              <span>1920×1080</span>
+              <span class="player__sep" aria-hidden="true">·</span>
+              <span>remotion + gsap</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ================= LIVE PROOF STRIP ================= -->
+      <section class="section section--proof" id="proof" aria-labelledby="proof-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Live proof</p>
+            <h2 class="h2" id="proof-title">Every clip below ships with the prompt that made it.</h2>
+            <p class="section__lede">
+              These four were rendered with the skills this product ships, not with a different tool.
+              Each block shows the exact prompt, the stack and the duration. Copy the prompt, paste it
+              into your agent, and you start from the same place.
+            </p>
+          </header>
+
+          <div class="contact-sheet">
+            <article class="clip" data-clip="launch-title">
+              <div class="clip__frame">
+                <div class="clip__media">
+                  <video
+                    class="clip__video"
+                    data-clip-video
+                    preload="none"
+                    muted
+                    loop
+                    playsinline
+                    aria-label="Launch title. Title card that reveals a wordmark, holds for two seconds, then exits."
+                  ></video>
+                  <p class="clip__state" data-clip-state hidden>
+                    <span class="clip__state-title">Clip not yet rendered</span>
+                    <span class="clip__state-note">The prompt below is the whole deliverable — paste it into an agent and it starts from here.</span>
+                  </p>
+                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
+                    <span class="clip__toggle-label">Play clip</span>
+                  </button>
+                </div>
+              </div>
+              <div class="clip__head">
+                <h3 class="clip__title">Launch title</h3>
+                <p class="clip__sub"><span class="mark" aria-hidden="true"></span>0:14 · remotion</p>
+              </div>
+              <div class="prompt">
+                <p class="prompt__label">Prompt</p>
+                <pre class="prompt__text"><code>A 14s launch title: wordmark reveals from a blur, holds 2s on the logo, then a calm fade exit. Inter Tight, one accent, no decoration.</code></pre>
+                <div class="prompt__actions">
+                  <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
+                  <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="clip" data-clip="kinetic-type">
+              <div class="clip__frame">
+                <div class="clip__media">
+                  <video
+                    class="clip__video"
+                    data-clip-video
+                    preload="none"
+                    muted
+                    loop
+                    playsinline
+                    aria-label="Kinetic type. Nine words arriving one at a time in a tight typographic sequence."
+                  ></video>
+                  <p class="clip__state" data-clip-state hidden>
+                    <span class="clip__state-title">Clip not yet rendered</span>
+                    <span class="clip__state-note">The prompt below is the whole deliverable — paste it into an agent and it starts from here.</span>
+                  </p>
+                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
+                    <span class="clip__toggle-label">Play clip</span>
+                  </button>
+                </div>
+              </div>
+              <div class="clip__head">
+                <h3 class="clip__title">Kinetic type</h3>
+                <p class="clip__sub"><span class="mark" aria-hidden="true"></span>0:09 · gsap</p>
+              </div>
+              <div class="prompt">
+                <p class="prompt__label">Prompt</p>
+                <pre class="prompt__text"><code>Kinetic type, 9 words, one line each, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), word mask reveal, no bounce.</code></pre>
+                <div class="prompt__actions">
+                  <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
+                  <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="clip" data-clip="product-loop">
+              <div class="clip__frame">
+                <div class="clip__media">
+                  <video
+                    class="clip__video"
+                    data-clip-video
+                    preload="none"
+                    muted
+                    loop
+                    playsinline
+                    aria-label="Product loop. Three-beat product loop: a counter, a bar chart and a closing title."
+                  ></video>
+                  <p class="clip__state" data-clip-state hidden>
+                    <span class="clip__state-title">Clip not yet rendered</span>
+                    <span class="clip__state-note">The prompt below is the whole deliverable — paste it into an agent and it starts from here.</span>
+                  </p>
+                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
+                    <span class="clip__toggle-label">Play clip</span>
+                  </button>
+                </div>
+              </div>
+              <div class="clip__head">
+                <h3 class="clip__title">Product loop</h3>
+                <p class="clip__sub"><span class="mark" aria-hidden="true"></span>0:21 · remotion + ffmpeg</p>
+              </div>
+              <div class="prompt">
+                <p class="prompt__label">Prompt</p>
+                <pre class="prompt__text"><code>A 21s product loop, 3 beats: (1) 0:00 big number counts up, (2) 0:08 bar chart staggers in, (3) 0:16 title card and exit. 8px bar gaps, one accent.</code></pre>
+                <div class="prompt__actions">
+                  <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
+                  <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="clip" data-clip="footage-title">
+              <div class="clip__frame">
+                <div class="clip__media">
+                  <video
+                    class="clip__video"
+                    data-clip-video
+                    preload="none"
+                    muted
+                    loop
+                    playsinline
+                    aria-label="Footage and title. Real footage with a motion title sequence burned in over the top."
+                  ></video>
+                  <p class="clip__state" data-clip-state hidden>
+                    <span class="clip__state-title">Clip not yet rendered</span>
+                    <span class="clip__state-note">The prompt below is the whole deliverable — paste it into an agent and it starts from here.</span>
+                  </p>
+                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
+                    <span class="clip__toggle-label">Play clip</span>
+                  </button>
+                </div>
+              </div>
+              <div class="clip__head">
+                <h3 class="clip__title">Footage + title</h3>
+                <p class="clip__sub"><span class="mark" aria-hidden="true"></span>0:16 · remotion + montage bridge</p>
+              </div>
+              <div class="prompt">
+                <p class="prompt__label">Prompt</p>
+                <pre class="prompt__text"><code>Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14.</code></pre>
+                <div class="prompt__actions">
+                  <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
+                  <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <p class="contact-sheet__foot">
+            Rendered with the shipped skills — the exact prompt behind each one is printed above and
+            copied to your clipboard in one click.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= MECHANISM ================= -->
+      <section class="section section--mechanism" id="mechanism" aria-labelledby="mechanism-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>How it works</p>
+            <h2 class="h2" id="mechanism-title">Three steps, and only the last one needs a renderer.</h2>
+            <p class="section__lede">
+              The agent is the author. You are the person who reads the frame and says whether it is
+              right.
+            </p>
+          </header>
+
+          <ol class="steps">
+            <li class="step">
+              <p class="step__no">01</p>
+              <div class="step__body">
+                <h3 class="step__title">You describe it</h3>
+                <div class="artifact artifact--brief">
+                  <p class="artifact__label">The brief</p>
+                  <p class="artifact__brief">15s launch film, name reveal, hold 2s, calm exit</p>
+                </div>
+                <p class="step__text">
+                  A sentence, a brief, or a screenshot of what you want. The agent reads it the way a
+                  director reads a note: what is on screen, how long it holds, how it ends.
+                </p>
+              </div>
+            </li>
+
+            <li class="step">
+              <p class="step__no">02</p>
+              <div class="step__body">
+                <h3 class="step__title">It writes the shot list</h3>
+                <div class="artifact artifact--board">
+                  <p class="artifact__label">Storyboard</p>
+                  <table class="board">
+                    <caption class="visually-hidden">Storyboard beats for the sample brief</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Beat</th>
+                        <th scope="col">In</th>
+                        <th scope="col">What happens</th>
+                        <th scope="col">Easing role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>beat 1</td>
+                        <td>0:00</td>
+                        <td>title in</td>
+                        <td>entrance · ease-out</td>
+                      </tr>
+                      <tr>
+                        <td>beat 2</td>
+                        <td>0:05</td>
+                        <td>subtitle</td>
+                        <td>on-screen · ease-in-out</td>
+                      </tr>
+                      <tr>
+                        <td>beat 3</td>
+                        <td>0:09</td>
+                        <td>cards stagger</td>
+                        <td>entrance · ease-out · 40ms</td>
+                      </tr>
+                      <tr>
+                        <td>beat 4</td>
+                        <td>0:13</td>
+                        <td>hold and exit</td>
+                        <td>exit · ease-in</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="step__text">
+                  Beats, timing, easing role and stagger budget are decided before a line of code is
+                  written, so the motion is a plan rather than an improvisation.
+                </p>
+              </div>
+            </li>
+
+            <li class="step">
+              <p class="step__no">03</p>
+              <div class="step__body">
+                <h3 class="step__title">It writes and renders the video</h3>
+                <div class="artifact artifact--code">
+                  <p class="artifact__label">A slice of the composition</p>
+                  <pre class="code" tabindex="0" aria-label="Sample Remotion composition"><code><span class="tok-kw">import</span> { AbsoluteFill, interpolate, useCurrentFrame } <span class="tok-kw">from</span> <span class="tok-str">'remotion'</span>;
+<span class="tok-kw">import</span> { gsap } <span class="tok-kw">from</span> <span class="tok-str">'gsap'</span>;
+
+<span class="tok-kw">export const</span> LaunchTitle = () =&gt; {
+  <span class="tok-kw">const</span> frame = useCurrentFrame();
+  <span class="tok-kw">const</span> opacity = interpolate(frame, [0, 24, 120, 150], [0, 1, 1, 0], {
+    extrapolateLeft: <span class="tok-str">'clamp'</span>,
+    extrapolateRight: <span class="tok-str">'clamp'</span>,
+  });
+  <span class="tok-kw">return</span> (
+    &lt;AbsoluteFill style={{ backgroundColor: <span class="tok-str">'#111113'</span>, opacity }}&gt;
+      &lt;Title /&gt;
+    &lt;/AbsoluteFill&gt;
+  );
+};</code></pre>
+                </div>
+                <p class="step__text">
+                  Remotion renders the frames, GSAP runs the choreography, ffmpeg writes the file. The
+                  project stays on your machine, and the project is the video.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ================= WHAT'S IN THE BOX ================= -->
+      <section class="section section--box" id="box" aria-labelledby="box-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>What&rsquo;s in the box</p>
+            <h2 class="h2" id="box-title">One package. Sixteen hosts. Twenty skills.</h2>
+            <p class="section__lede">
+              Select a folder to see what it teaches. The skill pack is adapted from LottieFiles,
+              GreenSock and Remotion, all MIT, with attribution kept intact.
+            </p>
+          </header>
+
+          <div class="tree-layout">
+            <div class="tree" role="group" aria-label="Package contents">
+              <ul class="tree__list">
+                <li>
+                  <button class="tree__row" type="button" data-tree-node="motion-master" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">motion-master/</span>
+                  </button>
+                </li>
+                <li class="tree__indent">
+                  <button class="tree__row" type="button" data-tree-node="skills" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">skills/</span>
+                    <span class="tree__note">20 skills · MIT + attribution</span>
+                  </button>
+                </li>
+                <li class="tree__indent tree__indent--deep">
+                  <button class="tree__row" type="button" data-tree-node="motion-design" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">motion-design/</span>
+                  </button>
+                </li>
+                <li class="tree__indent tree__indent--deep">
+                  <button class="tree__row" type="button" data-tree-node="remotion-markup" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">remotion-markup/</span>
+                  </button>
+                </li>
+                <li class="tree__indent tree__indent--deep">
+                  <button class="tree__row" type="button" data-tree-node="remotion-render" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">remotion-render/</span>
+                  </button>
+                </li>
+                <li class="tree__indent tree__indent--deep">
+                  <button class="tree__row" type="button" data-tree-node="gsap-timeline" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">gsap-timeline/</span>
+                  </button>
+                </li>
+                <li class="tree__indent tree__indent--deep">
+                  <button class="tree__row" type="button" data-tree-node="more-skills" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">… 15 more</span>
+                  </button>
+                </li>
+                <li class="tree__indent">
+                  <button class="tree__row" type="button" data-tree-node="tokens" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">tokens/</span>
+                    <span class="tree__note">springs, easings, durations</span>
+                  </button>
+                </li>
+                <li class="tree__indent">
+                  <button class="tree__row" type="button" data-tree-node="starters" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">starters/</span>
+                    <span class="tree__note">showreel · title · launch · changelog</span>
+                  </button>
+                </li>
+                <li class="tree__indent">
+                  <button class="tree__row" type="button" data-tree-node="plugin" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">plugin.json</span>
+                    <span class="tree__note">ChatGPT + Codex, one package</span>
+                  </button>
+                </li>
+                <li class="tree__indent">
+                  <button class="tree__row" type="button" data-tree-node="mcp" aria-expanded="false">
+                    <span class="tree__glyph" aria-hidden="true"></span>
+                    <span class="tree__name">mcp.json</span>
+                    <span class="tree__note">one URL, 16 hosts</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div class="tree-detail" data-tree-detail>
+              <p class="tree-detail__label" data-tree-detail-label>skills/motion-design/</p>
+              <p class="tree-detail__text" data-tree-detail-text>
+                The motion doctrine the agent reads before it animates anything: duration tables,
+                easing roles, stagger budgets, and the anti-slop rules the rest of the pack points
+                back to.
+              </p>
+            </div>
+          </div>
+
+          <div class="install">
+            <p class="install__label">Install</p>
+            <ul class="install__list">
+              <li>
+                <button class="btn btn--quiet" type="button" data-install="ChatGPT">ChatGPT</button>
+              </li>
+              <li>
+                <button class="btn btn--quiet" type="button" data-install="Codex">Codex</button>
+              </li>
+              <li>
+                <button class="btn btn--quiet" type="button" data-install="Claude">Claude</button>
+              </li>
+              <li>
+                <button class="btn btn--quiet" type="button" data-install="Cursor">Cursor</button>
+              </li>
+              <li><span class="install__more">+ 12 more hosts</span></li>
+            </ul>
+            <p class="install__command" data-install-command hidden>
+              <code data-install-command-text></code>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= FOOTAGE MIX ================= -->
+      <section class="section section--footage" id="footage" aria-labelledby="footage-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Footage mix</p>
+            <h2 class="h2" id="footage-title">Use your own footage.</h2>
+            <p class="section__lede">
+              The agent can cut a clip you supply and burn a motion title over it. It talks to a
+              Montage instance you run yourself, over its public API — the footage never touches our
+              infrastructure.
+            </p>
+          </header>
+
+          <div class="mix">
+            <div class="mix__step">
+              <p class="mix__label">1 · Your footage</p>
+              <div class="mix__slot" role="img" aria-label="Placeholder for the source clip you supply">
+                <span class="mix__slot-text">your-clip.mp4</span>
+              </div>
+            </div>
+            <div class="mix__step">
+              <p class="mix__label">2 · The request</p>
+              <p class="mix__request">
+                “Cut the first 3 seconds, add a title card in our brand type at 0:03, hold over the
+                footage, fade out at 0:14.”
+              </p>
+            </div>
+            <div class="mix__step">
+              <p class="mix__label">3 · The result</p>
+              <div class="mix__slot mix__slot--result" data-clip="footage-title">
+                <div class="clip__media">
+                  <video
+                    class="clip__video"
+                    data-clip-video
+                    preload="none"
+                    muted
+                    loop
+                    playsinline
+                    aria-label="Footage and title. Real footage with a motion title sequence burned in over the top."
+                  ></video>
+                  <p class="clip__state" data-clip-state hidden>
+                    <span class="clip__state-title">Clip not yet rendered</span>
+                    <span class="clip__state-note">Rendered by the parallel clip job — the prompt above is the recipe.</span>
+                  </p>
+                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
+                    <span class="clip__toggle-label">Play clip</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="mix__note">
+            <span class="mark" aria-hidden="true"></span>
+            The Montage bridge is AGPL-3.0 and ships with the Studio tier. It is a separate work that
+            speaks a public interface; the skill pack is not.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= OBJECTIONS ================= -->
+      <section class="section section--objections" id="objections" aria-labelledby="objections-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Straight answers</p>
+            <h2 class="h2" id="objections-title">The four questions everyone asks first.</h2>
+          </header>
+
+          <div class="qa">
+            <article class="qa__item">
+              <h3 class="qa__question">“AI video is $15 a month. Why $149 once?”</h3>
+              <p class="qa__answer">
+                You pay once and the file is yours forever. No credits, no watermark, no model that
+                can be retired underneath you. Your project renders on your own machine, so the
+                twelfth video costs nothing.
+              </p>
+            </article>
+
+            <article class="qa__item">
+              <h3 class="qa__question">“I don&rsquo;t know how to code.”</h3>
+              <p class="qa__answer">
+                You don&rsquo;t. You paste a sentence into your agent and it comes back with a video.
+                If you want to change a word later, you type the change — the project is text, and
+                text is something you can read.
+              </p>
+            </article>
+
+            <article class="qa__item">
+              <h3 class="qa__question">“Won&rsquo;t it look like AI?”</h3>
+              <p class="qa__answer">
+                The motion rules are ours and they are opinionated: fixed durations, fixed easing
+                roles, stagger budgets, one accent colour. Read the rules in the skills — they are in
+                the box, not behind a login.
+              </p>
+            </article>
+
+            <article class="qa__item">
+              <h3 class="qa__question">“Do I own it?”</h3>
+              <p class="qa__answer">
+                The video, the project and the code. Use it commercially, including for clients. No
+                attribution required.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PRICING ================= -->
+      <section class="section section--pricing" id="pricing" aria-labelledby="pricing-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Pricing</p>
+            <h2 class="h2" id="pricing-title">One payment. No subscription for the software.</h2>
+            <p class="section__lede">
+              Two tiers, because the product has two things in it: the skill pack for one person, and
+              the footage bridge for a team.
+            </p>
+          </header>
+
+          <div class="tiers">
+            <article class="tier" aria-labelledby="tier-solo-title">
+              <p class="tier__name">Solo</p>
+              <p class="tier__price"><span class="tier__amount">$149</span> <span class="tier__once">once</span></p>
+              <ul class="tier__list">
+                <li>20 motion skills, MIT with attribution</li>
+                <li>One plugin package, 16 agent hosts</li>
+                <li>Local render on your own machine, unlimited</li>
+                <li>Motion tokens and four scene starters</li>
+                <li>Lifetime updates</li>
+                <li>Commercial use, no attribution required</li>
+              </ul>
+              <a class="btn btn--primary btn--block" href="#buy" data-buy="solo">Buy Solo — $149</a>
+            </article>
+
+            <article class="tier tier--studio" aria-labelledby="tier-studio-title">
+              <p class="tier__name">Studio <span class="tier__flag">includes the footage bridge</span></p>
+              <p class="tier__price"><span class="tier__amount">$599</span> <span class="tier__once">once</span></p>
+              <ul class="tier__list">
+                <li>Everything in Solo</li>
+                <li>Montage bridge (AGPL-3.0) for your own footage</li>
+                <li>Hosted rendering, billed only if you use it</li>
+                <li>Team seats for collaborators</li>
+                <li>Commercial licence, work for clients</li>
+                <li>Priority support</li>
+              </ul>
+              <a class="btn btn--primary btn--block" href="#buy" data-buy="studio">Buy Studio — $599</a>
+            </article>
+          </div>
+
+          <div class="buy" id="buy">
+            <p class="buy__label">Checkout</p>
+            <div class="buy__body">
+              <p class="buy__line">
+                One payment of <strong data-buy-amount>$149</strong>. You get the licence key, the
+                install command for your host and the skill pack. Nothing renews and nothing renews by
+                default.
+              </p>
+              <p class="buy__line buy__line--muted">
+                The hosted render allowance in Studio is optional and is only charged if you ask for a
+                cloud render. You are never charged automatically.
+              </p>
+              <p class="buy__status" role="status" aria-live="polite" data-buy-status></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= FAQ ================= -->
+      <section class="section section--faq" id="faq" aria-labelledby="faq-title">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Questions</p>
+            <h2 class="h2" id="faq-title">The questions we are actually asked.</h2>
+          </header>
+
+          <div class="faq">
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Which agents does it work with?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  ChatGPT, Codex, Claude and Cursor, plus twelve more hosts, from one package. The
+                  install is a plugin manifest and a single MCP URL — the same command shape in every
+                  host that supports plugins.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">What do I get the moment I pay?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  A licence key, the skill pack, the plugin package and the token and starter
+                  libraries, plus a one-line install command for the host you use. The exact command
+                  for your host is in the purchase email.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Do I need to install anything to try it?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  You can paste any prompt from this page into a chat agent and see the brief
+                  yourself. The licence is what adds the skills, the tokens and the render pipeline
+                  that turn that brief into a finished file.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Does it run on my own computer?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  Yes. The project renders locally with Remotion on your own machine, so there is no
+                  per-minute fee and no queue. If you would rather not install a renderer, Studio
+                  includes an optional hosted render allowance.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Can I use the result for client work?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  Yes. The video, the project and the code are yours to use commercially, including
+                  for clients, with no attribution required.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">What if I want my own footage in it?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  That is the Montage bridge, included in Studio. It runs against a Montage instance
+                  you control, so your footage stays on your machine. The bridge is AGPL-3.0 and
+                  ships as a separate, isolated work.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell footer__inner">
+        <div class="footer__brand">
+          <p class="footer__name">Motion Master</p>
+          <p class="footer__line">Describe the video. Get the file.</p>
+        </div>
+        <nav class="footer__nav" aria-label="Footer">
+          <a class="footer__link" href="#proof">Examples</a>
+          <a class="footer__link" href="#mechanism">How it works</a>
+          <a class="footer__link" href="#box">In the box</a>
+          <a class="footer__link" href="#pricing">Pricing</a>
+          <a class="footer__link" href="#faq">FAQ</a>
+        </nav>
+        <p class="footer__legal">
+          © 2026 Motion Master. Licence terms are sent with every purchase. Skill packs adapted from
+          LottieFiles, GreenSock and Remotion, used under their licences.
+        </p>
+      </div>
+    </footer>
+
+    <div class="mobile-bar" data-mobile-bar hidden>
+      <a class="btn btn--primary btn--block" href="#pricing">Buy the license — $149</a>
+    </div>
+
+    <p class="visually-hidden" role="status" aria-live="polite" data-live-region></p>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

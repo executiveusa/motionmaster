@@ -96,9 +96,9 @@ Not an average of the three.
 - **Product proof:** a live in-browser motion canvas in the hero; real rendered clips with
   their exact prompts in the proof strip; a real storyboard artifact; a real code panel.
 - **Trust sequence:** real clip → real prompt → real code → real licence terms → price.
-- **Objection sequence:** "it looks like AI" → "I don't know code" → "$149 vs $15/mo" →
+- **Objection sequence:** "it looks like AI" → "I don't know code" → "$99 vs $15/mo" →
   "it's my footage" → "I own it".
-- **CTA wording:** `Buy the license — $149` (primary) / `See it make one` (secondary).
+- **CTA wording:** `Buy the license — $99` (primary) / `See it make one` (secondary).
 - **Confirmation state:** checkout success page showing the install command per host and
   the download link. Not a toast.
 

@@ -1,0 +1,18 @@
+{
+  "name": "motion-master-clips",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real motion clips rendered by the Motion Master skills. These are the proof assets for the landing page.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.537",
+    "@remotion/google-fonts": "4.0.537",
+    "@remotion/renderer": "4.0.537",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.537"
+  }
+}

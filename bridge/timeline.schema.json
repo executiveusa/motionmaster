@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motion-master.example/schemas/montage-explainer-timeline.schema.json",
+  "title": "Montage Explainer timeline (Motion Master bridge subset)",
+  "description": "The subset of the Montage Explainer composition timeline the Motion Master bridge emits: real-footage cuts with in/out points, motion-graphics overlays, and the theme override. Rendered by Montage, never by the bridge.",
+  "$comment": "SPDX-License-Identifier: AGPL-3.0-only | Copyright (C) 2026 Motion Master. This directory is a separate AGPL-3.0 work that talks to a Montage instance over its public HTTP/MCP interfaces. It is NOT part of the proprietary Motion Master product and is excluded from its licence by design.",
+  "type": "object",
+  "required": ["cuts"],
+  "additionalProperties": true,
+  "properties": {
+    "_license": {
+      "type": "string",
+      "description": "AGPL notice carried by files written from this directory."
+    },
+    "cuts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/cut" }
+    },
+    "overlays": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/overlay" }
+    },
+    "themeConfig": { "$ref": "#/$defs/themeConfig" },
+    "captions": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "audio": { "type": "object" }
+  },
+  "$defs": {
+    "cut": {
+      "type": "object",
+      "required": ["id", "in_seconds", "out_seconds"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source media path. Relative paths resolve against the composer's public/ directory; absolute paths and http(s) URLs are used as-is."
+        },
+        "in_seconds": { "type": "number", "minimum": 0 },
+        "out_seconds": { "type": "number", "minimum": 0 },
+        "source_in_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Seek position inside the source file."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text_card",
+            "hero_title",
+            "stat_card",
+            "callout",
+            "comparison",
+            "bar_chart",
+            "line_chart",
+            "pie_chart",
+            "kpi_grid",
+            "progress_bar",
+            "anime_scene",
+            "terminal_scene",
+            "screenshot_scene"
+          ],
+          "description": "Scene type. When absent the cut is real footage (or a still image)."
+        },
+        "animation": {
+          "type": "string",
+          "description": "Camera animation. Video: zoom-in, ken-burns. Image: zoom-in, zoom-out, pan-left, pan-right, ken-burns, ken-burns-slow-zoom, parallax, static."
+        },
+        "layer": { "type": "string" },
+        "transition_in": { "type": "string" },
+        "transition_out": { "type": "string" },
+        "transition_duration": { "type": "number", "minimum": 0 },
+        "text": { "type": "string" },
+        "stat": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "title": { "type": "string" },
+        "callout_type": { "type": "string", "enum": ["info", "warning", "tip", "quote"] },
+        "leftLabel": { "type": "string" },
+        "leftValue": { "type": "string" },
+        "rightLabel": { "type": "string" },
+        "rightValue": { "type": "string" },
+        "chartData": { "type": "array" },
+        "chartSeries": { "type": "array" },
+        "chartAnimation": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 1 },
+        "progressLabel": { "type": "string" },
+        "progressColor": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "steps": { "type": "array" },
+        "terminalTitle": { "type": "string" },
+        "prompt": { "type": "string" },
+        "backgroundImage": { "type": "string" },
+        "backgroundVideo": { "type": "string" },
+        "backgroundOverlay": { "type": "number", "minimum": 0, "maximum": 1 },
+        "screenshotSteps": { "type": "array" },
+        "screenshotSize": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "number", "minimum": 1 },
+            "height": { "type": "number", "minimum": 1 }
+          }
+        },
+        "color": { "type": "string" },
+        "accentColor": { "$ref": "#/$defs/color" },
+        "fontSize": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "not": { "required": ["type"] } },
+          "then": { "required": ["source"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "text_card" } } },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "hero_title" } } },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "stat_card" } } },
+          "then": { "required": ["stat"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "callout" } } },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "comparison" } } },
+          "then": { "required": ["leftLabel", "leftValue", "rightLabel", "rightValue"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "bar_chart" } } },
+          "then": { "required": ["chartData"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "line_chart" } } },
+          "then": { "required": ["chartSeries"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "pie_chart" } } },
+          "then": { "required": ["chartData"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "kpi_grid" } } },
+          "then": { "required": ["chartData"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "progress_bar" } } },
+          "then": { "required": ["progress"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "anime_scene" } } },
+          "then": { "required": ["images"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "terminal_scene" } } },
+          "then": { "required": ["steps"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "screenshot_scene" } } },
+          "then": { "required": ["backgroundImage", "screenshotSteps"] }
+        }
+      ]
+    },
+    "overlay": {
+      "type": "object",
+      "required": ["type", "in_seconds", "out_seconds"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["section_title", "stat_reveal", "hero_title", "provider_chip"]
+        },
+        "in_seconds": { "type": "number", "minimum": 0 },
+        "out_seconds": { "type": "number", "minimum": 0 },
+        "text": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "accentColor": { "$ref": "#/$defs/color" },
+        "position": { "type": "string" },
+        "providers": { "type": "array", "items": { "type": "string" } },
+        "cycleSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "label": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": { "enum": ["section_title", "stat_reveal", "hero_title"] }
+            }
+          },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "provider_chip" } } },
+          "then": { "required": ["providers"] }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "section_title" } }
+          },
+          "then": {
+            "properties": {
+              "position": {
+                "type": "string",
+                "enum": ["top-left", "bottom-left", "center"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "stat_reveal" } }
+          },
+          "then": {
+            "properties": {
+              "position": {
+                "type": "string",
+                "enum": ["center", "bottom-right", "right"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "provider_chip" } }
+          },
+          "then": {
+            "properties": {
+              "position": {
+                "type": "string",
+                "enum": ["top-left", "top-right", "bottom-left", "bottom-right"]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Six digit hex colour, e.g. #FF4A1C."
+    },
+    "themeConfig": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "primaryColor": { "$ref": "#/$defs/color" },
+        "accentColor": { "$ref": "#/$defs/color" },
+        "backgroundColor": { "$ref": "#/$defs/color" },
+        "surfaceColor": { "$ref": "#/$defs/color" },
+        "textColor": { "$ref": "#/$defs/color" },
+        "mutedTextColor": { "$ref": "#/$defs/color" },
+        "headingFont": { "type": "string" },
+        "bodyFont": { "type": "string" },
+        "monoFont": { "type": "string" },
+        "chartColors": { "type": "array", "items": { "$ref": "#/$defs/color" } }
+      }
+    }
+  }
+}

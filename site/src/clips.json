@@ -1,0 +1,58 @@
+{
+  "clips": [
+    {
+      "id": "launch-title",
+      "title": "Launch title",
+      "duration": "0:14",
+      "durationSeconds": 14,
+      "stack": "remotion",
+      "resolution": "1280×720",
+      "src": "/clips/launch-title.mp4",
+      "poster": "/clips/launch-title.jpg",
+      "alt": "A title card: a wordmark rises into a masked reveal, an accent rule draws in beneath it, holds, then fades out.",
+      "prompt": "A 14s launch title. The wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds for 2s, then fades out and lifts. One accent, no decoration, hairline rules top and bottom.",
+      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+    },
+    {
+      "id": "kinetic-type",
+      "title": "Kinetic type",
+      "duration": "0:09",
+      "durationSeconds": 9,
+      "stack": "remotion",
+      "resolution": "1280×720",
+      "src": "/clips/kinetic-type.mp4",
+      "poster": "/clips/kinetic-type.jpg",
+      "alt": "Six words arrive one at a time in three lines, then exit in reverse.",
+      "prompt": "Kinetic type. Six words across three lines, each arriving one at a time with a masked reveal, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), no bounce. The words exit in reverse order.",
+      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+    },
+    {
+      "id": "product-loop",
+      "title": "Product loop",
+      "duration": "0:21",
+      "durationSeconds": 21,
+      "stack": "remotion + ffmpeg",
+      "resolution": "1280×720",
+      "src": "/clips/product-loop.mp4",
+      "poster": "/clips/product-loop.jpg",
+      "alt": "Three beats: four pipeline stages fill in sequence, a finished frame, then a closing title card.",
+      "prompt": "A 21s product loop in three beats. Beat one: four stages fill in sequence, staggered 90ms, with a progress bar each. Beat two: the finished frame, a stat panel and a rule. Beat three: a closing title card. One accent, 8px rhythm.",
+      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+    },
+    {
+      "id": "footage-title",
+      "title": "Footage + title",
+      "duration": "0:16",
+      "durationSeconds": 16,
+      "stack": "remotion + montage bridge",
+      "resolution": "1280×720",
+      "src": "/clips/footage-title.mp4",
+      "poster": "/clips/footage-title.jpg",
+      "alt": "A moving source clip with a motion title sequence burned in over the top.",
+      "prompt": "Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14.",
+      "renderedWith": "Motion Master skills + Montage bridge (cut + overlay)",
+      "bridgeDemo": true
+    }
+  ],
+  "note": "Every clip here was rendered by the skills this product ships. The prompt is the product: it is shown, copyable, and can be pasted straight into ChatGPT with the plugin installed. The source footage in footage-title is a generated stand-in, not customer footage."
+}

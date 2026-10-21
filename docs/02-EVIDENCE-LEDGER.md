@@ -21,7 +21,7 @@ Every claim that may appear on the public landing page. Status per the Landing P
 | 14 | "Used by [competitor] / trusted by [logos]" | **DO NOT CLAIM** | No logos exist | **No** |
 | 15 | Competitor comparison claims ("unlike X, we…") | **DO NOT CLAIM** | Comparative advertising without verification | **No** — describe what we do, not who we beat |
 | 16 | Awards, press, "featured in" | **MISSING PROOF** | None | **No** |
-| 17 | Domain `motionmaster.xyz` | **UNVERIFIED** | Not purchased | **No** — page must say "Motion Master" until the founder secures a domain |
+| 17 | Domain `motionmaster` | **USER PROVIDED** | Founder confirmed 2026-10-21: "we will buy the domain motionmaster". The TLD is not yet chosen. | **Partially** — the word "Motion Master" and the bare word "motionmaster" are fine. A full URL with a TLD may only appear once a domain is actually purchased and DNS points at the site. |
 | 18 | "29 open-source motion skills exist" | VERIFIED | motionvideo.xyz/skills directory, 29 entries | Yes, as a factual statement about the open-source ecosystem, attributed |
 | 19 | Local render speed figure | PENDING | Will be measured on our rig; must state CPU, RAM, resolution, clip length | Only with the hardware stated, or omit |
 | 20 | Hosted render allowance size (e.g. 40/mo) | USER PROVIDED — pending | Founder to confirm the number and its cost basis | Only after the founder confirms it is fundable |

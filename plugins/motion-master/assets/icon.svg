@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Motion Master">
+  <title>Motion Master</title>
+  <!-- canvas -->
+  <rect width="256" height="256" fill="#F4F4F2"/>
+  <!-- frame rail: the signature 56px-equivalent left gutter with frame ticks -->
+  <rect x="0" y="0" width="34" height="256" fill="#111113"/>
+  <g fill="#F4F4F2">
+    <rect x="14" y="24"  width="6" height="20"/>
+    <rect x="14" y="60"  width="6" height="12"/>
+    <rect x="14" y="96"  width="6" height="20"/>
+    <rect x="14" y="132" width="6" height="12"/>
+    <rect x="14" y="168" width="6" height="20"/>
+    <rect x="14" y="204" width="6" height="12"/>
+  </g>
+  <!-- the accent mark: one signal orange, never a background -->
+  <rect x="34" y="0" width="6" height="256" fill="#FF4A1C"/>
+  <!-- three frames of type: a wordmark, set and quiet -->
+  <rect x="70" y="72"  width="150" height="14" fill="#111113"/>
+  <rect x="70" y="98"  width="112" height="14" fill="#111113"/>
+  <rect x="70" y="140" width="150" height="2"  fill="#DDDEDA"/>
+  <rect x="70" y="160" width="74"  height="8"  fill="#6B6B70"/>
+  <!-- the frame corner: hairline, zero radius -->
+  <path d="M70 44 H220" stroke="#111113" stroke-width="3"/>
+</svg>

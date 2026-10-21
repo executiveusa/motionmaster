@@ -1,0 +1,24 @@
+{
+  "name": "@motion-master/montage-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Motion Master bridge to a user-run Montage instance (HTTP board API + MCP studio tools).",
+  "_license": "SPDX-License-Identifier: AGPL-3.0-only | Copyright (C) 2026 Motion Master. This directory is a separate AGPL-3.0 work that talks to a Montage instance over its public HTTP/MCP interfaces. It is NOT part of the proprietary Motion Master product and is excluded from its licence by design.",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "validate": "node --experimental-strip-types validate-timeline.ts",
+    "validate:example": "node --experimental-strip-types validate-timeline.ts examples/footage-title.timeline.json"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

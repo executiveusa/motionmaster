@@ -1,0 +1,25 @@
+<!--
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright (C) 2026 Motion Master
+This directory is a separate AGPL-3.0 work that talks to a Montage instance
+over its public HTTP/MCP interfaces. It is NOT part of the proprietary
+Motion Master product and is excluded from its licence by design.
+-->
+
+# Notes for the docs writer — Montage bridge
+
+- Montage board HTTP API (read from the Montage repo, read-only): `GET /api/health`, `GET /api/projects`, `GET /api/project/{project_id}/state`, `GET /api/project/{project_id}/events`, `GET /api/library/events`, `GET /thumb/{project_id}/{file_path}?w=320|640|960`, `GET /media/{project_id}/{file_path}`, plus the board pages `GET /`, `GET /p/{project_id}`.
+- The change feed is Server-Sent Events: frames are `data: {"type":"hello"|"change"|"heartbeat", ...}`; the server heartbeats every 15s and coalesces bursts, so a client should re-fetch state on every `change`.
+- Media and thumbnails are served only from inside a project directory; a path that escapes it gets HTTP 403, a missing file 404. `mediaUrl(projectId, "assets/video/source.mp4")` builds the URL.
+- Montage MCP tools (stdio, `python -m yappy_clipz.mcp_server`): `project_create`, `project_list`, `project_get`, `project_validate`, `timeline_get`, `timeline_replace` — all take `tenant_id` + `project_id`; `timeline_replace` also takes `expected_version` and the `timeline` object.
+- `timeline_replace` is optimistic: the incoming document's `version` must equal `expected_version`, and Montage stores it as `version + 1`; a stale version is a version conflict.
+- Two timeline shapes exist: the canonical **Timeline v1** stored by the studio tools (`version`, `canvas`, `tracks`, `markers?`, `extensions?`) and the **Explainer** document the composer renders (`cuts`, `overlays?`, `themeConfig?`).
+- The bridge's `buildExplainerTimeline(spec)` emits the Explainer shape: `cuts[]` with `id`, `source`, `in_seconds`, `out_seconds`, `source_in_seconds`, `animation`, optional `type`; `overlays[]` with `type`, `in_seconds`, `out_seconds`, `text`, `subtitle`, `accentColor`, `position`.
+- Cut scene types: `text_card`, `hero_title`, `stat_card`, `callout`, `comparison`, `bar_chart`, `line_chart`, `pie_chart`, `kpi_grid`, `progress_bar`, `anime_scene`, `terminal_scene`, `screenshot_scene`; a cut with no `type` is real footage (or a still).
+- Overlay types: `section_title`, `stat_reveal`, `hero_title`, `provider_chip`; positions are `top-left|bottom-left|center` (section title), `center|bottom-right|right` (stat reveal), `top-left|top-right|bottom-left|bottom-right` (provider chip).
+- A cut's `source` is resolved by the composer against its own `public/` directory unless it is an absolute path or an http(s) URL; video animation is `zoom-in|ken-burns`, image animation adds `zoom-out|pan-left|pan-right|ken-burns-slow-zoom|parallax|static`.
+- Rendering is Montage's job, not the bridge's: `npx remotion render src/index.tsx Explainer out/video.mp4` inside the Montage `remotion-composer/` project — the bridge only produces the input document.
+- Motion Master tokens are read at runtime from `plugins/motion-master/assets/motion-tokens.json` (v1.0.0): canvas `#F4F4F2`, surface `#FFFFFF`, ink `#111113`, muted ink `#6B6B70`, hairline `#DDDEDA`, accent `#FF4A1C`, accent dark `#D63A12`, player zone `#0E0E10`, IBM Plex Sans + IBM Plex Mono.
+- Licence boundary: `executiveusa/pauli-montage-video-agent` is AGPL-3.0 and stays untouched — read-only, never copied, vendored or forked; the bridge is a clean-room client over the public HTTP/MCP interfaces, so `bridge/` ships AGPL-3.0-only and is deliberately excluded from the proprietary Motion Master licence.
+- Configuration: `MONTAGE_URL` (required — your own Montage instance), `MONTAGE_TENANT_ID` (default `tenant_owner`), `MONTAGE_MCP_COMMAND` (default `python`), `MONTAGE_MCP_ARGS` (default `-m yappy_clipz.mcp_server`), `MONTAGE_TOKEN` (hosted auth only).
+- The bridge never renders and never writes into a Montage project directory; everything it could not exercise against a live instance (render invocation, MCP handshake, HTTP fallback, fonts, path resolution) is listed as UNVERIFIED in `bridge/README.md`.

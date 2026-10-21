@@ -1,0 +1,22 @@
+{
+  "_license": "SPDX-License-Identifier: AGPL-3.0-only\nCopyright (C) 2026 Motion Master\nThis directory is a separate AGPL-3.0 work that talks to a Montage instance over its public HTTP/MCP interfaces. It is NOT part of the proprietary Motion Master product and is excluded from its licence by design.",
+  "cuts": [
+    {
+      "id": "cut-open",
+      "source": "assets/video/source.mp4",
+      "in_seconds": 0,
+      "out_seconds": 4,
+      "source_in_seconds": 0,
+      "animation": "ken-burns",
+      "layer": "primary"
+    },
+    {
+      "id": "cut-card",
+      "type": "text_card",
+      "in_seconds": 4,
+      "out_seconds": 8,
+      "layer": "primary"
+    }
+  ],
+  "overlays": []
+}

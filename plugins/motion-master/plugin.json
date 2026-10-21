@@ -1,0 +1,49 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "motion-master",
+  "version": "1.0.0",
+  "description": "Motion design for AI agents: 20 MIT motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion composition generator.",
+  "author": {
+    "name": "Motion Master",
+    "url": "https://github.com/executiveusa"
+  },
+  "homepage": "https://github.com/executiveusa/motion-master-",
+  "repository": "https://github.com/executiveusa/motion-master-",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "keywords": [
+    "motion design",
+    "video",
+    "animation",
+    "remotion",
+    "gsap",
+    "storyboard",
+    "typography",
+    "ffmpeg"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Motion Master",
+        "shortDescription": "Storyboard, choreograph and render motion design in code",
+        "longDescription": "Motion Master teaches an agent to write motion design in code. It ships 20 MIT-licensed motion skills (LottieFiles motion-design, the official GreenSock GSAP skills, the official Remotion skills), a Motion Master router with the motion doctrine, the palette and type tokens and the anti-slop rules, plus an MCP server with a deterministic storyboard planner, the motion token set, the exact prompt behind every gallery clip, a runnable Remotion composition generator, and the Montage bridge for mixing real footage with motion graphics. It plans the shot list, writes the animation, renders the file, and hands the creator a video they own.",
+        "developerName": "Motion Master",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/executiveusa/motion-master-",
+        "defaultPrompt": [
+          "Plan a 15s launch film for my product: name reveal, hold 2s, calm exit. Give me the storyboard first.",
+          "Build the Remotion composition for this storyboard using the Motion Master tokens.",
+          "Show me the motion skills you have and which one I need for this brief.",
+          "Mix my footage with a title card using the Montage bridge."
+        ],
+        "brandColor": "#FF4A1C",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg",
+        "screenshots": []
+      }
+    }
+  }
+}

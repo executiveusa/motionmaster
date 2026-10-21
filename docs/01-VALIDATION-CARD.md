@@ -89,7 +89,7 @@ Better — think about (min 4):
     Figma / Canva" tier could reach buyers who will never install an agent. Same
     instinct, different delivery, different buyer.
   - What evidence would settle each: 5 user tests on the no-code edit path; 3 landing
-    A/B tests on "template-shaped" vs "custom" framing; a pricing survey at $99/$149/$249.
+    A/B tests on "template-shaped" vs "custom" framing; a pricing survey at $99/$99/$249.
 
 New — think about (min 4):
   - The buyer is not the operator. The agent makes aesthetic decisions the buyer
@@ -145,7 +145,7 @@ Sources    : motionvideo.xyz (/skills, /motionvideo-skill, /creatives), motionvi
             docs.claude.com third-party extensions, support.claude.com plugins.
 Sharpest tensions:
   1. Your one-time price sits against a category that bills monthly. Runway at $15/mo
-     means $149 = ten months of a competitor. The page must answer this in the first
+     means $99 is roughly six and a half months of Runway. The page must answer this in the first
      screen, and the answer has to be true: you own the project and the file forever,
      there are no credits, no model limits, and no watermark. If the answer is only
      "it will be cheaper over time," the one-time price loses to Runway every time.

@@ -1,0 +1,58 @@
+/* ============================================================
+   SECTIONS — hero composition and shared section furniture
+   ============================================================ */
+
+.hero {
+  padding-top: clamp(48px, 6vw, 96px);
+}
+
+.hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.hero .display {
+  max-width: 22ch;
+}
+
+.hero__lede {
+  margin-top: 28px;
+  max-width: 58ch;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.hero__assurances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 32px;
+  margin-top: 28px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.hero__assurances li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero .player {
+  margin-top: clamp(40px, 5vw, 72px);
+  margin-bottom: var(--section-pad);
+}
+
+/* Section headings share one stamp position across the page. */
+.section__head {
+  position: relative;
+}

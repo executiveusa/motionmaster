@@ -23,7 +23,7 @@ copy pass — but every headline here is already slop-checked against the blackl
 │0 │  Motion Master teaches an AI agent to storyboard, choreograph and render      │
 │0 │  motion design in code. You get the video, the project, and the source.        │
 │: │                                                                              │
-│0 │  [ Buy the license — $149 ]   [ See it make one ↓ ]                          │
+│0 │  [ Buy the license — $99 ]   [ See it make one ↓ ]                          │
 │  │                                                                              │
 │0 │  ✓ One payment, no subscription   ✓ Renders on your machine   ✓ You own it   │
 │1 │                                                                              │
@@ -175,7 +175,7 @@ copy pass — but every headline here is already slop-checked against the blackl
 ┌──┬──────────────────────────────────────────────────────────────────────────────┐
 │  │  STRAIGHT ANSWERS                                                            │
 │  │                                                                              │
-│  │  "AI video is $15 a month. Why $149 once?"                                  │
+│  │  "AI video is $15 a month. Why $99 once?"                                  │
 │  │  You pay once and the file is yours forever. No credits, no watermark,        │
 │  │  no model that can be retired underneath you. Your project renders on your   │
 │  │  own machine, so the twelfth video costs nothing.                            │
@@ -205,7 +205,7 @@ copy pass — but every headline here is already slop-checked against the blackl
 │  │                                                                              │
 │  │  ┌──────────────────────────┐   ┌──────────────────────────┐               │
 │  │  │ SOLIO                     │   │ STUDIO                    │               │
-│  │  │ $149 once                 │   │ $599 once                 │               │
+│  │  │ $99 once                 │   │ $399 once                 │               │
 │  │  │                           │   │                           │               │
 │  │  │ · 20 motion skills        │   │ · everything in Solo      │               │
 │  │  │ · plugin: 16 hosts        │   │ · Montage bridge (AGPL)   │               │
@@ -259,7 +259,7 @@ copy pass — but every headline here is already slop-checked against the blackl
 │                          │  │  (clamp mid-range)       │
 │ Motion Master teaches…   │  │                          │
 │                          │  │  ✓ one payment           │
-│ [ Buy the license — $149]│  │  ✓ you own it            │
+│ [ Buy the license — $99]│  │  ✓ you own it            │
 │ [ See it make one ]      │  │  (2 of 3; third scrolls) │
 ├──────────────────────────┤  │                          │
 │ ┌──────────────────────┐ │  │  LIVE CANVAS full-bleed  │

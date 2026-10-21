@@ -1,0 +1,160 @@
+/* ============================================================
+   RESPONSIVE — 320 / 375 / 390 / 430 / 768 / 1024 / 1440
+   Desktop rail (56px) collapses to a 2px top progress line.
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  body {
+    padding-left: var(--rail);
+  }
+
+  .mobile-bar {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --margin: 24px;
+  }
+
+  body {
+    font-size: 16px;
+  }
+
+  .topbar {
+    height: 56px;
+  }
+
+  .nav,
+  .topbar__cta {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .contact-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clip {
+    padding: 24px;
+  }
+
+  .step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 40px;
+  }
+
+  .step__no {
+    padding-top: 0;
+  }
+
+  .qa__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding-block: 28px;
+  }
+
+  .qa__question {
+    max-width: none;
+  }
+
+  .tiers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mix {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tree-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tree {
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .buy {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 24px;
+  }
+
+  .footer__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .footer__brand,
+  .footer__nav,
+  .footer__legal {
+    grid-column: 1 / -1;
+  }
+
+  .footer__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+  }
+
+  .player__stage {
+    aspect-ratio: auto;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero__actions .btn {
+    width: 100%;
+  }
+
+  .hero__assurances li {
+    font-size: 12px;
+  }
+
+  .tier {
+    padding: 28px;
+  }
+
+  .tree-detail {
+    padding: 24px;
+  }
+
+  .mix__step {
+    padding: 20px;
+  }
+
+  .player__caption {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+@media (max-width: 380px) {
+  :root {
+    --margin: 16px;
+  }
+
+  .clip {
+    padding: 18px;
+  }
+
+  .prompt {
+    padding: 16px;
+  }
+
+  .stage__beats {
+    font-size: 12px;
+  }
+
+  .stage__beats li {
+    grid-template-columns: 56px 48px 1fr;
+    gap: 8px;
+  }
+}

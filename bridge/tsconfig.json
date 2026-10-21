@@ -1,0 +1,22 @@
+{
+  // SPDX-License-Identifier: AGPL-3.0-only
+  // Copyright (C) 2026 Motion Master
+  // This directory is a separate AGPL-3.0 work that talks to a Montage instance
+  // over its public HTTP/MCP interfaces. It is NOT part of the proprietary
+  // Motion Master product and is excluded from its licence by design.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "validate-timeline.ts"]
+}

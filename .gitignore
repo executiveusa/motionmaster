@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.cache/
+*.log
+
+# Rendered proof media is produced by clips/render-all.sh — reproducible, not source.
+site/public/clips/*.mp4
+site/public/clips/*.jpg
+clips/public/
+
+# Local review artefacts
+.review/
+site/screenshots/
+
+# Plan and prompt working files
+.mavis/
+
+.DS_Store
+.env
+.env.local
+*.pem

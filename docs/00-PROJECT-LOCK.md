@@ -30,7 +30,7 @@ Grill Round 1, and researched market evidence.
 **Existing proof:** Only what we build. The competitor's proof is a free catalog of AI-made clips; ours is a working pipeline plus clips rendered by the shipped skills.
 
 **Primary objections:**
-1. "AI video is $15/month — why pay $149 once?"
+1. "AI video is $15/month — why pay $99 once?"
 2. "Do I need to know how to code?"
 3. "Will it look like AI slop?"
 4. "Do I own the output, and can I edit it later?"
@@ -64,7 +64,24 @@ Grill Round 1, and researched market evidence.
 
 ## Open decisions (deliberately deferred, flagged in Evidence Ledger)
 
-- Domain — **UNVERIFIED**, must be secured before launch. Copy says "Motion Master", never a URL until bought.
-- Payment processor — Dodo Payments (competitor uses it, verified live) vs Lemon Squeezy vs Stripe. Choose one; needs founder account.
-- Whether the founder owns the montage repo (affects Q4 option (c), dual-licensing). **Founder to confirm.**
-- Final price point after first 5 customer conversations. $149 is a hypothesis, not a finding.
+- Domain — **"motionmaster"** (founder confirmed 2026-10-21). The TLD is not chosen and the
+  domain is not yet purchased. Copy says "Motion Master"; a URL with a TLD may only appear
+  once DNS points at the site.
+- Payment processor — Dodo Payments (competitor uses it, verified live) vs Lemon Squeezy vs
+  Stripe. Choose one; needs a founder account.
+- ~~Whether the founder owns the montage repo~~ — **RESOLVED 2026-10-21: the founder owns
+  it.** The commercial dual-licence path is therefore live, which means the AGPL boundary
+  on `bridge/` is now a business choice rather than a legal constraint. Default posture
+  (b) still ships until the owner acts; see `docs/05-MONTAGE-INTEGRATION.md` §2 and
+  `bridge/LICENSING.md`.
+- Final price point after the first 5 customer conversations. **$99 is the founder's
+  decision** (2026-10-21) after the validation card recommended it. Still a hypothesis,
+  not a finding — test $99 against $149 and $249.
+
+## Confirmed by the founder (2026-10-21)
+
+| Question | Answer | Consequence |
+|---|---|---|
+| Do you own the Montage repo? | **Yes** | Dual-licence path available. Bridge stays AGPL by default; a commercial licence from the owner removes the copyleft from the shipped product. Motion Master still does not modify the Montage repo. |
+| Domain | **motionmaster** (TLD pending) | Copy may use the word. No URL with a TLD until purchased. |
+| Price | **$99 for Solo, one-time** | Early buyers buy a lifetime download. $99 is under one season of Runway and under one freelance motion designer. Studio set at $399. |
