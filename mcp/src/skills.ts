@@ -5,7 +5,21 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-export type SkillGroup = "motion-master" | "motion-design" | "gsap" | "remotion";
+/**
+ * What a skill teaches, which is how an agent decides what to load.
+ * Order matters: the router first, then the general principles, then the
+ * craft rules, then the style libraries, then the tooling.
+ */
+export type SkillGroup =
+  | "motion-master"
+  | "motion-design"
+  | "craft"
+  | "styles"
+  | "production"
+  | "web"
+  | "catalogue"
+  | "gsap"
+  | "remotion";
 
 export interface SkillSummary {
   name: string;
@@ -111,26 +125,49 @@ function unquote(value: string): string {
   return value;
 }
 
+const GROUP_BY_NAME: Record<string, SkillGroup> = {
+  "motion-master": "motion-master",
+  "motion-design": "motion-design",
+  // Craft law: what good is, what never ships, and the measured gates.
+  "motionmaxxing": "craft",
+  // Film style libraries — a style prompt you can reuse on your own brief.
+  "lemo-opuscar": "styles",
+  "huashu-art-motion": "styles",
+  // Producing a whole film, end to end.
+  "product-launch-motion": "production",
+  "guizang-product-video": "production",
+  "jacky-motion": "production",
+  // Browser and canvas animation.
+  "oil-motion": "web",
+  "animate": "web",
+  "claude-motion-motion-design": "web",
+  "claude-motion-review-loop": "web",
+  "claude-motion-sound-design": "web",
+  "claude-motion-web-sims": "web",
+  // A technique catalogue to look things up in.
+  "awesome-ai-motion": "catalogue",
+};
+
 function groupFor(name: string): SkillGroup {
-  if (name === "motion-master") return "motion-master";
   if (name.startsWith("gsap-")) return "gsap";
   if (name.startsWith("remotion-")) return "remotion";
-  if (name === "motion-design") return "motion-design";
-  return "motion-master";
+  return GROUP_BY_NAME[name] ?? "motion-master";
 }
 
 const UPSTREAM: Record<string, string> = {
   "motion-design": "LottieFiles motion-design skill (MIT)",
   gsap: "GreenSock GSAP official skills (MIT)",
   remotion: "Remotion official skills (MIT)",
+  craft: "motionmaxxing (Apache-2.0)",
+  styles: "lemo-opuscar (MIT + CC BY 4.0), huashu-art-motion (MIT)",
+  production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT)",
+  web: "oil-motion (MIT), animate (MIT), claude-motion (MIT)",
+  catalogue: "awesome-ai-motion (MIT)",
 };
 
 function upstreamFor(group: SkillGroup): string | null {
   if (group === "motion-master") return null;
-  if (group === "motion-design") return UPSTREAM["motion-design"];
-  if (group === "gsap") return UPSTREAM.gsap;
-  if (group === "remotion") return UPSTREAM.remotion;
-  return null;
+  return UPSTREAM[group] ?? null;
 }
 
 /** Extract the "Related skills" pointers so the agent knows what to load next. */

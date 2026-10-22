@@ -12,7 +12,7 @@ has not approved a push.
 | | | state |
 |---|---|---|
 | **Landing page** | `site/` | Vite + vanilla TS + GSAP. 4 real rendered clips with their exact prompts, mechanism, contents, objections, pricing, FAQ. 0 external requests. |
-| **Agent plugin** | `plugins/motion-master/` | 20 MIT motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
+| **Agent plugin** | `plugins/motion-master/` | 33 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
 | **MCP server** | `mcp/` | 7 tools: `list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `mix_footage`. 30/30 policy checks. |
 | **Montage bridge** | `bridge/` | Clean-room client for the AGPL Montage agent. 24/24 tests. AGPL-3.0-only, isolated, never modifies the Montage repo. |
 | **Proof clips** | `clips/` | 4 compositions rendered to 1280×720 h264 + posters. 3 real skills, 1 real bridge timeline. |

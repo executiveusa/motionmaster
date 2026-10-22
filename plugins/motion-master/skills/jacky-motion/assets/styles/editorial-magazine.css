@@ -1,0 +1,46 @@
+/* ════ STYLE · editorial-magazine · 中文编辑特稿跨页 ════
+FONT_LINKS：
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+════════════════════════════════════════════════════════ */
+:root{
+  --stage-w:1920px;--stage-h:1080px;
+  --shell:#e9e7e1;--surface:#faf9f6;--surface-2:#f1efe9;
+  --text:#141414;--text-2:rgba(20,20,20,.62);--text-mute:rgba(20,20,20,.36);
+  --rule-c:rgba(0,0,0,.12);
+  --accent:#b91c1c;--accent-soft:rgba(185,28,28,.06);--accent-2:#0f766e; /* 青绿=对照标记，同屏只用一个强色 */
+  --font-display:"Noto Serif SC","Source Han Serif SC",Georgia,serif;
+  --font-body:"Noto Sans SC",Inter,-apple-system,sans-serif;
+  --font-mono:Inter,ui-monospace,monospace;
+  --hero-weight:900;--num-font:var(--font-display);--num-weight:700;--num-style:normal;
+  --card-bg:#fff;--card-border:1px solid rgba(0,0,0,.1);--card-shadow:none;
+  --r-card:0;--rule-w:1px;--rule-style:solid;
+  --stage-pad-x:150px;--stage-pad-y:110px;
+  --dur-fast:.5s;--dur-base:.9s;--dur-slow:1.5s;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dim-opacity:.34;
+}
+.hero-title{line-height:1.16}
+.kicker{font-size:19px;letter-spacing:.14em;border-left:4px solid var(--accent);padding-left:14px}
+.quote{font-weight:600}
+.tag{border-radius:0;font-family:var(--font-body)}
+.tag.outline{background:transparent;border:1px solid var(--rule-c);color:var(--text-2)}
+.flow-link{background:var(--text);height:2px}
+.split-divider{background:var(--rule-c)}
+/* 签名：巨型编号压版锚点（可与标题轻微压版，不压字） */
+.ed-num{
+  font-family:var(--font-display);font-weight:900;font-size:200px;line-height:1;
+  color:var(--accent-soft);-webkit-text-stroke:1.5px rgba(185,28,28,.4);color:transparent;
+}
+/* 签名：拉引（pull quote） */
+.pq{display:grid;grid-template-columns:6px 1fr;gap:28px}
+.pq-bar{background:var(--accent)}
+.pq-text{font-family:var(--font-display);font-size:46px;line-height:1.42;font-weight:600;word-break:keep-all}
+.pq-source{font-size:20px;color:var(--text-mute);margin-top:20px}
+/* 签名：细规则线组（编辑秩序） */
+.ed-rule-thick{border-top:3px solid var(--text)}
+/* 图像裁切框：裁切要制造观点 */
+.crop{overflow:hidden;position:relative}
+.crop img{display:block;width:100%;height:100%;object-fit:cover}
+/* 注意：.crop 仅用于氛围/人物图裁切；信息截图仍用 .shot 完整展示 */
+.hl{background:linear-gradient(transparent 62%,rgba(185,28,28,.18) 62%);font-weight:700}
+.hl-teal{background:linear-gradient(transparent 62%,rgba(15,118,110,.16) 62%);font-weight:700}

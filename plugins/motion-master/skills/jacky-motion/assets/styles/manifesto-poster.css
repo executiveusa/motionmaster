@@ -1,0 +1,55 @@
+/* ════ STYLE · manifesto-poster · 宣言式大字报 ════
+FONT_LINKS：
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700;900&family=Archivo+Black&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+气质：现代主义宣言海报。米白 + 墨黑 + 一种信号红，900 字重巨字，
+4px 厚规则线，直角色块。观点即视觉，没有装饰的位置。
+注意：这不是瑞士网格风——禁 IKB 蓝/柠檬黄/点阵网格（那是归藏的语言）。
+════════════════════════════════════════════════════════ */
+:root{
+  --stage-w:1920px;--stage-h:1080px;
+  --shell:#dedad0;--surface:#f2efe6;--surface-2:#e9e5d8;
+  --text:#141414;--text-2:rgba(20,20,20,.66);--text-mute:rgba(20,20,20,.4);
+  --rule-c:#141414;
+  --accent:#e63312;--accent-soft:rgba(230,51,18,.1);--accent-2:#e63312; /* 全片单强调色 */
+  --font-display:"Noto Sans SC","Archivo Black",sans-serif;
+  --font-body:"Noto Sans SC",-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --hero-weight:900;--num-font:"Archivo Black","Noto Sans SC",sans-serif;
+  --num-weight:400;--num-style:normal;
+  --card-bg:#f2efe6;--card-border:3px solid #141414;--card-shadow:none;
+  --r-card:0;--rule-w:4px;--rule-style:solid;
+  --stage-pad-x:130px;--stage-pad-y:100px;
+  --dur-fast:.35s;--dur-base:.65s;--dur-slow:1s; /* 利落、果断 */
+  --ease-out:cubic-bezier(.16,1,.3,1);--dim-opacity:.26;
+}
+.hero-title{line-height:1.1;letter-spacing:0}
+.kicker{
+  font-weight:900;color:var(--surface);background:var(--text);
+  padding:8px 20px;display:inline-block;letter-spacing:.08em;
+}
+.hero-sub{font-weight:500}
+.tag{border-radius:0;border:2.5px solid var(--text);background:transparent;color:var(--text);font-weight:900}
+.tag.fill{background:var(--accent);border-color:var(--accent);color:#fff}
+.flow-node{border-radius:0}
+.flow-link{background:var(--text);height:4px}
+.split-divider{background:var(--text);width:4px}
+.rule-h{border-top:4px solid var(--text)}
+/* 签名：墨块反白（整块黑底承载一句话，全片 1-2 次） */
+.ink-block{
+  background:var(--text);color:var(--surface);padding:48px 56px;
+}
+.ink-block .hl{color:var(--accent)}
+/* 签名：红块断言 */
+.red-block{background:var(--accent);color:#fff;padding:40px 52px}
+/* 签名：巨型序号（Archivo Black，可压版但不压字） */
+.mf-num{
+  font-family:"Archivo Black",sans-serif;font-size:220px;line-height:1;
+  color:transparent;-webkit-text-stroke:3px #141414;
+}
+.mf-num.solid{color:var(--accent);-webkit-text-stroke:0}
+/* 签名：加粗下边线的断言行 */
+.mf-line{border-bottom:4px solid var(--text);padding-bottom:20px}
+/* 强调：红字或红底反白，不用下划线花活 */
+.hl{color:var(--accent);font-weight:900}
+.hl-inverse{background:var(--accent);color:#fff;padding:0 12px}

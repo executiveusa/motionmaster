@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jacky Motion"
+  short_description: "中文口播转高质量信息动画，可选纯 HTML 或 SRT 自动播放"
+  default_prompt: "使用 $jacky-motion2-0，把这段中文口播稿生成可录屏的信息动画 HTML；先根据我是否提供 SRT 选择运行模式。"

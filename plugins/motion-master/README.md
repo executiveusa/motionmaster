@@ -9,7 +9,7 @@ video, the project, and the source.
 
 | Tier | Price | What you get |
 | --- | --- | --- |
-| **Solo** | **$99 one-time** | The plugin, all 20 MIT motion skills, the MCP server (planner, tokens, clip library, composition generator). Every future update. |
+| **Solo** | **$99 one-time** | The plugin, 33 upstream motion skills, the MCP server (planner, tokens, clip library, composition generator). Every future update. |
 | **Studio** | **$399 one-time** | Everything in Solo, plus footage mixing against your own Montage instance (`mix_footage`), priority support and the studio onboarding walkthrough. |
 
 **One payment. No subscription. No per-render billing.** The licence key is delivered

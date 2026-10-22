@@ -1,0 +1,49 @@
+/* ════ STYLE · finance-studio-cards · 财经演播室信息屏 ════
+FONT_LINKS：
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+════════════════════════════════════════════════════════ */
+:root{
+  --stage-w:1920px;--stage-h:1080px;
+  --shell:#06090f;--surface:#0a0e17;--surface-2:#0e1626;
+  --text:#e8edf5;--text-2:rgba(232,237,245,.72);--text-mute:rgba(232,237,245,.42);
+  --rule-c:rgba(255,255,255,.09);
+  --accent:#00d4aa;--accent-soft:rgba(0,212,170,.1);--accent-2:#f59e0b; /* 琥珀=风险/警告专用 */
+  --font-display:Inter,"Noto Sans SC",-apple-system,sans-serif;
+  --font-body:Inter,"Noto Sans SC",-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",ui-monospace,monospace;
+  --hero-weight:700;--num-font:var(--font-mono);--num-weight:700;--num-style:normal;
+  --card-bg:rgba(14,22,38,.85);--card-border:1px solid rgba(255,255,255,.08);
+  --card-shadow:0 0 24px rgba(0,212,170,.1),0 0 1px rgba(0,212,170,.3);
+  --r-card:8px;--rule-w:1px;--rule-style:solid;
+  --stage-pad-x:110px;--stage-pad-y:96px;
+  --dur-fast:.4s;--dur-base:.75s;--dur-slow:1.2s;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dim-opacity:.28;
+}
+#stage{background:radial-gradient(ellipse 80% 70% at 50% 30%,#0d1422 0%,#0a0e17 70%)}
+.hero-num{color:var(--accent);text-shadow:0 0 32px rgba(0,212,170,.35)}
+.kicker{font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.12em;font-size:17px}
+.label{font-family:var(--font-mono);font-size:17px}
+.tag{border:1px solid rgba(0,212,170,.35);background:rgba(0,212,170,.08);border-radius:4px}
+.flow-link{background:var(--accent);box-shadow:0 0 12px rgba(0,212,170,.5)}
+.split-divider{background:rgba(255,255,255,.1)}
+/* 签名：演播室顶部栏（放在 scene 顶部，data-safe-box="topbar"） */
+.top-bar{
+  display:flex;align-items:center;gap:20px;
+  border-bottom:2px solid var(--accent);padding-bottom:16px;
+}
+.top-bar .t-label{font-family:var(--font-mono);font-size:18px;color:var(--text-mute);letter-spacing:.1em}
+.top-bar .t-accent{width:10px;height:10px;background:var(--accent)}
+/* 签名：主卡片背发光层级——主亮、次弱、非当前压暗 */
+.card.main{
+  border-color:rgba(0,212,170,.45);
+  box-shadow:0 0 40px rgba(0,212,170,.18),0 0 2px rgba(0,212,170,.5);
+}
+.card.quiet{box-shadow:none;border-color:rgba(255,255,255,.06)}
+/* 风险/警告：只允许琥珀 */
+.risk{color:var(--accent-2)}
+.tag.risk{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08);color:var(--accent-2)}
+/* 条形数据 */
+.bar-track{height:14px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);transform-origin:left center}
+.hl{color:var(--accent);font-weight:700}

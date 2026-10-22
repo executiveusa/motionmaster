@@ -1,0 +1,67 @@
+/* ════ STYLE · ink-framework · 暖纸墨蓝框架手稿 ════
+FONT_LINKS：
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+气质：一份被认真排印过的思想文稿（借鉴 kami / Anthropic 的纸感语言）：
+暖羊皮纸底、墨蓝勾线、衬线定调。框架图、思维导图、概念地图在纸上安静展开。
+适合方法论、哲学、认知框架、深度拆解。
+════════════════════════════════════════════════════════ */
+:root{
+  --stage-w:1920px;--stage-h:1080px;
+  --shell:#e5ddcc;--surface:#f7f2e7;--surface-2:#efe8d8;
+  --text:#2b2620;--text-2:rgba(43,38,32,.66);--text-mute:rgba(43,38,32,.4);
+  --rule-c:rgba(43,56,82,.24);
+  --accent:#2f4e79;--accent-soft:rgba(47,78,121,.08);--accent-2:#b3552e; /* 赭红=极少量的批注色 */
+  --font-display:"Noto Serif SC","Source Han Serif SC",Georgia,serif;
+  --font-body:"Noto Sans SC",-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --hero-weight:700;--num-font:var(--font-display);--num-weight:600;--num-style:normal;
+  --card-bg:#fbf8ef;--card-border:1.5px solid rgba(47,78,121,.5);
+  --card-shadow:0 1px 0 rgba(43,38,32,.08);
+  --r-card:6px;--rule-w:1px;--rule-style:solid;
+  --stage-pad-x:150px;--stage-pad-y:108px;
+  --dur-fast:.5s;--dur-base:.95s;--dur-slow:1.6s; /* 安静、书卷气的节奏 */
+  --ease-out:cubic-bezier(.16,1,.3,1);--dim-opacity:.34;
+}
+/* 纸面：暖色纤维 + 四边柔和暗角 */
+#stage::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(ellipse at center,transparent 58%,rgba(120,95,50,.07) 100%),
+    repeating-linear-gradient(90deg,transparent 0 5px,rgba(120,95,50,.011) 5px 6px);
+}
+.kicker{
+  color:var(--accent);font-family:var(--font-mono);font-size:17px;
+  letter-spacing:.16em;text-transform:uppercase;
+}
+.hero-title{line-height:1.2;color:#241f19}
+.quote{font-weight:600}
+.label{font-family:var(--font-mono);font-size:16px;letter-spacing:.05em}
+.tag{border-radius:3px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+/* 框架节点：墨蓝细线盒，是本风格的主角 */
+.flow-node{background:var(--card-bg)}
+.flow-link{background:var(--accent);height:1.5px}
+.split-divider{background:var(--rule-c)}
+/* 签名：章节编号（衬线 + 细线圈） */
+.ink-index{
+  font-family:var(--font-display);font-size:26px;color:var(--accent);
+  border:1.5px solid var(--accent);border-radius:50%;
+  width:64px;height:64px;display:grid;place-items:center;
+}
+/* 签名：概念节点（框架图/思维导图专用，比 .card 更轻） */
+.node-box{
+  border:1.5px solid rgba(47,78,121,.55);border-radius:6px;background:var(--card-bg);
+  padding:22px 30px;text-align:center;
+}
+.node-box.core{border-width:2.5px;background:var(--accent);color:#f7f2e7}
+.node-box.core .label{color:rgba(247,242,231,.7)}
+/* 签名：双细线标题框（kami 式排印仪式感，只给全片 1-2 个关键结论用） */
+.ink-frame{
+  border-top:2.5px solid var(--accent);border-bottom:1px solid var(--accent);
+  padding:36px 0;
+}
+/* 连接线走 SVG 时的规范 */
+.ink-svg{stroke:var(--accent);stroke-width:1.5;fill:none}
+/* 强调：墨蓝断句 / 赭红批注（每屏只选其一） */
+.hl{color:var(--accent);font-weight:700}
+.hl-note{color:var(--accent-2);font-family:var(--font-display);font-style:normal}

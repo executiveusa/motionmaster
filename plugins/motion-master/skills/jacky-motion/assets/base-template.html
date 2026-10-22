@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!-- {{TITLE}} --></title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<!-- {{FONT_LINKS}}：替换为所选风格 css 文件头部注释中给出的 <link> 字体行 -->
+<!--
+═══════════════════════════════════════════════════════════════════
+Jacky Motion 2.1 · 基座模板（生成契约速览，完整规范见 references/html-production.md）
+
+这份文件是【完整可运行的运行时】。生成成片时你只做 4 件事：
+  1. 替换 STYLE LAYER 块为所选风格的 assets/styles/{id}.css 内容
+  2. 在 BEATS 注释处写入各 <section class="beat">（版式骨架从
+     references/layout-skeletons.md 选用并登记 data-layout）
+  3. 在 BEAT CSS 注释处写各 beat 的独立 CSS（.b1 / .b2 前缀）
+  4. 在 TL 注册表里为需要签名动效的 beat 写 enter/step 时间线
+
+【绝对不要改动】RUNTIME CORE 的 CSS 和 RUNTIME 的 JS。
+运行时已提供：舞台缩放 / beat+step 状态机 / 键盘与点击推进 /
+F 全屏 / R 重播当前 beat / 默认入场动效 / GSAP 失败降级。
+
+step 契约（final-state-first，稳定性的根）：
+  - 元素写 data-step="N"（N≥2）→ 第 N 步才出现；第 1 步内容不写 data-step
+  - 元素的 CSS 静止态 = 最终可见态；时间线只允许 gsap.from / fromTo，
+    动画终点必须回到 CSS 静止态 → 动画挂了最终帧依然正确
+  - data-dim-at="N" → 第 N 步起该元素自动灰化退为上下文
+  - beat 上的 data-current-step 属性可供 CSS 做状态高亮
+  - 交互控件加 data-no-advance，点击不推进
+═══════════════════════════════════════════════════════════════════
+-->
+<style>
+/* ════════════════ RUNTIME CORE（不可修改） ════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  min-height:100vh;overflow:hidden;position:relative;
+  background:var(--shell);color:var(--text);font-family:var(--font-body);
+}
+#stage{
+  width:var(--stage-w,1920px);height:var(--stage-h,1080px);
+  position:fixed;left:50%;top:50%;overflow:hidden;background:var(--surface);
+  transform:translate(-50%,-50%);transform-origin:center center;
+}
+.beat{position:absolute;inset:0;display:none}
+.beat:first-of-type{display:block}
+.js .beat{display:none}
+.js .beat.active{display:block}
+.scene{position:absolute;inset:0;padding:var(--stage-pad-y) var(--stage-pad-x)}
+
+/* step 可见性契约：JS 就绪后，未到步的元素隐形但占位（布局稳定） */
+.js .beat [data-step]:not(.on){visibility:hidden}
+/* 灰化退场契约 */
+[data-dim-at]{transition:opacity .6s cubic-bezier(.16,1,.3,1),filter .6s cubic-bezier(.16,1,.3,1)}
+[data-dim-at].dim{opacity:var(--dim-opacity,.32);filter:saturate(.55)}
+
+/* HUD：录屏时几乎不可见 */
+.hud{
+  position:absolute;left:0;right:0;bottom:0;height:52px;z-index:90;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;pointer-events:none;
+}
+.hud-dots{display:flex;gap:8px;opacity:.14}
+.hud-dot{width:6px;height:6px;border-radius:50%;background:var(--text);opacity:.45}
+.hud-dot.cur{opacity:1}
+.hud-hint{font-size:12px;opacity:.12;font-family:var(--font-mono);letter-spacing:.04em}
+
+/* ════════════════ PRIMITIVES（风格层通过变量驱动，勿改结构） ════════════════ */
+.kicker{
+  font-size:20px;font-weight:600;color:var(--accent);
+  letter-spacing:.08em;font-family:var(--font-body);
+}
+.hero-title{
+  font-family:var(--font-display);font-weight:var(--hero-weight);
+  line-height:1.14;word-break:keep-all;line-break:strict;color:var(--text);
+}
+.hero-sub{
+  font-size:30px;line-height:1.5;color:var(--text-2);word-break:keep-all;
+}
+.hero-num{
+  font-family:var(--num-font);font-weight:var(--num-weight);font-style:var(--num-style);
+  font-variant-numeric:tabular-nums;line-height:1;color:var(--text);
+}
+.body-text{font-size:26px;line-height:1.55;color:var(--text-2);word-break:keep-all}
+.label{font-size:19px;line-height:1.4;color:var(--text-mute)}
+.mono{font-family:var(--font-mono)}
+.accent{color:var(--accent)}
+.card{
+  background:var(--card-bg);border:var(--card-border);border-radius:var(--r-card);
+  box-shadow:var(--card-shadow);padding:36px 40px;
+}
+.quote{
+  font-family:var(--font-display);font-size:40px;line-height:1.4;
+  color:var(--text);word-break:keep-all;
+}
+.rule-h{height:0;border-top:var(--rule-w) var(--rule-style) var(--rule-c)}
+.tag{
+  display:inline-block;font-size:18px;padding:6px 16px;border-radius:calc(var(--r-card)*.7);
+  background:var(--accent-soft);color:var(--accent);font-weight:600;
+}
+/* 横向流程：节点与连接线各占独立轨道，线永不穿卡 */
+.flow{display:grid;align-items:center;gap:0}
+.flow-node{
+  background:var(--card-bg);border:var(--card-border);border-radius:var(--r-card);
+  box-shadow:var(--card-shadow);padding:28px 30px;text-align:center;
+}
+.flow-link{height:3px;background:var(--accent);margin:0 18px;transform-origin:left center}
+.flow-link.v{height:auto;width:3px;margin:18px 0;transform-origin:center top}
+/* 左右对比 */
+.split{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch}
+.split-divider{background:var(--rule-c);width:var(--rule-w)}
+/* 矩阵网格 */
+.grid-2x3{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:28px}
+.grid-3x2{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr);gap:28px}
+/* 截图容器：信息截图禁止 cover 裁切 */
+.shot{display:grid;place-items:center;overflow:hidden}
+.shot img{max-width:100%;max-height:100%;display:block;border-radius:calc(var(--r-card)*.8)}
+/* ════════════════ END PRIMITIVES ════════════════ */
+
+/* ════════════════ STYLE LAYER（生成时整块替换为 assets/styles/{id}.css；
+   必须位于 PRIMITIVES 之后，风格层的组件覆盖才能生效） ════════════════ */
+:root{
+  --stage-w:1920px;--stage-h:1080px;
+  --shell:#111;--surface:#f5f2ea;--surface-2:#ece8dd;
+  --text:#1c1a16;--text-2:#4a463e;--text-mute:#8b857a;
+  --rule-c:#d8d2c4;--accent:#b3552e;--accent-soft:rgba(179,85,46,.12);--accent-2:var(--accent);
+  --font-display:"Noto Serif SC",serif;--font-body:"Noto Sans SC",-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --hero-weight:700;--num-font:var(--font-display);--num-weight:600;--num-style:normal;
+  --card-bg:#fdfcf8;--card-border:1px solid var(--rule-c);--card-shadow:0 2px 14px rgba(28,26,22,.06);
+  --r-card:6px;--rule-w:1px;--rule-style:solid;
+  --stage-pad-x:120px;--stage-pad-y:96px;
+  --dur-fast:.45s;--dur-base:.8s;--dur-slow:1.3s;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+}
+/* ════════════════ END STYLE LAYER ════════════════ */
+
+/* ════════════════ BEAT CSS（生成时写入，.b1/.b2… 前缀，每 beat 独立） ════════════════ */
+/* {{BEAT_CSS}} */
+/* ════════════════ END BEAT CSS ════════════════ */
+</style>
+</head>
+<body>
+<main id="stage" aria-live="polite">
+
+  <!-- ════════════ BEATS（生成时写入） ════════════
+  <section class="beat" id="b1"
+    data-layout="L01" data-steps="2"
+    data-core="一句话核心信息"
+    data-primitive="Claim">
+    <div class="scene b1">
+      <div class="kicker" data-safe-box="kicker">…</div>
+      <h1 class="hero-title" data-safe-box="title">…</h1>
+      <p class="hero-sub" data-step="2" data-safe-box="sub">…</p>
+    </div>
+  </section>
+  ════════════════════════════════════════════ -->
+
+  <div class="hud" data-no-advance>
+    <div class="hud-dots" id="hudDots"></div>
+    <div class="hud-hint">Click / Space / → 前进 · ← 后退 · R 重播 · F 全屏</div>
+  </div>
+</main>
+
+<script>
+/* ════════════════ RUNTIME（不可修改） ════════════════ */
+document.documentElement.classList.add('js');
+
+const stage = document.getElementById('stage');
+const beats = [...document.querySelectorAll('.beat')];
+const state = { beat: 0, step: 1 };
+const HAS_GSAP = typeof window.gsap !== 'undefined';
+
+/* ---- 舞台缩放 ---- */
+function scaleStage(){
+  const w = parseFloat(getComputedStyle(stage).width);
+  const h = parseFloat(getComputedStyle(stage).height);
+  const s = Math.min(innerWidth / w, innerHeight / h);
+  stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+}
+scaleStage();
+addEventListener('resize', scaleStage);
+
+/* ---- HUD ---- */
+const dotsEl = document.getElementById('hudDots');
+beats.forEach(() => {
+  const d = document.createElement('div');
+  d.className = 'hud-dot';
+  dotsEl.appendChild(d);
+});
+function syncHud(){
+  [...dotsEl.children].forEach((d, i) => d.classList.toggle('cur', i === state.beat));
+}
+
+/* ---- step 状态应用（幂等：任何时刻可整体重算） ---- */
+function stepsOf(b){ return Math.max(1, Number(b.dataset.steps || 1)); }
+
+function applyState(){
+  beats.forEach((b, i) => b.classList.toggle('active', i === state.beat));
+  const b = beats[state.beat];
+  b.dataset.currentStep = state.step;
+  b.querySelectorAll('[data-step]').forEach(el => {
+    el.classList.toggle('on', Number(el.dataset.step) <= state.step);
+  });
+  b.querySelectorAll('[data-dim-at]').forEach(el => {
+    el.classList.toggle('dim', Number(el.dataset.dimAt) <= state.step);
+  });
+  syncHud();
+}
+
+/* ---- 动画调度：TL 注册表优先，缺省走默认入场；全部 try/catch 隔离 ---- */
+function settle(b){
+  // 注意：不能用 gsap.set(..., {clearProps}) 清理——GSAP 3.x 会把目标元素
+  // 重新 append 到父节点末尾，打乱 <br>/<span> 与文本节点的顺序。
+  if (HAS_GSAP) gsap.killTweensOf(b.querySelectorAll('*'));
+  b.querySelectorAll('[style]').forEach(el => {
+    ['transform', 'opacity', 'filter', 'clip-path', 'visibility'].forEach(p => el.style.removeProperty(p));
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  });
+}
+
+function defaultEnter(root){
+  const items = [...root.querySelectorAll('.scene > *')]
+    .filter(el => !el.hasAttribute('data-step') || Number(el.dataset.step) <= 1);
+  if (!items.length) return;
+  gsap.from(items, {
+    opacity: 0, y: 16, duration: .9, ease: 'expo.out',
+    stagger: .07, clearProps: 'transform,opacity'
+  });
+}
+
+function defaultStep(root, n){
+  const items = [...root.querySelectorAll('[data-step="' + n + '"]')];
+  if (!items.length) return;
+  gsap.from(items, {
+    opacity: 0, y: 14, duration: .7, ease: 'expo.out',
+    stagger: .06, clearProps: 'transform,opacity'
+  });
+}
+
+function playEnter(){
+  const b = beats[state.beat];
+  if (!HAS_GSAP) return;
+  try {
+    (TL[b.id] && TL[b.id].enter) ? TL[b.id].enter(b) : defaultEnter(b);
+  } catch(e){ console.warn('enter tl failed:', b.id, e); }
+}
+
+function playStep(n){
+  const b = beats[state.beat];
+  if (!HAS_GSAP) return;
+  try {
+    (TL[b.id] && TL[b.id].step) ? TL[b.id].step(b, n) : defaultStep(b, n);
+  } catch(e){ console.warn('step tl failed:', b.id, e); }
+}
+
+/* ---- 导航 ---- */
+function enterBeat(i, fromEnd){
+  state.beat = Math.max(0, Math.min(i, beats.length - 1));
+  const b = beats[state.beat];
+  settle(b);
+  state.step = fromEnd ? stepsOf(b) : 1;
+  applyState();
+  if (!fromEnd) playEnter();
+}
+
+function advance(){
+  const b = beats[state.beat];
+  if (state.step < stepsOf(b)) {
+    state.step += 1;
+    applyState();
+    playStep(state.step);
+  } else if (state.beat < beats.length - 1) {
+    enterBeat(state.beat + 1, false);
+  }
+}
+
+function back(){
+  if (state.step > 1) {
+    state.step -= 1;
+    settle(beats[state.beat]);
+    applyState();
+  } else if (state.beat > 0) {
+    enterBeat(state.beat - 1, true);
+  }
+}
+
+function replayBeat(){ enterBeat(state.beat, false); }
+
+/* ---- 输入 ---- */
+stage.addEventListener('click', e => {
+  if (e.target.closest('[data-no-advance]')) return;
+  advance();
+});
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); return; }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); replayBeat(); return; }
+  if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); advance(); }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); back(); }
+});
+
+function toggleFullscreen(){
+  if (!document.fullscreenElement) {
+    (document.documentElement.requestFullscreen || function(){}).call(document.documentElement);
+  } else {
+    document.exitFullscreen && document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', scaleStage);
+
+/* ════════════════ TL 时间线注册表（生成时写入） ════════════════
+   规则：只用 gsap.from / gsap.fromTo，终点必须回到 CSS 静止态。
+   enter(b)   —— beat 入场编排（b = 该 beat 的 section 元素）
+   step(b, n) —— 第 n 步推进编排（只动 [data-step="n"] 及相关高亮）
+   示例：
+   TL.b3 = {
+     enter(b){
+       gsap.timeline()
+         .from(b.querySelector('.b3-title'), { opacity:0, y:24, duration:.9, ease:'expo.out' })
+         .from(b.querySelectorAll('.b3-node'), { opacity:0, y:18, stagger:.09,
+             duration:.7, ease:'expo.out', clearProps:'transform,opacity' }, '-=.3');
+     },
+     step(b, n){
+       gsap.from(b.querySelector('.b3-link-' + n), { scaleX:0, duration:.6,
+         ease:'expo.out', clearProps:'transform' });
+       gsap.from(b.querySelector('[data-step="' + n + '"]'), { opacity:0, x:20,
+         duration:.7, ease:'expo.out', clearProps:'transform,opacity' });
+     }
+   };
+════════════════════════════════════════════════════════════ */
+const TL = {};
+/* {{BEAT_TIMELINES}} */
+
+/* ---- 启动 ---- */
+if (beats.length) enterBeat(0, false);
+</script>
+</body>
+</html>

@@ -197,7 +197,13 @@ tools `list_clips` and `get_clip_prompt`.
 
 ## 6. Specialised skills in this package
 
-Load only what the brief needs.
+Load only what the brief needs. Thirty-three upstream skills ship in this package; the
+router decides which two or three to open.
+
+**Craft law — read before you animate anything.** `motionmaxxing` decides *what* is good
+and *how* it is measured: what good is, what never ships, the craft laws, and the gates
+that are computed on the render rather than asserted. If a brief is a film rather than a
+widget, this is the first skill to load, and it overrides your defaults.
 
 **Motion doctrine** — `motion-design` (director, patterns and reference folders).
 **GSAP** — `gsap-core`, `gsap-timeline`, `gsap-scrolltrigger`, `gsap-utils`,
@@ -206,6 +212,39 @@ Load only what the brief needs.
 `remotion-studio`, `remotion-captions`, `remotion-interactivity`, `remotion-maps`,
 `remotion-multimedia`, `remotion-docs`, `remotion-saas`, `remotion-upgrade`.
 
-All twenty are MIT-licensed and carry their upstream attribution. The Motion Master
-layer (this router, the token files, the prompt library and the MCP server) is the
-paid product: **$99 Solo, $399 Studio, one-time**.
+**Film styles** — `lemo-opuscar` holds sixty complete film styles, each with a
+`STYLE.md` that is a style prompt you can reuse on your own brief (glass product,
+ink wash, blueprint, art deco, dataviz, film-noir, kino-montage and fifty more), plus
+the technique for building a film where *picture is a function of time*: a page with
+`window.render(t)`, rendered frame by frame through headless Chrome. `huashu-art-motion`
+does the same for paintings moving in thirty-five art styles.
+
+**Producing a film** — `product-launch-motion` (one shape that never cuts, camera work
+that fills every frame), `guizang-product-video` (promo films built from the real
+product), `jacky-motion` (turning a voiceover script into motion).
+
+**Browser and canvas** — `oil-motion` (interactive web animation), `animate`
+(procedural canvas animation in any style), `claude-motion-motion-design`,
+`claude-motion-review-loop`, `claude-motion-sound-design`,
+`claude-motion-web-sims`.
+
+**Technique lookup** — `awesome-ai-motion` is a catalogue of 637 motion techniques with
+their parameters and prompts, for when you know the effect you want and need the recipe.
+
+The upstream skills keep their own licences and attribution — MIT, MIT + CC BY 4.0, and
+Apache-2.0 for `motionmaxxing` — and each carries its licence file and an `UPSTREAM.md`
+saying where it came from. The Motion Master layer (this router, the token files, the
+prompt library and the MCP server) is the paid product: **$99 Solo, $399 Studio,
+one-time**.
+
+### How to route
+
+| The brief says | Open |
+| --- | --- |
+| "a promo / launch film / ad" | `motionmaxxing`, then `product-launch-motion`, then a style from `lemo-opuscar/styles/` |
+| "this brand has a look" | `lemo-opuscar` and pick the style that fits the brand, not the brand's name |
+| "make it feel alive / interactive / on the web" | `oil-motion`, `animate`, `claude-motion-web-sims` |
+| "a title card / kinetic type" | `motion-design`, `gsap-timeline` |
+| "render it to a file" | `remotion-create`, `remotion-markup`, `remotion-render` |
+| "I want to see the technique" | `awesome-ai-motion` |
+| "it looks like AI slop" | `motionmaxxing` — then read `references/slop.md` before touching anything |

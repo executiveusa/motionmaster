@@ -1,7 +1,7 @@
 {
   "name": "motion-master",
   "version": "1.0.0",
-  "description": "Motion design for AI agents: 20 MIT motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion composition generator.",
+  "description": "Motion design for AI agents: 33 motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion composition generator.",
   "author": {
     "name": "Motion Master"
   },
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Motion Master",
     "shortDescription": "Storyboard, choreograph and render motion design in code",
-    "longDescription": "Motion Master teaches an agent to write motion design in code. It ships 20 MIT-licensed motion skills (LottieFiles motion-design, the official GreenSock GSAP skills, the official Remotion skills), a Motion Master router with the motion doctrine, the palette and type tokens and the anti-slop rules, plus an MCP server with a deterministic storyboard planner, the motion token set, the exact prompt behind every gallery clip, a runnable Remotion composition generator, and a handover to a Montage instance the user runs for mixing real footage with motion graphics. It plans the shot list, writes the animation, renders the file on your own machine, and hands the creator a video they own. Motion Master is a paid, one-time licence: $99 Solo, $399 Studio. It is not a subscription. Studio can render on our machines with an allowance in your licence; nothing is ever charged automatically.",
+    "longDescription": "Motion Master teaches an agent to write motion design in code. It ships 33 upstream motion skills — the LottieFiles motion-design doctrine, the official GreenSock GSAP and Remotion skills, the motionmaxxing craft law with its measured gates, sixty complete film styles from lemo-opuscar, and libraries for launch films, canvas animation and a 637-technique catalogue — each keeping its own licence and attribution, plus a Motion Master router with the motion doctrine, the palette and type tokens and the anti-slop rules, plus an MCP server with a deterministic storyboard planner, the motion token set, the exact prompt behind every gallery clip, a runnable Remotion composition generator, and a handover to a Montage instance the user runs for mixing real footage with motion graphics. It plans the shot list, writes the animation, renders the file on your own machine, and hands the creator a video they own. Motion Master is a paid, one-time licence: $99 Solo, $399 Studio. It is not a subscription. Studio can render on our machines with an allowance in your licence; nothing is ever charged automatically.",
     "developerName": "Motion Master",
     "category": "Productivity",
     "capabilities": [

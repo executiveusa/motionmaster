@@ -19,12 +19,12 @@ export const GENERATED_LICENCE = {
       "display": "$99",
       "priceLine": "$99 once",
       "includes": [
-        "20 MIT motion skills — motion-design, GSAP and Remotion",
+        "33 motion skills — motion doctrine, GSAP, Remotion, the craft law and 60 film styles",
         "One plugin package, 16 agent hosts",
         "The MCP server: plan_video, build_composition, mix_footage, clip library",
         "Motion tokens and four scene starters",
         "Renders on your own machine, no per-minute fee",
-        "Commercial use — upstream MIT notices stay in the package"
+        "Commercial use — upstream licences and attribution stay in the package"
       ]
     },
     {
