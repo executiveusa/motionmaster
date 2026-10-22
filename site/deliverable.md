@@ -7,19 +7,21 @@ example on it is a real file this repository rendered.
 
 ## What it is
 
-Vite + vanilla TypeScript + GSAP. Self-hosted IBM Plex Sans and IBM Plex Mono. No React,
-no Tailwind, no CDN, no analytics, no font service, no external request of any kind at
-runtime — `scripts/verify-content.mjs` fails the build if `dist/index.html` contains a
-single `src="http…"` or `href="http…"`.
+Vite + vanilla TypeScript. **No runtime dependency at all** — the hero is a rendered
+video, not a live animation, so there is no animation library on the page. Self-hosted
+IBM Plex Sans and IBM Plex Mono. No React, no Tailwind, no CDN, no analytics, no font
+service, no external request of any kind at runtime — `scripts/verify-content.mjs`
+fails the build if `dist/index.html` contains a single `src="http…"` or `href="http…"`.
 
 | | |
 |---|---|
-| Built JS | 16.7 kB app + 70.0 kB GSAP = **86.7 kB** uncompressed, **34.2 kB gzipped** |
+| Built JS | **15.3 kB** uncompressed. That is the whole page. |
 | CSS | 22.7 kB (5.1 kB gzipped) |
-| HTML | 43.7 kB (8.5 kB gzipped) |
+| HTML | 39.9 kB (7.9 kB gzipped) |
+| Hero film | 1920×1080, 104s, h264, muted autoplay loop |
 | External requests | **0** |
 | Fonts | self-hosted, `font-display: swap`, latin subset only |
-| Motion | GSAP for the hero canvas; `prefers-reduced-motion` disables every reveal |
+| Motion | The hero film, paused under `prefers-reduced-motion` and when off screen; scroll reveals disable themselves the same way |
 
 ## The source of truth for the offer
 
@@ -108,6 +110,25 @@ Two real layout bugs were found and fixed this way: the storyboard table and the
 sample were widening the page at 320px (grid and flex children default to
 `min-width: auto`, which stops their own scroll boxes from working), and the clip
 metadata line had `white-space: nowrap` around a long stack string.
+
+## The hero film
+
+The first thing on the page is a film, not a paragraph. It was built in `hero/` and it
+is a real render:
+
+- `hero/film.js` — the film itself. Picture is a function of time: `window.render(t)`
+  draws the frame at time `t`. It is built to the craft law that ships in the plugin
+  package (`skills/motionmaxxing`): a world with ground, light and depth; a camera
+  that always drifts; cuts on motion; arrivals that decelerate from oversize; no dead
+  frames; no page chrome; an end card under 1.4 seconds.
+- `hero/render.mjs` — the renderer. One headless Chrome, `window.render(t)` called
+  frame by frame, each frame piped straight into ffmpeg. No intermediate video, no
+  screen recording, no dropped frames.
+- `hero/stills.mjs` — renders stills at chosen moments so the design can be judged
+  before spending minutes on a full render.
+
+The footage inside the film is the real rendered clips and the code beside it is the
+real `KineticType.tsx`. Nothing in it is a mock-up.
 
 ## Design territory
 

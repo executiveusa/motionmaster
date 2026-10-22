@@ -6,12 +6,12 @@
       "duration": "0:14",
       "durationSeconds": 14,
       "stack": "remotion",
-      "resolution": "1280×720",
+      "resolution": "1280\u00d7720",
       "src": "/clips/launch-title.mp4",
       "poster": "/clips/launch-title.jpg",
       "alt": "A white title card. A wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds, then fades out.",
       "prompt": "A 14s launch title on a white canvas. The wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds for 2s, then fades out and lifts. Hairline rules top and bottom, one accent, no decoration.",
-      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+      "renderedWith": "Motion Master skills \u2014 motion-design + remotion-markup"
     },
     {
       "id": "kinetic-type",
@@ -19,12 +19,12 @@
       "duration": "0:09",
       "durationSeconds": 9,
       "stack": "remotion",
-      "resolution": "1280×720",
+      "resolution": "1280\u00d7720",
       "src": "/clips/kinetic-type.mp4",
       "poster": "/clips/kinetic-type.jpg",
       "alt": "Six words arrive one at a time on a black canvas, one word per line, alternating white and accent, then exit in reverse.",
       "prompt": "Kinetic type on a black canvas. Six words, one word per line, each arriving on its own with a masked reveal, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), no bounce. Every second word is the accent colour. The words exit in reverse order.",
-      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+      "renderedWith": "Motion Master skills \u2014 motion-design + remotion-markup"
     },
     {
       "id": "product-loop",
@@ -32,12 +32,12 @@
       "duration": "0:21",
       "durationSeconds": 21,
       "stack": "remotion + ffmpeg",
-      "resolution": "1280×720",
+      "resolution": "1280\u00d7720",
       "src": "/clips/product-loop.mp4",
       "poster": "/clips/product-loop.jpg",
       "alt": "Four pipeline stages fill in sequence, each with a progress bar, then a closing card that reads four stages, one file.",
       "prompt": "A 21s product loop. Four stages fill in sequence, staggered 90ms, each with its own progress bar and percentage. Then the finished frame: a stat panel and a rule. Then a closing card that reads \"Four stages. One file.\" One accent, 8px rhythm.",
-      "renderedWith": "Motion Master skills — motion-design + remotion-markup"
+      "renderedWith": "Motion Master skills \u2014 motion-design + remotion-markup"
     },
     {
       "id": "footage-title",
@@ -45,11 +45,11 @@
       "duration": "0:16",
       "durationSeconds": 16,
       "stack": "remotion + montage bridge",
-      "resolution": "1280×720",
+      "resolution": "1280\u00d7720",
       "src": "/clips/footage-title.mp4",
       "poster": "/clips/footage-title.jpg",
-      "alt": "A dark moving source clip with a title sequence burned in over the top and a cut-and-overlay readout along the bottom.",
-      "prompt": "Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14. Kicker above, headline, a source-in and out readout, and a cut + overlay line along the bottom.",
+      "alt": "A dark moving source clip with a title sequence burned in over the top.",
+      "prompt": "Cut the first 3s of the source clip, add a title card in our brand type at 0:03, hold over the footage, fade out at 0:14. A headline and a source-in readout, over a moving source.",
       "renderedWith": "Motion Master skills + the Montage bridge cut/overlay timeline",
       "bridgeDemo": true
     }

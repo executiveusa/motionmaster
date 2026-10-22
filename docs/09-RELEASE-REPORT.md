@@ -11,7 +11,8 @@ has not approved a push.
 
 | | | state |
 |---|---|---|
-| **Landing page** | `site/` | Vite + vanilla TS + GSAP. 4 real rendered clips with their exact prompts, mechanism, contents, objections, pricing, FAQ. 0 external requests. |
+| **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, mechanism, contents, objections, pricing, FAQ. 0 external requests, 15.3 kB of JavaScript. |
+| **Hero film** | `hero/` | 104 seconds, 1920×1080, rendered frame by frame. The brief, the shot list, the code beside the footage it produced, the renders, the file. |
 | **Agent plugin** | `plugins/motion-master/` | 33 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
 | **MCP server** | `mcp/` | 7 tools: `list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `mix_footage`. 30/30 policy checks. |
 | **Montage bridge** | `bridge/` | Clean-room client for the AGPL Montage agent. 24/24 tests. AGPL-3.0-only, isolated, never modifies the Montage repo. |
@@ -29,7 +30,7 @@ has not approved a push.
 | `site`: overflow at 320/375/390/430/768/1024/1280/1440 | **0 horizontal overflow at every width** |
 | `site`: WCAG AA contrast, every visible text node | **0 failures** |
 | `site`: touch targets | none under 44px |
-| `site`: built JS | 86.7 kB uncompressed, **34.2 kB gzipped** (budget 90 kB gz) |
+| `site`: built JS | **15.3 kB** uncompressed — the GSAP hero canvas is gone, so the page has no runtime dependency at all |
 | `site`: external runtime requests | **0** |
 | `bridge: npx tsc --noEmit` | clean |
 | `bridge: npm test` | **24/24** |
@@ -86,6 +87,39 @@ should not. Rewritten.
 
 **Unbacked promises were removed**: "Lifetime updates", "Priority support", "Team
 seats". Nothing in the evidence ledger backs them, and the ledger is the rule.
+
+---
+
+## 3b. The second pass — what the craft law said about our own work
+
+The ten best skills from motionvideo.xyz were imported into the plugin package. One of
+them, **motionmaxxing**, is a craft law measured on 53 professional recreations, with a
+"never ship" list and gates computed on the render rather than asserted.
+
+Its gate G5 bans, in a shot: corner labels, tracked-caps labels, counters, timecodes,
+resolution text, header and footer bars, kickers above a headline, progress bars and
+letter-typed headlines.
+
+**All four of our clips were carrying every one of those things.** "RENDERED BY MOTION
+MASTER" in the corner. "storyboard · choreograph · render" as a tracked-caps footer.
+`00:00:14 · 1280×720` as a timecode. "CUT + OVERLAY · MONTAGE BRIDGE" as a bottom bar.
+A shot that carries its own instrumentation is a screenshot of a tool, not a piece of
+film — which is exactly why the gallery read as AI slop.
+
+So the chrome came out of all four compositions, and they were re-rendered. The launch
+title is now a wordmark, an accent rule and two hairlines on a white canvas, and it
+looks like a title card instead of a web card.
+
+Then the hero became a film: `hero/film.js` is a page where **picture is a function of
+time** — `window.render(t)` draws the frame — rendered frame by frame through headless
+Chrome and piped into ffmpeg. That is the technique lemo-opuscar documents, and it is
+why the film can have a world with ground, light and depth, a camera that always
+drifts, cuts on motion, arrivals that decelerate from oversize, and an end card under
+1.4 seconds.
+
+The footage inside the film is the real rendered clips. The code panel beside it is the
+real `KineticType.tsx`. The words the film opens with are the words that describe the
+clip you can see: *Twenty-one seconds. Four stages. One accent.*
 
 ---
 
@@ -189,3 +223,5 @@ media path, and `MONTAGE_TOKEN` was not being sent as a bearer token on the SSE 
 - The source footage in `footage-title` is a generated stand-in and says so.
 - The `footage-title` clip shows the bridge's cut-and-overlay timeline shape, rendered
   by our own composition. It is not a screenshot of a running Montage instance.
+- The hero film shows our four clips and our own source code. It is not a clip from a
+  customer, and it does not claim to be.

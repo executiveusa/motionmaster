@@ -48,7 +48,7 @@ render FootageTitle  "$OUT_DIR/footage-title.mp4"
 #    value is the seek time in seconds.
 while read -r id at; do
   [ -z "$id" ] && continue
-  ffmpeg -v error -y -ss "$at" -i "$OUT_DIR/$id.mp4" -vframes 1 -q:v 3 "$OUT_DIR/$id.jpg"
+  ffmpeg -v error -nostdin -y -ss "$at" -i "$OUT_DIR/$id.mp4" -vframes 1 -q:v 3 "$OUT_DIR/$id.jpg"
 done <<'TIMES'
 launch-title 3.5
 kinetic-type 3.4
