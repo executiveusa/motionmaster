@@ -213,7 +213,33 @@ media path, and `MONTAGE_TOKEN` was not being sent as a bearer token on the SSE 
 
 ---
 
-## 8. What is not claimed
+## 8. The second deployment
+
+The site is live at **https://xh96yo5leugpy.space.minimax.io** — the first deployment was
+superseded by the hero film and the re-rendered clips.
+
+What changed in that pass:
+
+- The hero is now a **104-second film** instead of a live GSAP canvas. That removed the
+  page's only runtime dependency: built JavaScript went from **84.7 kB to 15.3 kB** and
+  GSAP is gone from `site/package.json` entirely.
+- The four clips were re-rendered **without their chrome**.
+- The gallery prompt for `footage-title` was corrected to match its new clip, and the
+  build's content check caught the drift before it could ship.
+- The pricing tier list is now **generated** from `licence.json` rather than
+  hand-written, because it had already drifted once.
+
+Verified on the deployed copy, not the local build: the film, its poster and all four
+clips serve 200 with the right content types; `$99` and `$399` are in the live HTML; no
+horizontal overflow at 320/375/390/430/768/1024/1440; and the anti-slop audit is still
+**0 high-severity findings, 1 medium** (25 headings).
+
+The hosting platform injects a "Created by MiniMax Agent" badge in the corner of the
+page. It is the platform's, not ours, and it disappears with a real domain.
+
+---
+
+## 9. What is not claimed
 
 - No user counts, no revenue figures, no testimonials, no logos, no "trusted by".
 - No render-speed number — it has not been measured on a stated rig.
