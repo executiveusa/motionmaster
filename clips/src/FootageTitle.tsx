@@ -8,7 +8,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { COLOR, MOTION, TYPE, timecode } from "./tokens";
+import { COLOR, MOTION, TYPE } from "./tokens";
 
 /**
  * CLIP 4 — "Footage + title" · 0:16 · remotion + montage bridge
@@ -83,17 +83,6 @@ export const FootageTitle: React.FC = () => {
                   display: "inline-block",
                 }}
               />
-              <span
-                style={{
-                  fontFamily: TYPE.mono,
-                  fontSize: 20,
-                  letterSpacing: 5,
-                  color: COLOR.canvas,
-                  textTransform: "uppercase",
-                }}
-              >
-                Product update
-              </span>
             </div>
 
             {/* overlay: hero_title */}
@@ -117,47 +106,10 @@ export const FootageTitle: React.FC = () => {
               >
                 Cut it. Title it.
               </div>
-              <div
-                style={{
-                  marginTop: 18,
-                  fontFamily: TYPE.mono,
-                  fontSize: 24,
-                  letterSpacing: 2,
-                  color: "rgba(244,244,242,0.66)",
-                }}
-              >
-                SOURCE IN 0:03 · TITLE OVER · OUT 0:14
-              </div>
             </div>
           </>
         )}
 
-        <div
-          style={{
-            position: "absolute",
-            right: 120,
-            bottom: 56,
-            fontFamily: TYPE.mono,
-            fontSize: 18,
-            color: "rgba(244,244,242,0.5)",
-            letterSpacing: 2,
-          }}
-        >
-          {timecode(frame, fps)}
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            left: 120,
-            bottom: 56,
-            fontFamily: TYPE.mono,
-            fontSize: 18,
-            color: "rgba(244,244,242,0.5)",
-            letterSpacing: 2,
-          }}
-        >
-          CUT + OVERLAY · MONTAGE BRIDGE
-        </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );

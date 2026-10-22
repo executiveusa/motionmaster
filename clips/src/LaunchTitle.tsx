@@ -6,7 +6,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { COLOR, MOTION, TYPE, timecode } from "./tokens";
+import { COLOR, MOTION, TYPE } from "./tokens";
 
 /**
  * CLIP 1 — "Launch title" · 0:14 · remotion
@@ -32,7 +32,6 @@ export const LaunchTitle: React.FC = () => {
     easing: Easing.bezier(...MOTION.easeExit),
   });
 
-  const eyebrow = enter(12, 18);
   const wordmark = enter(26, 22);
   const rule = interpolate(frame, [48, 70], [0, 1], {
     extrapolateLeft: "clamp",
@@ -75,32 +74,6 @@ export const LaunchTitle: React.FC = () => {
       />
 
       <div style={{ opacity: contentOpacity, transform: `translateY(${contentY}px)` }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            fontFamily: TYPE.mono,
-            fontSize: 20,
-            letterSpacing: 6,
-            textTransform: "uppercase",
-            color: COLOR.muted,
-            opacity: eyebrow,
-            transform: `translateY(${(1 - eyebrow) * 14}px)`,
-            marginBottom: 34,
-          }}
-        >
-          <span
-            style={{
-              width: 40,
-              height: 3,
-              backgroundColor: COLOR.accent,
-              display: "inline-block",
-            }}
-          />
-          Motion Master
-        </div>
-
         <div
           style={{
             fontSize: 186,
@@ -146,33 +119,10 @@ export const LaunchTitle: React.FC = () => {
         </div>
       </div>
 
-      {/* frame-accurate label — the lab-report motif, present in every clip */}
-      <div
-        style={{
-          position: "absolute",
-          right: 160,
-          bottom: 60,
-          fontFamily: TYPE.mono,
-          fontSize: 18,
-          color: COLOR.muted,
-          letterSpacing: 2,
-        }}
-      >
-        {timecode(frame, fps)} · 1280×720
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 160,
-          bottom: 60,
-          fontFamily: TYPE.mono,
-          fontSize: 18,
-          color: COLOR.muted,
-          letterSpacing: 2,
-        }}
-      >
-        RENDERED BY MOTION MASTER
-      </div>
+      {/* No frame chrome. The motionmaxxing G5 gate bans corner labels,
+          timecodes, resolution text and tracked-caps footers: a shot that
+          carries its own instrumentation is a screenshot of a tool, not a
+          piece of film. The page carries that information instead. */}
     </AbsoluteFill>
   );
 };

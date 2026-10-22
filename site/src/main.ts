@@ -1,6 +1,8 @@
 /* Motion Master — landing page entry point.
-   Stack: Vite + TypeScript (vanilla) + GSAP. No framework, no runtime dep
-   other than GSAP. Fonts are self-hosted through @fontsource. */
+   Stack: Vite + TypeScript (vanilla). No framework, no runtime dependency at
+   all: the hero is a rendered video, not a live animation, so the page ships
+   zero JavaScript beyond this entry point. Fonts are self-hosted through
+   @fontsource. */
 
 import '@fontsource/ibm-plex-sans/latin-400.css';
 import '@fontsource/ibm-plex-sans/latin-500.css';
@@ -15,8 +17,8 @@ import './styles/components.css';
 import './styles/sections.css';
 import './styles/responsive.css';
 
-import { initHero } from './modules/hero';
 import { initClips } from './modules/clips';
+import { initFilm } from './modules/film';
 import { initTree } from './modules/tree';
 import { initMenu, initMobileBar } from './modules/nav';
 import { initRail } from './modules/rail';
@@ -26,7 +28,7 @@ import { initPricing } from './modules/pricing';
 function boot(): void {
   initRail();
   initReveals();
-  initHero();
+  initFilm();
   initClips();
   initTree();
   initMenu();

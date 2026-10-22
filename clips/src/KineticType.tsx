@@ -6,7 +6,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { COLOR, MOTION, TYPE, timecode } from "./tokens";
+import { COLOR, MOTION, TYPE } from "./tokens";
 
 /**
  * CLIP 2 — "Kinetic type" · 0:09 · gsap-style timeline in Remotion
@@ -84,33 +84,6 @@ export const KineticType: React.FC = () => {
             </div>
           );
         })}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          right: 170,
-          bottom: 56,
-          fontFamily: TYPE.mono,
-          fontSize: 18,
-          color: "#55555C",
-          letterSpacing: 2,
-        }}
-      >
-        {timecode(frame, fps)}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 170,
-          bottom: 56,
-          fontFamily: TYPE.mono,
-          fontSize: 18,
-          color: "#55555C",
-          letterSpacing: 2,
-        }}
-      >
-        TIMELINE · CUBIC-BEZIER(0.05, 0.7, 0.1, 1)
       </div>
     </AbsoluteFill>
   );

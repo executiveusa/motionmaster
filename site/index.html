@@ -92,92 +92,39 @@
 
     <main id="main">
       <!-- ================= HERO ================= -->
-      <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="shell">
-          <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Agent skills for motion design</p>
+      <!-- The film is the hero. It is a real render — the brief, the shot list,
+           the composition and the file — made with the skills this product
+           ships. Everything else on this page is a caption for it. -->
+      <section class="hero hero--film" id="top" aria-labelledby="hero-title">
+        <figure class="film">
+          <video
+            class="film__video"
+            data-film
+            src="/film/motion-master-hero.mp4"
+            poster="/film/hero-poster.jpg"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            aria-label="A motion film: a brief becomes a shot list, the shot list becomes code, the code renders a file."
+          ></video>
+          <figcaption class="visually-hidden">
+            A brief is written, four shots assemble in depth, the shot list
+            becomes a composition beside the footage it produces, the three
+            renders play, and the file lands.
+          </figcaption>
+        </figure>
+
+        <div class="shell hero__body">
           <h1 class="display" id="hero-title">Describe the video.<br />Get the file.</h1>
           <p class="hero__lede">
-            Motion Master teaches an AI agent to storyboard, choreograph and render motion design in
-            code — Remotion, GSAP and ffmpeg. You get the video, the project and the source.
+            One prompt. A skill pack that writes motion in code. A file you own.
           </p>
           <div class="hero__actions">
             <a class="btn btn--primary" href="#pricing">Buy the licence — $99</a>
-            <a class="btn btn--ghost" href="#proof">
-              See it make one
-              <svg class="btn__icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
-                <path d="M7 1v11M2.5 7.5 7 12l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
-              </svg>
-            </a>
+            <a class="btn btn--ghost" href="#proof">Read the prompts</a>
           </div>
-          <ul class="hero__assurances">
-            <li><span class="mark" aria-hidden="true"></span>One payment, no subscription</li>
-            <li><span class="mark" aria-hidden="true"></span>Renders on your own machine</li>
-            <li><span class="mark" aria-hidden="true"></span>You own the output</li>
-          </ul>
-
-          <!-- Live in-browser motion composition. GSAP drives it; the markup below
-               is the final frame, so a static render (reduced motion, no JS) is
-               still a complete frame. -->
-          <figure class="player" data-hero-player>
-            <div class="player__bar">
-              <span class="player__tag">Live canvas</span>
-              <span class="player__tag player__tag--right">Remotion + GSAP · in browser</span>
-            </div>
-            <div class="player__stage" data-hero-stage>
-              <div class="stage__brief">
-                <span class="stage__label">Brief</span>
-                <span class="stage__prompt">14s launch film, name reveal, hold 2s, calm exit</span>
-              </div>
-              <div class="stage__scene">
-                <div class="stage__beat stage__beat--line" data-beat="line">
-                  <p class="stage__headline">
-                    <span class="stage__word"><i>Describe</i></span>
-                    <span class="stage__word"><i>the</i></span>
-                    <span class="stage__word"><i>video.</i></span>
-                  </p>
-                </div>
-                <div class="stage__beat stage__beat--list" data-beat="list">
-                  <p class="stage__headline">
-                    <span class="stage__word"><i>It</i></span>
-                    <span class="stage__word"><i>writes</i></span>
-                    <span class="stage__word"><i>the</i></span>
-                    <span class="stage__word"><i>shot</i></span>
-                    <span class="stage__word"><i>list.</i></span>
-                  </p>
-                  <ol class="stage__beats">
-                    <li><span class="stage__beatno">beat 1</span><span class="stage__time">0:00</span><span class="stage__what">title in</span></li>
-                    <li><span class="stage__beatno">beat 2</span><span class="stage__time">0:05</span><span class="stage__what">subtitle</span></li>
-                    <li><span class="stage__beatno">beat 3</span><span class="stage__time">0:09</span><span class="stage__what">cards stagger</span></li>
-                    <li><span class="stage__beatno">beat 4</span><span class="stage__time">0:13</span><span class="stage__what">hold and exit</span></li>
-                  </ol>
-                </div>
-                <div class="stage__beat stage__beat--out" data-beat="out">
-                  <p class="stage__headline">
-                    <span class="stage__word"><i>It</i></span>
-                    <span class="stage__word"><i>renders</i></span>
-                    <span class="stage__word"><i>the</i></span>
-                    <span class="stage__word"><i>file.</i></span>
-                  </p>
-                  <div class="stage__bars" aria-hidden="true">
-                    <span class="stage__bar"><i></i></span>
-                    <span class="stage__bar"><i></i></span>
-                    <span class="stage__bar"><i></i></span>
-                    <span class="stage__bar"><i></i></span>
-                    <span class="stage__bar"><i></i></span>
-                  </div>
-                  <p class="stage__file">launch-title.mp4 · 1280×720 · h264</p>
-                </div>
-              </div>
-              <p class="stage__foot">The agent writes the code. You get the file.</p>
-            </div>
-            <figcaption class="player__caption">
-              <span class="player__time" role="timer" aria-live="off" data-hero-time>00:00:11:24</span>
-              <span class="player__sep" aria-hidden="true">·</span>
-              <span>1280×720</span>
-              <span class="player__sep" aria-hidden="true">·</span>
-              <span>remotion + gsap</span>
-            </figcaption>
-          </figure>
         </div>
       </section>
 

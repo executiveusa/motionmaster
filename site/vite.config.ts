@@ -9,13 +9,6 @@ export default defineConfig({
     sourcemap: false,
     cssCodeSplit: false,
     reportCompressedSize: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          gsap: ['gsap'],
-        },
-      },
-    },
   },
   server: {
     host: '127.0.0.1',

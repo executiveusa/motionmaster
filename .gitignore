@@ -13,6 +13,13 @@ build/
 .review/
 site/screenshots/
 
+# The hero film's intermediate frame sequences: 118 MB of PNGs that are
+# regenerated from site/public/clips by hero/render.mjs. The finished MP4 is
+# committed; the frames it was cut from are not.
+hero/frames/
+hero/stills/
+hero/.chrome-profile/
+
 # Plan and prompt working files
 .mavis/
 

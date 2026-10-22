@@ -1,7 +1,7 @@
 import { qs, qsa } from '../lib/dom';
 
 const STAMPS: Record<string, string> = {
-  top: '00 HERO',
+  top: '00 FILM',
   proof: '01 PROOF',
   mechanism: '02 MECHANISM',
   box: '03 BOX',

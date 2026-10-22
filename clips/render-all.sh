@@ -9,7 +9,19 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-CHROME="${CHROME_BIN:-/opt/chrome-headless-shell-linux64/chrome-headless-shell}"
+# Prefer whatever Chrome this machine has. The /opt and /usr/local copies are
+# sandbox-local and disappear when the sandbox is recycled; the workspace copy
+# is the durable one.
+CHROME="${CHROME_BIN:-}"
+if [ -z "$CHROME" ]; then
+  for c in /opt/chrome-headless-shell-linux64/chrome-headless-shell \
+           /usr/local/bin/chrome-headless-shell \
+           "${HOME:-/workspace/.home}/chrome/chrome-headless-shell-linux64/chrome-headless-shell" \
+           /workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell; do
+    [ -n "$c" ] && [ -x "$c" ] && CHROME="$c" && break
+  done
+fi
+: "${CHROME:?no Chrome Headless Shell found — set CHROME_BIN}"
 OUT_DIR="${OUT_DIR:-../site/public/clips}"
 BROWSER_FLAGS=(--browser-executable="$CHROME" --ignore-certificate-errors --gl=swangle --concurrency=1)
 

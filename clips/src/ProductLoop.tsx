@@ -6,7 +6,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { COLOR, MOTION, TYPE, timecode } from "./tokens";
+import { COLOR, MOTION, TYPE } from "./tokens";
 
 /**
  * CLIP 3 — "Product loop" · 0:21 · remotion + ffmpeg
@@ -91,19 +91,6 @@ export const ProductLoop: React.FC = () => {
         transform: `translateY(${exit * -18}px)`,
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          left: 170,
-          top: 120,
-          fontFamily: TYPE.mono,
-          fontSize: 18,
-          letterSpacing: 2,
-          color: COLOR.muted,
-        }}
-      >
-        {timecode(frame, fps)} · 1280×720 · 30FPS
-      </div>
 
       {beat === 1 && (
         <div style={{ maxWidth: 1180 }}>
@@ -220,10 +207,6 @@ export const ProductLoop: React.FC = () => {
                 lineHeight: 2.1,
               }}
             >
-              MP4 · H.264 · 1280×720
-              <br />
-              30 FPS · 00:00:21:00
-              <br />
               SOURCE PROJECT INCLUDED
             </div>
           </div>
