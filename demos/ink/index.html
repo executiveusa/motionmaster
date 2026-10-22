@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Motion Master — ink</title>
+    <style>
+      @font-face {
+        font-family: 'Plex Mono';
+        src: url('../lib/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Plex Mono';
+        src: url('../lib/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+        font-weight: 500;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Caveat';
+        src: url('../lib/fonts/caveat.woff2') format('woff2');
+        font-weight: 400 700;
+        font-display: block;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #0b0f14;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 1920px;
+        height: 1080px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="film" width="1920" height="1080"></canvas>
+    <script src="../lib/strokes.js"></script>
+    <script src="./film.js"></script>
+  </body>
+</html>

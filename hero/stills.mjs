@@ -10,12 +10,17 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const times = process.argv.slice(2).map(Number).filter((n) => !Number.isNaN(n));
+const raw = process.argv.slice(2);
+const dirArg = raw.indexOf('--dir');
+const DIR = dirArg !== -1 ? raw[dirArg + 1] : here;
+const times = raw.filter((n) => !Number.isNaN(Number(n)) && n !== '--dir' && n !== DIR).map(Number);
 if (!times.length) times.push(0, 6, 12, 22, 30, 44, 50, 58, 64, 72, 80, 88, 94, 99, 102);
-const OUTDIR = join(here, 'stills');
+const rootArg = raw.indexOf('--root');
+const ROOT = rootArg !== -1 && raw[rootArg + 1] ? raw[rootArg + 1] : dirname(DIR);
+const OUTDIR = join(DIR, 'stills');
 mkdirSync(OUTDIR, { recursive: true });
 
 const W = 1920;
@@ -25,8 +30,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 const server = createServer((req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
   const rel = normalize(url === '/' ? '/index.html' : url).replace(/^(\.\.[/\\])+/, '');
-  const file = join(here, rel);
-  if (!file.startsWith(here) || !existsSync(file) || statSync(file).isDirectory()) {
+  const file = join(ROOT, rel);
+  if (!file.startsWith(ROOT) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404);
     res.end('nope');
     return;
@@ -50,7 +55,7 @@ if (!CHROME) {
   process.exit(1);
 }
 
-const profile = join(here, '.chrome-profile');
+const profile = join(DIR, '.chrome-profile');
 mkdirSync(profile, { recursive: true });
 const PORT_CDP = 9600 + Math.floor(Math.random() * 300);
 const chrome = spawn(
@@ -93,12 +98,13 @@ ws.onmessage = (e) => {
 
 try {
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
-  await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/index.html` });
+  await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/${basename(DIR)}/index.html` });
   for (let i = 0; i < 120; i++) {
     const r = await send('Runtime.evaluate', { expression: 'Boolean(window.READY) && document.fonts.status === "loaded"', returnByValue: true });
     if (r.result && r.result.value) break;
     await sleep(500);
   }
+  await send('Runtime.evaluate', { expression: 'window.PRELOAD || true', awaitPromise: true, returnByValue: true });
   for (const t of times) {
     const r = await send('Runtime.evaluate', { expression: `window.render(${t})`, awaitPromise: true, returnByValue: true });
     if (r.exceptionDetails) {

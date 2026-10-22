@@ -6,7 +6,7 @@
       "poster": true,
       "videoSrc": "/clips/launch-title.mp4",
       "posterSrc": "/clips/launch-title.jpg",
-      "posterBytes": 23835,
+      "posterBytes": 6601,
       "videoBytes": 77193
     },
     "kinetic-type": {
@@ -14,7 +14,7 @@
       "poster": true,
       "videoSrc": "/clips/kinetic-type.mp4",
       "posterSrc": "/clips/kinetic-type.jpg",
-      "posterBytes": 29291,
+      "posterBytes": 8296,
       "videoBytes": 104964
     },
     "product-loop": {
@@ -22,7 +22,7 @@
       "poster": true,
       "videoSrc": "/clips/product-loop.mp4",
       "posterSrc": "/clips/product-loop.jpg",
-      "posterBytes": 25008,
+      "posterBytes": 6266,
       "videoBytes": 166283
     },
     "footage-title": {
@@ -30,7 +30,7 @@
       "poster": true,
       "videoSrc": "/clips/footage-title.mp4",
       "posterSrc": "/clips/footage-title.jpg",
-      "posterBytes": 19691,
+      "posterBytes": 4490,
       "videoBytes": 584160
     }
   }

@@ -180,6 +180,24 @@ if (!html.includes('content="motionmaster"')) fail('site-domain meta tag does no
 if (/motionmaster\.[a-z]{2,6}/i.test(html)) fail('a domain with a TLD appears on the page');
 if (/rel="canonical"/.test(html)) fail('canonical link present — the domain is not secured yet');
 
+/* ---- 9b. every film the page promises is actually there -------------------- */
+
+const FILMS = [
+  ['film/motion-master-hero.mp4', 'the hero film'],
+  ['demos/blueprint.mp4', 'the blueprint demo'],
+  ['demos/ink.mp4', 'the ink demo'],
+  ['demos/whiteboard.mp4', 'the whiteboard demo'],
+];
+for (const [rel, what] of FILMS) {
+  const path = join(distDir, rel);
+  if (!existsSync(path)) fail(`${what} is missing from the build: ${rel}`);
+  else {
+    const bytes = statSync(path).size;
+    if (bytes < 100 * 1024) fail(`${what} looks truncated (${bytes} bytes)`);
+  }
+}
+notes.push(`checked ${FILMS.length} films are present in the build`);
+
 /* ---- report ----------------------------------------------------------------- */
 
 for (const note of notes) console.log(`[check] ${note}`);

@@ -14,7 +14,7 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync, mkdirSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -24,10 +24,15 @@ const argOf = (name, fallback) => {
 };
 const OUT = argOf('--out', join(here, 'motion-master-hero.mp4'));
 const FPS = Number(argOf('--fps', 30));
-
-const W = 1920;
-const H = 1080;
-const DUR = 104;
+const DUR = Number(argOf('--duration', 104));
+// The film directory: --dir points at a folder with index.html, film.js and
+// whatever it needs. Defaults to this folder (the hero film).
+const DIR = argOf('--dir', here);
+// The server root is the film's parent, so a film can reach shared assets
+// in a sibling folder (../lib/strokes.js) as well as its own (frames/).
+const ROOT = argOf('--root', dirname(DIR));
+const W = Number(argOf('--width', 1920));
+const H = Number(argOf('--height', 1080));
 
 const MIME = {
   '.html': 'text/html',
@@ -43,8 +48,8 @@ const MIME = {
 const server = createServer((req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
   const rel = normalize(url === '/' ? '/index.html' : url).replace(/^(\.\.[/\\])+/, '');
-  const file = join(here, rel);
-  if (!file.startsWith(here) || !existsSync(file) || statSync(file).isDirectory()) {
+  const file = join(ROOT, rel);
+  if (!file.startsWith(ROOT) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404);
     res.end('not found');
     return;
@@ -71,7 +76,7 @@ if (!CHROME) {
   process.exit(1);
 }
 
-const profile = join(here, '.chrome-profile');
+const profile = join(DIR, '.chrome-profile');
 mkdirSync(profile, { recursive: true });
 const PORT_CDP = 9222 + Math.floor(Math.random() * 600);
 
@@ -176,7 +181,7 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/index.html` });
+  await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/${basename(DIR)}/index.html` });
 
   // wait for the page and the fonts
   for (let i = 0; i < 120; i++) {
@@ -187,7 +192,12 @@ try {
     if (r.result && r.result.value) break;
     await sleep(500);
   }
-  // prime the frame cache so the first frames are not slow
+  // wait for the page's preload, then prime the frame cache
+  await send('Runtime.evaluate', {
+    expression: 'window.PRELOAD || true',
+    awaitPromise: true,
+    returnByValue: true,
+  });
   await send('Runtime.evaluate', {
     expression: 'window.render(0)',
     awaitPromise: true,
