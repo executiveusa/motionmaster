@@ -82,6 +82,7 @@ export interface LibraryBlock {
     default: unknown;
     min: number | null;
     max: number | null;
+    options: { value: string; label: string }[];
   }[];
   files: { path: string; target: string; type: string }[];
   license: string;

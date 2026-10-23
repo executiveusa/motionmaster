@@ -102,6 +102,7 @@ async function main() {
       default: v.default ?? null,
       min: v.min ?? null,
       max: v.max ?? null,
+      options: v.options ?? [],
     })),
     files: (item.files ?? []).map((f) => ({ path: f.path, target: f.target, type: f.type })),
     license: item.license ?? 'Apache-2.0 (heygen-com/hyperframes)',

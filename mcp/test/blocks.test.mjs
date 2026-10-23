@@ -103,11 +103,15 @@ test("a brief that asks for pictures can reach a gallery block", { skip }, () =>
 });
 
 test("the headline drops the production notes", { skip }, () => {
-  assert.equal(headlineFrom("a coffee brand launch for ACME in 12 seconds"), "coffee brand launch for ACME");
-  assert.equal(headlineFrom("make a 30 second video about coffee"), "about coffee");
-  assert.equal(headlineFrom("a 12 second film for ACME"), "for ACME");
+  // The subject, not the instruction. "coffee brand launch for ACME" would
+  // overflow a card; "ACME" is what the card should say.
+  assert.equal(headlineFrom("a coffee brand launch for ACME in 12 seconds"), "ACME");
+  assert.equal(headlineFrom("make a 30 second video about coffee"), "coffee");
+  assert.equal(headlineFrom("a 12 second film for ACME"), "ACME");
+  assert.equal(headlineFrom("a launch film for Northwind"), "Northwind");
+  assert.equal(headlineFrom("a calm title card and a product reveal for ACME coffee"), "ACME coffee");
   assert.equal(headlineFrom("  "), "Your headline here");
-  assert.ok(headlineFrom("x".repeat(200)).length <= 90);
+  assert.ok(headlineFrom("x".repeat(200)).length <= 40);
 });
 
 test("the brand is read out of the brief", { skip }, () => {

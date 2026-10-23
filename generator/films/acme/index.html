@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" width="1920" height="1080" />
+    <title>ACME coffee</title>
+    <script src="./gsap-3.14.2.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      /* The host's ground is the player's, not a brand colour: a block that
+         does not declare its own assumes a dark ground. */
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0E0E10; }
+      #root { position: relative; width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1920" data-height="1080">
+      <div
+        id="titlecard-calm"
+        data-composition-id="titlecard-calm"
+        data-composition-src="compositions/components/titlecard-calm.html"
+        data-start="0"
+        data-duration="5"
+        data-track-index="1"
+        data-width="1920"
+        data-height="1080"
+        data-variable-values='{"headline":"ACME coffee","kicker":"ACME"}'
+        style="position: absolute; inset: 0; background: #0E0E10;"
+      ></div>
+      <div
+        id="titlecard-lockup"
+        data-composition-id="titlecard-lockup"
+        data-composition-src="compositions/components/titlecard-lockup.html"
+        data-start="5"
+        data-duration="5"
+        data-track-index="2"
+        data-width="1920"
+        data-height="1080"
+        data-variable-values='{"wordmark":"ACME","label":"ACME","kicker":"ACME","rule":"show","accent":"green","exit":"none"}'
+        style="position: absolute; inset: 0; background: #0E0E10;"
+      ></div>
+      <div
+        id="pull-back-reveal"
+        data-composition-id="pull-back-reveal"
+        data-composition-src="compositions/components/pull-back-reveal.html"
+        data-start="10"
+        data-duration="5"
+        data-track-index="3"
+        data-width="1920"
+        data-height="1080"
+        data-variable-values='{"detail_text":"ACME","headline":"ACME coffee","accent":"green"}'
+        style="position: absolute; inset: 0; background: #0E0E10;"
+      ></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+      window.__timelines["main"].seek(0);
+    </script>
+  </body>
+</html>

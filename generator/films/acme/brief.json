@@ -1,0 +1,63 @@
+{
+  "brief": "a calm title card and a product reveal for ACME coffee in 12 seconds",
+  "headline": "ACME coffee",
+  "shots": [
+    {
+      "index": 0,
+      "id": "titlecard-calm",
+      "title": "Titlecard Calm",
+      "src": "compositions/components/titlecard-calm.html",
+      "duration": 5,
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "values": {
+        "headline": "ACME coffee",
+        "kicker": "ACME"
+      },
+      "unresolved": [],
+      "ground": "#0E0E10"
+    },
+    {
+      "index": 1,
+      "id": "titlecard-lockup",
+      "title": "Titlecard Lockup",
+      "src": "compositions/components/titlecard-lockup.html",
+      "duration": 5,
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "values": {
+        "wordmark": "ACME",
+        "label": "ACME",
+        "kicker": "ACME",
+        "rule": "show",
+        "accent": "green",
+        "exit": "none"
+      },
+      "unresolved": [],
+      "ground": "#0E0E10"
+    },
+    {
+      "index": 2,
+      "id": "pull-back-reveal",
+      "title": "Pull Back Reveal",
+      "src": "compositions/components/pull-back-reveal.html",
+      "duration": 5,
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "values": {
+        "detail_text": "ACME",
+        "headline": "ACME coffee",
+        "accent": "green"
+      },
+      "unresolved": [],
+      "ground": "#0E0E10"
+    }
+  ],
+  "generated": "scripts/compose-film.mjs"
+}

@@ -17,6 +17,10 @@
  */
 import type { TokenShape } from "./enhancer.js";
 
+/**
+ * The headline a card carries, and a short label for the small slots.
+ */
+
 export interface BlockVariable {
   id: string;
   type: "image" | "enum" | "string" | "number" | "color" | "boolean" | string;
@@ -27,6 +31,7 @@ export interface BlockVariable {
   default: unknown;
   min: number | null;
   max: number | null;
+  options: { value: string; label: string }[];
 }
 
 export interface MotionBlock {
@@ -185,49 +190,117 @@ export interface FillContext {
 }
 
 /** Pull the subject out of the brief to use as a headline. */
+/** Production words that describe the request, not the subject. */
+const PRODUCTION_WORDS = new Set([
+  "calm", "cinematic", "smooth", "modern", "clean", "minimal", "bold", "dark",
+  "light", "quiet", "soft", "sharp", "fast", "slow", "short", "long", "simple",
+  "title", "card", "titleline", "product", "reveal", "launch", "promo", "ad",
+  "showreel", "intro", "outro", "logo", "wordmark", "kinetic", "type",
+  "typography", "animation", "animated", "video", "clip", "film", "piece",
+  "social", "spot", "teaser", "opener", "sting", "motion", "graphics",
+  "presentation", "deck", "loop", "looping", "seamless", "showcase", "feature",
+  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "twelve", "first", "second", "third",
+]);
+
+/** A word that describes the request rather than the subject. */
+function isProductionWord(word: string): boolean {
+  const bare = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (PRODUCTION_WORDS.has(bare)) return true;
+  return bare.length > 3 && PRODUCTION_WORDS.has(bare.replace(/s$/, ""));
+}
+
+/**
+ * The title a card should carry.
+ *
+ * A brief is an instruction; a headline is a subject. "a calm title card and a
+ * product reveal for ACME coffee" is a request for two things — the subject is
+ * "ACME coffee". A headline that carries the whole sentence overflows the
+ * card it is set in, so the production words come off first and the result is
+ * capped short.
+ */
 export function headlineFrom(brief: string, fallback = "Your headline here"): string {
-  let cleaned = brief
+  let working = brief
     .replace(/^\s*(make|create|generate|build|design|produce|i want|i need|can you|please)\s+/i, "")
     .replace(/[.!?]+$/, "")
     .trim();
 
-  // The duration is a production note, not a headline. Strip it wherever it
-  // sits, and everything that only qualifies the request with it.
-  cleaned = cleaned
+  // The duration is a production note, not a headline.
+  working = working
     .replace(/\b\d{1,2}\s*(?:-|–|—|to)?\s*\d*\s*(?:s\b|sec\b|secs\b|seconds?\b)/gi, " ")
     .replace(/\b\d{1,2}:\d{2}\b/g, " ")
+    .replace(/\b(?:for|in|of|at|within|about|last)\s*$/i, "")
     .trim();
 
-  // A leading article, once the production notes are gone.
-  cleaned = cleaned.replace(/^\s*(a|an|the)\s+/i, "").trim();
+  /*
+   * The subject usually sits after a preposition: "… for ACME coffee". Take it
+   * before any production phrase is stripped, because the phrase often sits
+   * between the request and the subject: "a launch film for Northwind".
+   */
+  let subject = "";
+  const tail = working.match(/\b(?:for|about|of)\s+([^.!?]{2,60})$/i);
+  if (tail) {
+    const candidate = tail[1].trim();
+    const words = candidate.split(/\s+/).filter(Boolean);
+    const meaningful = words.filter((w) => !isProductionWord(w));
+    if (meaningful.length > 0 && meaningful.length <= 6) subject = meaningful.join(" ");
+  }
 
-  // A production phrase is not the headline. A leading one loses only the
-  // noun — "video about coffee" is still about coffee — and a trailing one
-  // loses everything from the noun onwards.
-  cleaned = cleaned.replace(
-    /^\s*(video|animation|clip|film|piece|promo|ad)\b\s*/i,
-    "",
-  );
-  cleaned = cleaned.replace(
-    /\s+(video|animation|clip|film|piece|promo|ad)\b.*$/i,
-    "",
-  );
+  // Strip the production phrasing.
+  working = working
+    .replace(/^\s*(a|an|the)\s+/i, "")
+    .replace(/^\s*(video|animation|clip|film|piece|promo|ad)\b\s*/i, "")
+    .replace(/\s+(video|animation|clip|film|piece|promo|ad)\b.*$/i, "")
+    .replace(/\s+(for|in|of|at|with|about)$/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+[,;]$/, "")
+    .trim();
 
-  // Trailing function words the sentence no longer needs.
-  cleaned = cleaned.replace(/\s+(for|in|of|at|with|about)$/i, "").trim();
-  cleaned = cleaned.replace(/\s+/g, " ").replace(/\s+[,;]$/, "").trim();
+  let title = subject;
+  if (!title) {
+    const words = working.split(/\s+/).filter(Boolean);
+    const kept = words.filter((w) => !isProductionWord(w));
+    title = kept.length > 0 ? kept.join(" ") : working;
+  }
 
-  if (!cleaned) return fallback;
-  return cleaned.length > 90 ? `${cleaned.slice(0, 89).trimEnd()}…` : cleaned;
+  if (!title) return fallback;
+  return title.length > 40 ? `${title.slice(0, 39).trimEnd()}…` : title;
+}
+
+/**
+ * A short label — for a chip, a tag, a kicker. Two or three words at most.
+ */
+export function shortLabelFrom(brief: string, fallback = "Label"): string {
+  const title = headlineFrom(brief, fallback);
+  // A chip or a kicker is a small slot. Ten characters is what fits without
+  // overflowing its box; a long title in a small chip is a clipped title.
+  if (title.length <= 10) return title;
+  const first = title.split(/\s+/).filter(Boolean)[0] ?? title;
+  if (first.length <= 10) return first;
+  return `${first.slice(0, 9)}…`;
 }
 
 function isHeadlineVariable(v: BlockVariable): boolean {
   if (v.type !== "string") return false;
   const id = v.id.toLowerCase();
   const label = (v.label || "").toLowerCase();
+  // A headline is the main line of a shot. A detail, a chip or a kicker is
+  // not — putting a whole title into a 24px chip overflows its box.
+  if (isShortVariable(v)) return false;
   return (
-    /line|headline|title|head|text|caption|message|question/.test(id) ||
-    /headline|title|main text|caption/.test(label)
+    /^(headline|title|main_?text|line\d|headline_?text|supertitle|big_?text)\b/.test(id) ||
+    /^(headline|title|main text|caption|wordmark)$/.test(label)
+  );
+}
+
+/** A chip, a tag, a kicker — something that has to be very short. */
+function isShortVariable(v: BlockVariable): boolean {
+  if (v.type !== "string") return false;
+  const id = v.id.toLowerCase();
+  const label = (v.label || "").toLowerCase();
+  return (
+    /chip|tag|kicker|label|badge|pill|category|eyebrow|overline|detail_?text|sub_?text|caption_?small|stat/.test(id) ||
+    /chip|tag|kicker|label|badge|detail|stat/.test(label)
   );
 }
 
@@ -346,6 +419,15 @@ export function fillBlock(block: MotionBlock, context: FillContext): FilledBlock
             value: brand,
             source: "brief",
             reason: "The brand named in the brief.",
+          });
+        } else if (isShortVariable(variable)) {
+          const short = shortLabelFrom(context.brief);
+          values[id] = short;
+          variables.push({
+            id,
+            value: short,
+            source: "brief",
+            reason: "A short label, so it fits the slot it is set in.",
           });
         } else if (isHeadlineVariable(variable)) {
           values[id] = headline;
