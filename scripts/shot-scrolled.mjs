@@ -26,11 +26,18 @@ ws.onmessage = (e) => {
 };
 
 await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
-await send('Page.navigate', { url: 'http://127.0.0.1:4173/' });
+// The URL may be given as argv[6] (when argv[6] is not a step count) or
+// argv[7], so both call styles work.
+const argUrl = (a) => (a && !/^\d+$/.test(a) ? a : undefined);
+const target =
+  argUrl(process.argv[7]) ?? argUrl(process.argv[6]) ?? process.env.SHOT_URL ?? 'http://127.0.0.1:4173/';
+await send('Page.navigate', { url: target });
 await new Promise((r) => setTimeout(r, 1800));
 
 // Walk down the page in viewport-sized steps, like a reader scrolling.
-const steps = Number(process.argv[6] ?? 12);
+const steps = Number(
+  (/^\d+$/.test(process.argv[6] ?? '') ? process.argv[6] : process.argv[7]) ?? 12,
+);
 for (let i = 0; i < steps; i++) {
   await send('Runtime.evaluate', { expression: `window.scrollBy(0, ${Math.round(900 * 0.8)})` });
   await new Promise((r) => setTimeout(r, 320));

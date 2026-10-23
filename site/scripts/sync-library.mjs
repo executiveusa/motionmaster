@@ -31,6 +31,11 @@ const styles = catalogue.items.filter((i) => i.kind === 'style');
 
 /* Prompts: keep them, but cap the body so the payload stays sane. */
 const MAX_PROMPT_CHARS = 1400;
+
+/** Slugs that name a kind rather than a subject. */
+const GENERIC_CATEGORIES = new Set([
+  'prompt', 'case', 'skill', 'style', 'style-recipe', 'analysis',
+]);
 const prompts = catalogue.items
   .filter((i) => i.kind === 'prompt' && i.prompt.length > 120)
   .map((i) => ({
@@ -106,7 +111,12 @@ const payload = {
     license: c.license,
     count: c.count,
   })),
-  categories: catalogue.categories.filter((c) => c.count >= 2),
+  // The generic kind-slugs ('prompt', 'case', 'skill') are not categories a
+  // person browses by — the filter chips already do that job. The real
+  // categories are the ones worth listing.
+  categories: catalogue.categories.filter(
+    (c) => c.count >= 2 && !GENERIC_CATEGORIES.has(c.slug),
+  ),
   items: [...styleItems, ...prompts, ...cases, ...skills],
 };
 

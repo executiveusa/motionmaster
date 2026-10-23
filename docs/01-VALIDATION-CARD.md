@@ -1,5 +1,11 @@
 # PROVEN-BETTER-NEW CARD — Motion Master
 
+> **Status: 2026-10-23.** The offer in this document is **recorded, not live**.
+> The founder is not selling Motion Master at the moment; it is used in-house.
+> `licence.json` carries `status.onSale = false`, and the page, the plugin and the
+> MCP server all read it. The terms below are kept so a launch is one edit, not a
+> rebuild. See [`docs/11-LIBRARY-AND-GENERATOR.md`](11-LIBRARY-AND-GENERATOR.md).
+
 Mode: **Blunt** (founder-selected). Frameworks: Mark Pincus, *Life at the Speed of Play*.
 Pincus's numbers (95%/25%, 9–10 of 10, ~20%) are his heuristics, not measured statistics.
 

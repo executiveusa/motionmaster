@@ -1,5 +1,11 @@
 # GO TO MARKET — MOTION MASTER
 
+> **Status: 2026-10-23.** The offer in this document is **recorded, not live**.
+> The founder is not selling Motion Master at the moment; it is used in-house.
+> `licence.json` carries `status.onSale = false`, and the page, the plugin and the
+> MCP server all read it. The terms below are kept so a launch is one edit, not a
+> rebuild. See [`docs/11-LIBRARY-AND-GENERATOR.md`](11-LIBRARY-AND-GENERATOR.md).
+
 ## 0. The hard truth this plan is built around
 
 The closest analog to what you asked me to build has **$58 in verified all-time revenue**

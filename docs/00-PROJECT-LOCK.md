@@ -1,5 +1,11 @@
 # PROJECT LOCK — MOTION MASTER
 
+> **Status: 2026-10-23.** The offer in this document is **recorded, not live**.
+> The founder is not selling Motion Master at the moment; it is used in-house.
+> `licence.json` carries `status.onSale = false`, and the page, the plugin and the
+> MCP server all read it. The terms below are kept so a launch is one edit, not a
+> rebuild. See [`docs/11-LIBRARY-AND-GENERATOR.md`](11-LIBRARY-AND-GENERATOR.md).
+
 Locked 2026-10-21. Derived from founder delegation ("use all of your recommendations"),
 Grill Round 1, and researched market evidence.
 

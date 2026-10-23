@@ -2,12 +2,16 @@
 
 **Describe the video. Get the file.**
 
-Motion Master is a paid, one-time-licence agent product. It teaches an AI agent —
-ChatGPT, Codex, Claude, Cursor and a dozen more hosts — to storyboard, choreograph and
-render motion design **in code**, and hands a non-technical creator a finished video, the
-project, and the source.
+Motion Master is a motion-design agent. It teaches an AI agent — ChatGPT, Codex,
+Claude, Cursor and a dozen more hosts — to storyboard, choreograph and render motion
+design **in code**, and hands back a finished video, the project, and the source.
 
-Remotion · GSAP · ffmpeg. No subscription for the software. You own the output.
+Remotion · GSAP · HyperFrames · ffmpeg. You own the output.
+
+**It is not on sale.** The founder is using it in-house. The terms it would ship
+under are recorded in `licence.json` — $99 Solo, $399 Studio, one payment, no
+subscription — so a launch is one edit rather than a rebuild. Nothing in this
+repository may present a purchase as available.
 
 ---
 
@@ -16,11 +20,13 @@ Remotion · GSAP · ffmpeg. No subscription for the software. You own the output
 | Path | What it is | Licence |
 |---|---|---|
 | `site/` | The landing page. Vite + TypeScript + GSAP. | proprietary |
-| `plugins/motion-master/` | The portable agent plugin: manifests, the 20 motion skills, the Motion Master router. | proprietary (MIT upstream skills, attributed) |
-| `mcp/` | The MCP server — `plan_video`, `build_composition`, `mix_footage`, and the clip library. | proprietary |
+| `plugins/motion-master/` | The portable agent plugin: manifests, 38 motion skills, the Motion Master router. | proprietary (MIT / Apache / CC-BY upstream skills, attributed) |
+| `mcp/` | The MCP server — `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`, the prompt library and the prompt enhancer. | proprietary |
+| `library/` | **The open-source motion library.** Nine upstream collections normalised into one index: 3,988 items, 756 categories, 448 motion blocks. Every item carries its licence. | see `library/README.md` |
+| `generator/` | The HyperFrames render path: compositions, the render script, and the gate that catches what a render will not. | proprietary (HyperFrames is Apache-2.0) |
 | `bridge/` | The client that drives a Montage instance over its public HTTP/MCP interfaces. | **AGPL-3.0-only**, isolated on purpose |
 | `clips/` | The Remotion project that renders the proof clips. | proprietary |
-| `licence.json` | **The offer.** Prices, tier lists and the rendering policy. The site imports it; the MCP server generates from it. One copy, so the two cannot disagree. | proprietary |
+| `licence.json` | **The offer and its status.** Prices, tier lists, the rendering policy, and whether it is on sale at all. The site imports it; the MCP server generates from it. One copy, so the two cannot disagree. | proprietary |
 | `docs/` | The lock documents. Read these before changing anything. | proprietary |
 
 ### Marketplace catalogs
