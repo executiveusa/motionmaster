@@ -43,3 +43,8 @@ workspace/
 # The gate's per-film snapshot artefacts.
 generator/films/*/stills/
 generator/films/*/.hyperframes/
+
+# Chrome's own profile directories. They are created by the render scripts and
+# they are never source: a cache of nothing, several megabytes each.
+.chrome-profile/
+**/.chrome-profile/
