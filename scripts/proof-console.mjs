@@ -212,6 +212,86 @@ check(
 
 /* ------------------------------------------------------------- the keyboard */
 
+/* ------------------------------------------------- the disconnected state */
+
+await evaluate(
+  `localStorage.setItem('motion-master:agent', 'http://127.0.0.1:8799');
+   'set'`,
+);
+await send('Page.reload', { ignoreCache: true });
+await new Promise((resolve) => setTimeout(resolve, 2200));
+const offline = await evaluate(
+  `(() => {
+     const state = document.querySelector('[data-console-agent-state]');
+     const dot = document.querySelector('[data-console-agent-dot]');
+     const doc = document.documentElement;
+     return {
+       text: state ? state.textContent : '',
+       off: dot ? dot.classList.contains('console__agent-dot--off') : false,
+       scroll: doc.scrollWidth,
+       client: doc.clientWidth,
+     };
+   })()`,
+);
+check(
+  'the console says plainly when there is no agent',
+  offline.off && /no agent/.test(offline.text),
+  offline.text,
+);
+check(
+  'the disconnected state does not widen the page',
+  offline.scroll <= offline.client + 1,
+  `scroll ${offline.scroll} / client ${offline.client}`,
+);
+
+/* The disconnected message is the longest text in the console, so it is the
+   one that has to survive the narrowest screen. */
+await send('Emulation.setDeviceMetricsOverride', {
+  width: 320,
+  height: 900,
+  deviceScaleFactor: 1,
+  mobile: true,
+});
+await new Promise((resolve) => setTimeout(resolve, 500));
+const narrowOffline = await evaluate(
+  `(() => {
+     const doc = document.documentElement;
+     const wide = [];
+     for (const node of document.querySelectorAll('body *')) {
+       const rect = node.getBoundingClientRect();
+       if (rect.width === 0) continue;
+       if (rect.right > doc.clientWidth + 1) {
+         let scrollable = false;
+         for (let p = node.parentElement; p; p = p.parentElement) {
+           const style = getComputedStyle(p);
+           if (style.overflowX === 'auto' || style.overflowX === 'scroll') { scrollable = true; break; }
+         }
+         if (!scrollable) wide.push(node.className || node.tagName);
+       }
+     }
+     return { scroll: doc.scrollWidth, client: doc.clientWidth, wide: wide.slice(0, 5) };
+   })()`,
+);
+check(
+  'the disconnected message fits 320px',
+  narrowOffline.scroll <= narrowOffline.client + 1 && narrowOffline.wide.length === 0,
+  `scroll ${narrowOffline.scroll} / client ${narrowOffline.client} ${narrowOffline.wide.join(', ')}`,
+);
+
+await send('Emulation.setDeviceMetricsOverride', {
+  width: 1440,
+  height: 1000,
+  deviceScaleFactor: 1,
+  mobile: false,
+});
+
+await evaluate(
+  `localStorage.setItem('motion-master:agent', ${JSON.stringify(agent)});
+   'set'`,
+);
+await send('Page.reload', { ignoreCache: true });
+await new Promise((resolve) => setTimeout(resolve, 2000));
+
 const keyboard = await evaluate(
   `(() => {
      const input = document.querySelector('[data-console-input]');

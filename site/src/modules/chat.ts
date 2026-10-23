@@ -76,9 +76,15 @@ const qs = <T extends Element = HTMLElement>(
  */
 const AGENT_KEY = 'motion-master:agent';
 
-/** The address the page ships with. */
+/**
+ * The address the page ships with.
+ *
+ * The agent is a process on a machine, so its address is absolute. A relative
+ * path would ask the page's own host for the agent, which is the static site
+ * and never the agent.
+ */
 const defaultEndpoint = (): string =>
-  qs<HTMLElement>('[data-console]')?.dataset.consoleEndpoint?.trim() || '/chat';
+  qs<HTMLElement>('[data-console]')?.dataset.consoleEndpoint?.trim() || 'http://127.0.0.1:8787';
 
 /** The agent's root address, without the route. */
 export function agentBase(): string {
@@ -610,7 +616,15 @@ async function checkAgent(): Promise<void> {
     state.textContent = `agent connected · ${tools} tools`;
   } catch {
     dot.classList.add('console__agent-dot--off');
-    state.textContent = 'no agent here — start it with: cd mcp && npm start';
+    state.textContent = 'no agent here · start it with: cd mcp && npm start';
+    /*
+     * A page served over HTTPS has to ask the browser for permission before
+     * it can reach an address on this machine. It is one prompt, once, and
+     * without it the console says "no agent" when the agent is right there.
+     */
+    if (location.protocol === 'https:') {
+      state.textContent += ' · a deployed page also needs the browser\u2019s local-network permission';
+    }
   }
 }
 

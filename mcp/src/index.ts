@@ -220,10 +220,22 @@ export function createHttpHandler(config: Config) {
     const origin = corsOrigin(config, req.headers.origin);
     res.setHeader("access-control-allow-origin", origin);
     res.setHeader("vary", "origin");
+    /*
+     * Private Network Access.
+     *
+     * The page is served over HTTPS and the agent runs on this machine, so
+     * the browser is asking a public page to reach a private address. It
+     * will not, unless the server says so — and it asks first, with a
+     * preflight. Without these two headers the console cannot reach the
+     * agent from a deployed page at all, and the failure looks like "no
+     * agent here" rather than like a policy.
+     */
+    res.setHeader("access-control-allow-private-network", "true");
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "access-control-allow-methods": "GET, POST, OPTIONS",
-        "access-control-allow-headers": "content-type, x-file-name, x-motion-master",
+        "access-control-allow-headers":
+          "content-type, x-file-name, x-motion-master, access-control-request-private-network",
         "access-control-max-age": "600",
       });
       res.end();
