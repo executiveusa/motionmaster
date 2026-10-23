@@ -610,7 +610,7 @@ async function checkAgent(): Promise<void> {
     state.textContent = `agent connected · ${tools} tools`;
   } catch {
     dot.classList.add('console__agent-dot--off');
-    state.textContent = 'no agent at this address';
+    state.textContent = 'no agent here — start it with: cd mcp && npm start';
   }
 }
 
