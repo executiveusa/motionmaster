@@ -68,15 +68,30 @@ export interface LibraryBlock {
   title: string;
   description: string;
   tags: string[];
-  dimensions: unknown;
-  duration: unknown;
-  source: string;
+  author: string | null;
+  dimensions: { width: number; height: number } | null;
+  duration: number | null;
+  /** The block's editable schema: headlines, image slots, speed, colour. */
+  variables: {
+    id: string;
+    type: string;
+    role: string | null;
+    label: string;
+    description: string;
+    portrays: string[];
+    default: unknown;
+    min: number | null;
+    max: number | null;
+  }[];
+  files: { path: string; target: string; type: string }[];
+  license: string;
 }
 
 export interface BlocksFile {
   generated: string;
-  version: string;
+  source: string;
   count: number;
+  tags: { slug: string; count: number }[];
   blocks: LibraryBlock[];
 }
 

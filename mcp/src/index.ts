@@ -31,6 +31,8 @@ const TOOL_NAMES = [
   "browse_library",
   "get_library_item",
   "list_motion_blocks",
+  "fill_block",
+  "compose_film",
   "enhance_prompt",
 ] as const;
 

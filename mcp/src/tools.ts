@@ -29,6 +29,12 @@ import {
   loadCatalogue,
 } from "./library.js";
 import { enhance, type TokenShape } from "./enhancer.js";
+import {
+  fillBlock,
+  headlineFrom,
+  matchBlocks,
+  type MotionBlock,
+} from "./blocks.js";
 import { buildHyperFramesProject, GSAP_FILE } from "./hyperframes-composer.js";
 
 type TextContent = { type: "text"; text: string };
@@ -679,19 +685,194 @@ export function registerTools(server: McpServer, config: Config): void {
       });
       const lim = Math.min(limit ?? 40, 200);
       const off = offset ?? 0;
-      const tagCounts = new Map<string, number>();
-      for (const b of file.blocks) for (const t of b.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
       return ok({
         source: config.blocksPath,
         generator: file.generated,
+        upstream: file.source,
         total: filtered.length,
         libraryTotal: file.count,
-        tags: [...tagCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 60)
-          .map(([slug, count]) => ({ slug, count })),
-        blocks: filtered.slice(off, off + lim),
+        tags: file.tags.slice(0, 60),
+        blocks: filtered.slice(off, off + lim).map((b) => ({
+          id: b.id,
+          type: b.type,
+          title: b.title,
+          description: b.description,
+          tags: b.tags,
+          author: b.author,
+          dimensions: b.dimensions,
+          duration: b.duration,
+          variables: b.variables.map((v) => ({
+            id: v.id,
+            type: v.type,
+            role: v.role,
+            label: v.label,
+            default: v.default,
+          })),
+          files: b.files.length,
+        })),
         install: "npx hyperframes add <name>",
+        note:
+          "Each block is a working motion component with an editable variable schema. " +
+          "Use fill_block to fill one from a brief, or compose_film to assemble a film from several.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "fill_block",
+    {
+      title: "Fill a motion block from a brief",
+      description:
+        "Fill a HyperFrames motion block's variables from a brief. A block is a working motion component " +
+        "with an editable schema — the headline strings, the image slots, the speed, the colour — so this " +
+        "turns a sentence into a real composition that moves properly. Colour variables take the Motion " +
+        "Master palette; a headline takes the subject of the brief; everything else keeps the block's own " +
+        "default and says so.",
+      inputSchema: {
+        brief: z.string().describe("The brief to fill from."),
+        block: z.string().optional().describe("The block id. Omit to let the matcher choose one."),
+        tag: z.string().optional().describe("Prefer blocks with this tag."),
+        values: z
+          .record(z.any())
+          .optional()
+          .describe("Explicit values by variable id. These always win."),
+        headline: z.string().optional().describe("Override the headline."),
+      },
+    },
+    async ({ brief, block, tag, values, headline }) => {
+      const file = loadBlocks(config.blocksPath);
+      const tokenFile = tokens() as unknown as TokenShape;
+
+      let chosen: MotionBlock | undefined;
+      let matched: { block: MotionBlock; score: number; matchedTags: string[] }[] = [];
+      if (block) {
+        chosen = file.blocks.find((b) => b.id === block);
+        if (!chosen) {
+          return fail(`No block with id "${block}".`, {
+            hint: "Call list_motion_blocks to find one.",
+          });
+        }
+      } else {
+        matched = matchBlocks(file, `${brief} ${tag ?? ""}`, { limit: 5, requireVariables: true });
+        chosen = matched[0]?.block;
+        if (!chosen) {
+          return fail("No block matched that brief.", {
+            hint: "Try a tag such as title-card, typography, reveal or transition.",
+          });
+        }
+      }
+
+      const filled = fillBlock(chosen, {
+        brief,
+        values: values as Record<string, unknown> | undefined,
+        tokens: tokenFile,
+        headline,
+      });
+
+      return ok({
+        source: config.blocksPath,
+        block: {
+          id: chosen.id,
+          title: chosen.title,
+          tags: chosen.tags,
+          author: chosen.author,
+          dimensions: chosen.dimensions,
+          duration: chosen.duration,
+          license: chosen.license,
+        },
+        alternatives: matched
+          .slice(1)
+          .map((m) => ({ id: m.block.id, title: m.block.title, matchedTags: m.matchedTags })),
+        filled: filled.variables,
+        values: filled.values,
+        unresolved: filled.unresolved,
+        install: `npx hyperframes add ${chosen.id} --dir <project>`,
+        nextSteps: [
+          `npx hyperframes add ${chosen.id} --dir <project>`,
+          "Render it with the values above, or let compose_film assemble the whole film.",
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "compose_film",
+    {
+      title: "Compose a film from motion blocks",
+      description:
+        "Pick the motion blocks whose tags fit a brief, fill each one from the brief, and return the shot " +
+        "list with the variable values for every block. This is the assembly step: the blocks are real " +
+        "working components, so the result is a film made of motion that already works, not a template.",
+      inputSchema: {
+        brief: z.string().describe("What the film is about."),
+        count: z.number().int().positive().max(8).optional().describe("How many blocks (default 3)."),
+        tags: z.array(z.string()).optional().describe("Require these tags."),
+        values: z.record(z.any()).optional().describe("Explicit values by variable id."),
+      },
+    },
+    async ({ brief, count, tags, values }) => {
+      const file = loadBlocks(config.blocksPath);
+      const tokenFile = tokens() as unknown as TokenShape;
+      const want = count ?? 3;
+
+      const matched = matchBlocks(file, brief, {
+        limit: want * 4,
+        requireVariables: true,
+      });
+      if (matched.length === 0) {
+        return fail("No block matched that brief.", {
+          hint: "Try naming a look: title card, kinetic type, transition, product demo, data.",
+        });
+      }
+
+      // One block per shot, and not two blocks that are the same idea.
+      const chosen: MotionBlock[] = [];
+      const usedTags = new Set<string>();
+      for (const candidate of matched) {
+        if (chosen.length >= want) break;
+        const primary = candidate.block.tags[0] ?? candidate.block.id;
+        if (usedTags.has(primary) && chosen.length > 0) continue;
+        usedTags.add(primary);
+        chosen.push(candidate.block);
+      }
+
+      const headline = headlineFrom(brief);
+      const shots = chosen.map((block, index) => {
+        const filled = fillBlock(block, {
+          brief,
+          values: values as Record<string, unknown> | undefined,
+          tokens: tokenFile,
+          headline,
+        });
+        return {
+          index: index + 1,
+          id: block.id,
+          title: block.title,
+          tags: block.tags,
+          duration: block.duration,
+          matchedTags: block.tags.filter((t) =>
+            brief.toLowerCase().includes(t) || t.split("-").some((w) => brief.toLowerCase().includes(w)),
+          ),
+          values: filled.values,
+          filled: filled.variables,
+          unresolved: filled.unresolved,
+          install: `npx hyperframes add ${block.id} --dir <project>`,
+        };
+      });
+
+      const total = shots.reduce((sum, s) => sum + (s.duration ?? 5), 0);
+
+      return ok({
+        source: config.blocksPath,
+        brief,
+        headline,
+        shotCount: shots.length,
+        estimatedDurationSeconds: total,
+        shots,
+        note:
+          "Each shot is a working HyperFrames block with its variables filled. " +
+          "Install them with `npx hyperframes add <id>` and sequence them in one timeline.",
+        nextSteps: shots.map((s) => s.install),
       });
     },
   );

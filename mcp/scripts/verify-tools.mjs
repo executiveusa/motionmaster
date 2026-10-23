@@ -100,7 +100,8 @@ const main = async () => {
       "plan_video", "build_composition", "build_hyperframes_composition",
       "mix_footage",
       "list_library_collections", "list_library_categories", "browse_library",
-      "get_library_item", "list_motion_blocks", "enhance_prompt",
+      "get_library_item", "list_motion_blocks", "fill_block", "compose_film",
+      "enhance_prompt",
     ];
     check(
       "every tool is advertised",

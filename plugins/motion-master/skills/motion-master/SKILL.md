@@ -273,6 +273,13 @@ there, `browse_library` returns the prompt with its author and licence, and
 `get_library_item` returns it in full. `enhance_prompt` turns a weak brief into a
 complete one. The same index is browsable in the page, under **The library**.
 
+**The block library** — 448 HyperFrames components that already work. Each one
+carries its variable schema: the headline strings, the image slots, the speed, the
+colour. `list_motion_blocks` lists them by tag, `fill_block` fills one from a
+brief, and `compose_film` assembles a shot list from several. **This is the
+shortcut to a good film**: the block knows how the motion works, so the brief only
+has to say what the film is about. Do not rebuild a carousel when one exists.
+
 The upstream skills keep their own licences and attribution — MIT, MIT + CC BY 4.0, and
 Apache-2.0 for `motionmaxxing` — and each carries its licence file and an `UPSTREAM.md`
 saying where it came from. The Motion Master layer — this router, the token files, the
@@ -293,4 +300,6 @@ one-time**.
 | "I want a look / a style / a named visual" | MCP `browse_library` with `kind=style`, or `lemo-opuscar/styles/` |
 | "here is a one-line brief, make it good" | MCP `enhance_prompt` first, then plan the video |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
+| "build me a film from real motion" | MCP `compose_film` — picks the blocks whose tags fit, fills each one, and returns the shot list |
+| "put my words in that block" | MCP `fill_block` — fills a block's headline, colour and speed from a brief |
 | "it looks like AI slop" | `motionmaxxing` — then read `references/slop.md` before touching anything |

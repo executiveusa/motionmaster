@@ -168,6 +168,43 @@ two cores.
 `generator/render.sh` wraps the render and finds the browser through a chain of
 candidate paths, because the sandbox's Chrome has moved before.
 
+## The block library — the shortcut to a good film
+
+The catalogue command gives names, tags and descriptions. What it does not give
+is the thing that makes a block *usable*: its **variable schema** — the headline
+strings, the image slots, the speed, the colour, the enum choices. Those live in
+each registry item's `registry-item.json`.
+
+`scripts/fetch-registry.mjs` pulls all 458 of them at a pinned revision:
+**448 blocks, 231 with variables, 618 tags**. Every variable carries an id, a
+type, a role (`content`, `style`, `timing`, `layout`, `motion`), a label and a
+default.
+
+This is the difference between a template planner and something that works. A
+block already knows how the motion behaves — a headline that mask-reveals word by
+word, a carousel that converges from off-frame. The brief only has to say what it
+is about.
+
+Two new tools:
+
+| tool | what it does |
+| --- | --- |
+| `fill_block` | fills one block's variables from a brief: the headline from the subject, the brand into a wordmark, the colours from the Motion Master palette, the duration from the brief. Every value says where it came from. |
+| `compose_film` | picks the blocks whose tags fit the brief, fills each one, and returns the shot list with the values for every block. |
+
+Three rules the matcher and the filler follow, each of which fixed a real
+failure:
+
+- **Variants of one idea are one idea.** "carousel-text-circle-3" and
+  "-4" are the same block at a different angle. The matcher keeps the best of
+  each family, so a shot list is a shot list and not five flavours of the same
+  thing.
+- **A brief with no pictures is not answered with a twelve-image carousel.**
+  Image slots the brief did not ask for are a cost, not a feature.
+- **The upstream's own placeholder is flagged, never inherited.** A block that
+  ships with "HYPERFRAMES" or a heygen.com URL in it reports that variable as
+  unresolved, so the film cannot quietly advertise somebody else's product.
+
 ## The MCP now writes HyperFrames too
 
 `build_hyperframes_composition` takes the same storyboard `build_composition`
