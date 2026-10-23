@@ -11,14 +11,25 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Config } from "./config.js";
-import { loadTokens, tokenSource } from "./tokens.js";
+import { loadTokens, tokenSource, type MotionTokens } from "./tokens.js";
 import { listSkills } from "./skills.js";
 import { readGallery } from "./clips.js";
 import { planVideo, type Storyboard } from "./planner.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { MontageClient, validateTimeline } from "./montage.js";
 import { toMontageDocument, isTimelineDocument } from "./montage-timeline.js";
 import { LICENCE, licenceSentence } from "./licence.js";
+import {
+  browse,
+  getItem,
+  listCategories,
+  loadBlocks,
+  loadCatalogue,
+} from "./library.js";
+import { enhance, type TokenShape } from "./enhancer.js";
+import { buildHyperFramesProject, GSAP_FILE } from "./hyperframes-composer.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -45,7 +56,7 @@ function fail(message: string, extra: Record<string, unknown> = {}): {
 }
 
 const GROUP_SCHEMA = z
-  .enum(["all", "motion-master", "motion-design", "gsap", "remotion"])
+  .enum(["all", "motion-master", "motion-design", "gsap", "remotion", "hyperframes"])
   .optional()
   .describe("Only return skills from this group.");
 
@@ -120,6 +131,21 @@ const TOKEN_GROUP_SCHEMA = z
   ])
   .optional()
   .describe("Which part of the token set to return. Defaults to everything.");
+
+/**
+ * Read a local copy of GSAP so a generated project never reaches for a CDN.
+ * Falls back to an empty string, which the tool reports rather than hides.
+ */
+function readGsap(repoRoot: string): string {
+  const candidates = [
+    join(repoRoot, "generator", "vendor", GSAP_FILE),
+    join(repoRoot, "node_modules", "gsap", "dist", GSAP_FILE),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return readFileSync(c, "utf8");
+  }
+  return "";
+}
 
 export function registerTools(server: McpServer, config: Config): void {
   const tokens = () => loadTokens(config.tokensPath);
@@ -365,6 +391,354 @@ export function registerTools(server: McpServer, config: Config): void {
         ...composition,
         storyboard,
         tokensSource: tokenSource(config.tokensPath),
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_library_categories",
+    {
+      title: "List library categories",
+      description:
+        "List every category in the open-source motion library with its item count, so you can see what is " +
+        "available before you pick. 9 upstream collections are normalised into one index: style recipes, " +
+        "production prompts, technique notes and a security-graded skill directory. Filter by collection or kind.",
+      inputSchema: {
+        collection: z
+          .string()
+          .optional()
+          .describe("Only categories in this collection (see list_library_collections)."),
+        kind: z
+          .enum(["all", "prompt", "style", "skill", "case"])
+          .optional()
+          .describe("Only categories that contain items of this kind."),
+        min_count: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Hide categories with fewer than this many items (default 1)."),
+      },
+    },
+    async ({ collection, kind, min_count }) => {
+      const catalogue = loadCatalogue(config.libraryPath);
+      const categories = listCategories(catalogue, {
+        collection,
+        kind,
+        minCount: min_count,
+      });
+      return ok({
+        source: config.libraryPath,
+        collections: catalogue.collections.map((c) => ({
+          id: c.id,
+          title: c.title,
+          count: c.count,
+          license: c.license,
+        })),
+        counts: catalogue.counts,
+        categoryCount: categories.length,
+        categories,
+        note:
+          "Pick a category, then call browse_library with that category slug. " +
+          "For a named look, filter kind=style — each style item carries a ready-to-paste recipe.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_library_collections",
+    {
+      title: "List library collections",
+      description:
+        "List the 9 upstream open-source collections in the library, with licence, item count and homepage. " +
+        "Useful before shipping anything: four of them cannot go into a commercial product without a licence change.",
+      inputSchema: {},
+    },
+    async () => {
+      const catalogue = loadCatalogue(config.libraryPath);
+      return ok({
+        source: config.libraryPath,
+        collections: catalogue.collections,
+        licences: {
+          shippable: catalogue.collections
+            .filter((c) => /MIT|CC0|CC-BY-4\.0|Apache/i.test(c.license))
+            .map((c) => c.id),
+          restricted: catalogue.collections
+            .filter((c) => !/MIT|CC0|CC-BY-4\.0|Apache/i.test(c.license))
+            .map((c) => ({ id: c.id, licence: c.license })),
+        },
+      });
+    },
+  );
+
+  server.registerTool(
+    "browse_library",
+    {
+      title: "Browse the motion library",
+      description:
+        "Search and filter the open-source motion library. Combine a category with a query, a collection, a " +
+        "kind or a tag. Every returned item carries its prompt, its author, its source link and its licence.",
+      inputSchema: {
+        category: z.string().optional().describe("A category slug from list_library_categories."),
+        query: z.string().optional().describe("Free text. Matches title, summary, prompt and tags."),
+        collection: z.string().optional().describe("Restrict to one upstream collection."),
+        kind: z
+          .enum(["all", "prompt", "style", "skill", "case"])
+          .optional()
+          .describe("Restrict to one kind of item."),
+        tag: z.string().optional().describe("Restrict to one tag."),
+        license: z.string().optional().describe("Restrict to items with exactly this licence string."),
+        limit: z.number().int().positive().max(100).optional().describe("Items to return (default 20, max 100)."),
+        offset: z.number().int().nonnegative().optional().describe("Skip this many items."),
+      },
+    },
+    async (args) => {
+      const catalogue = loadCatalogue(config.libraryPath);
+      const result = browse(catalogue, args);
+      return ok({
+        source: config.libraryPath,
+        ...result,
+        items: result.items.map((i) => ({
+          ...i,
+          prompt: i.prompt ? i.prompt.slice(0, 1200) : "",
+          promptTruncated: i.prompt.length > 1200,
+        })),
+        note:
+          "Call get_library_item with an item id for the full prompt text.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_library_item",
+    {
+      title: "Get one library item",
+      description:
+        "Return one library item in full, including the complete prompt, the collection it came from, its " +
+        "author, its original post link and its licence.",
+      inputSchema: {
+        id: z.string().describe("The item id, e.g. hiapi-styles:style-cinematic3d."),
+      },
+    },
+    async ({ id }) => {
+      const catalogue = loadCatalogue(config.libraryPath);
+      const item = getItem(catalogue, id);
+      if (!item) {
+        return fail(`No library item with id "${id}".`, {
+          hint: "Call browse_library or list_library_categories first.",
+        });
+      }
+      return ok({ source: config.libraryPath, item });
+    },
+  );
+
+  server.registerTool(
+    "build_hyperframes_composition",
+    {
+      title: "Build a HyperFrames composition",
+      description:
+        "Turn a storyboard into a complete HyperFrames project — index.html with a seekable GSAP timeline, " +
+        "the project manifest and a local copy of GSAP. HyperFrames is the Apache-2.0 HTML-to-video renderer: " +
+        "the render is deterministic, the same composition produces the same frames every time, and nothing " +
+        "is fetched from a CDN at render time. This is the generator Motion Master recommends over hand-rolled " +
+        "canvas code, because it brings a lint and layout gate with it.",
+      inputSchema: {
+        storyboard: z
+          .object({
+            brief: z.string().optional(),
+            template: z.string().optional(),
+            style: z.string().optional(),
+            fps: z.number().int().positive().optional(),
+            width: z.number().int().positive().optional(),
+            height: z.number().int().positive().optional(),
+            duration: z
+              .object({ seconds: z.number().optional(), frames: z.number().optional() })
+              .optional(),
+            doctrine: z.record(z.any()).optional(),
+            beats: z
+              .array(
+                z.object({
+                  index: z.number().optional(),
+                  key: z.string().optional(),
+                  label: z.string().optional(),
+                  role: z.string().optional(),
+                  easingRole: z.string().optional(),
+                  easing: z
+                    .object({
+                      name: z.string().optional(),
+                      role: z.string().optional(),
+                      cubicBezier: z.array(z.number()).optional(),
+                    })
+                    .optional(),
+                  inSeconds: z.number().optional(),
+                  outSeconds: z.number().optional(),
+                  inFrame: z.number().optional(),
+                  outFrame: z.number().optional(),
+                  durationSeconds: z.number().optional(),
+                  animationMs: z.number().optional(),
+                  holdMs: z.number().optional(),
+                  elements: z
+                    .array(
+                      z.object({
+                        name: z.string(),
+                        type: z.string(),
+                        note: z.string().optional(),
+                      }),
+                    )
+                    .optional(),
+                  stagger: z
+                    .object({
+                      pattern: z.string().optional(),
+                      elementCount: z.number().optional(),
+                      intervalMs: z.number().optional(),
+                      totalMs: z.number().optional(),
+                      budgetMs: z.number().optional(),
+                      withinBudget: z.boolean().optional(),
+                      clamped: z.boolean().optional(),
+                    })
+                    .optional(),
+                  transition: z.record(z.any()).optional(),
+                  notes: z.array(z.string()).optional(),
+                }),
+              )
+              .describe("The beats to compose. Use plan_video to produce one."),
+          })
+          .describe("A storyboard. Get one from plan_video first."),
+        project_name: z.string().optional().describe("Directory name for the project (default 'composition')."),
+        include_gsap: z
+          .boolean()
+          .optional()
+          .describe("Include the GSAP source so the project is self-contained (default true)."),
+      },
+    },
+    async ({ storyboard, project_name, include_gsap }) => {
+      let board: Storyboard;
+      try {
+        board = normalizeStoryboard(storyboard as Partial<Storyboard>);
+      } catch (error) {
+        return fail((error as Error).message, {
+          hint: "Call plan_video first and pass the storyboard it returns.",
+        });
+      }
+      const tokenFile = tokens();
+      let gsapSource = "";
+      if (include_gsap !== false) {
+        gsapSource = readGsap(config.repoRoot);
+      }
+      const result = buildHyperFramesProject(board, tokenFile as unknown as MotionTokens, {
+        projectName: project_name ?? "composition",
+        gsapSource,
+      });
+      return ok({
+        generator: "hyperframes 0.8.186 (Apache-2.0)",
+        storyboard: board,
+        composition: result.composition,
+        files: result.files.map((f) => ({
+          path: f.path,
+          bytes: Buffer.byteLength(f.contents),
+          contents: f.contents.length > 20000 ? undefined : f.contents,
+        })),
+        commands: result.commands,
+        notes: result.notes,
+        install: "npx --yes hyperframes@0.8.186",
+        nextSteps: [
+          "Write the files to disk.",
+          "npx hyperframes check <dir>  — lint, runtime validation and layout inspection as one gate.",
+          "npx hyperframes render <dir> --output out.mp4 -f 30 -q delivery",
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_motion_blocks",
+    {
+      title: "List HyperFrames motion blocks",
+      description:
+        "List the installable HyperFrames motion components — real, working motion blocks with tags, " +
+        "dimensions and duration. This is the block catalogue you build films out of, not prompt text.",
+      inputSchema: {
+        tag: z.string().optional().describe("Filter by tag, e.g. transition, typography, kinetic-text."),
+        type: z.enum(["block", "component"]).optional().describe("Filter by item type."),
+        query: z.string().optional().describe("Free text search over name, title and description."),
+        limit: z.number().int().positive().max(200).optional().describe("Items to return (default 40)."),
+        offset: z.number().int().nonnegative().optional().describe("Skip this many items."),
+      },
+    },
+    async ({ tag, type, query, limit, offset }) => {
+      const file = loadBlocks(config.blocksPath);
+      const q = query?.trim().toLowerCase();
+      const filtered = file.blocks.filter((b) => {
+        if (tag && !b.tags.includes(tag)) return false;
+        if (type && b.type !== type) return false;
+        if (q) {
+          const hay = `${b.id} ${b.title} ${b.description} ${b.tags.join(" ")}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      const lim = Math.min(limit ?? 40, 200);
+      const off = offset ?? 0;
+      const tagCounts = new Map<string, number>();
+      for (const b of file.blocks) for (const t of b.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+      return ok({
+        source: config.blocksPath,
+        generator: file.generated,
+        total: filtered.length,
+        libraryTotal: file.count,
+        tags: [...tagCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 60)
+          .map(([slug, count]) => ({ slug, count })),
+        blocks: filtered.slice(off, off + lim),
+        install: "npx hyperframes add <name>",
+      });
+    },
+  );
+
+  server.registerTool(
+    "enhance_prompt",
+    {
+      title: "Enhance a weak motion prompt",
+      description:
+        "Strengthen a weak motion prompt into a complete brief. The enhancer is deterministic: it diagnoses " +
+        "which parts of a motion brief are missing (format, duration, style, camera, timing, typography, " +
+        "palette, audio, exclusions, production method), then rebuilds the prompt as a full brief using the " +
+        "Motion Master motion tokens and a style recipe matched out of the library. It never invents facts " +
+        "about your subject, and everything it assumes is reported back. Ask for this whenever a prompt " +
+        "would otherwise return something generic.",
+      inputSchema: {
+        prompt: z.string().describe("The prompt to strengthen."),
+        duration_seconds: z.number().positive().optional().describe("Target duration in seconds (default 8)."),
+        aspect: z.string().optional().describe("Aspect ratio (default 16:9)."),
+        resolution: z.string().optional().describe("Pixel size (default 1920x1080)."),
+        fps: z.number().int().positive().optional().describe("Frame rate (default 30)."),
+        style: z.string().optional().describe("Force a named style instead of matching one."),
+        style_collection: z.string().optional().describe("Draw the style recipe from this collection only."),
+        extra_constraints: z
+          .array(z.string())
+          .optional()
+          .describe("Extra constraint lines to append verbatim."),
+        alternatives: z.number().int().positive().max(6).optional().describe("Alternative styles to offer."),
+      },
+    },
+    async (args) => {
+      const catalogue = loadCatalogue(config.libraryPath);
+      const tokenFile = tokens() as unknown as TokenShape;
+      const result = enhance(args.prompt, catalogue, tokenFile, {
+        durationSeconds: args.duration_seconds,
+        aspect: args.aspect,
+        resolution: args.resolution,
+        fps: args.fps,
+        style: args.style,
+        styleCollection: args.style_collection,
+        extraConstraints: args.extra_constraints,
+        alternatives: args.alternatives,
+      });
+      return ok({
+        source: config.libraryPath,
+        tokens: config.tokensPath,
+        ...result,
       });
     },
   );

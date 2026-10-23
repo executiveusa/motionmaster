@@ -21,11 +21,13 @@ interface Tier {
 }
 
 interface Offer {
+  status: { onSale: boolean; mode: string; note: string; summary: string };
   tiers: Tier[];
   summary: string;
 }
 
 const catalogue = offer as Offer;
+const onSale = catalogue.status?.onSale !== false;
 
 export function initPricing(): void {
   const amount = qs<HTMLElement>('[data-buy-amount]');
@@ -56,10 +58,17 @@ export function initPricing(): void {
       }
 
       const button = qs<HTMLElement>(`[data-buy-label="${tier.id}"]`);
-      if (button) button.textContent = `Buy ${tier.label} — ${tier.display}`;
+      if (button && onSale) button.textContent = `Buy ${tier.label} — ${tier.display}`;
     }
 
     if (amount && tier.id === 'solo') amount.textContent = tier.display;
+  }
+
+  if (!onSale) {
+    // Nothing is on sale, so there is no purchase to start. Say so plainly
+    // rather than leaving a dead button that implies a checkout.
+    if (status) status.textContent = catalogue.status.summary;
+    return;
   }
 
   for (const button of qsa<HTMLAnchorElement>('[data-buy]')) {

@@ -19,7 +19,8 @@ export type SkillGroup =
   | "web"
   | "catalogue"
   | "gsap"
-  | "remotion";
+  | "remotion"
+  | "hyperframes";
 
 export interface SkillSummary {
   name: string;
@@ -146,6 +147,11 @@ const GROUP_BY_NAME: Record<string, SkillGroup> = {
   "claude-motion-web-sims": "web",
   // A technique catalogue to look things up in.
   "awesome-ai-motion": "catalogue",
+  // The HTML-to-video generator: render pipeline, block registry, media.
+  "hyperframes": "hyperframes",
+  "hyperframes-cli": "hyperframes",
+  "hyperframes-registry": "hyperframes",
+  "media-use": "hyperframes",
 };
 
 function groupFor(name: string): SkillGroup {
@@ -163,6 +169,7 @@ const UPSTREAM: Record<string, string> = {
   production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT)",
   web: "oil-motion (MIT), animate (MIT), claude-motion (MIT)",
   catalogue: "awesome-ai-motion (MIT)",
+  hyperframes: "HyperFrames by HeyGen (Apache-2.0)",
 };
 
 function upstreamFor(group: SkillGroup): string | null {

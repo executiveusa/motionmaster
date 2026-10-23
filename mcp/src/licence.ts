@@ -27,7 +27,15 @@ export interface LicenceTier {
   includes: string[];
 }
 
+export interface LicenceStatus {
+  onSale: boolean;
+  mode: string;
+  note: string;
+  summary: string;
+}
+
 export interface LicenceFacts {
+  status: LicenceStatus;
   type: string;
   currency: string;
   cadence: string;
@@ -63,6 +71,9 @@ export const LICENCE: LicenceFacts = generated;
 
 /** A short, plain sentence describing the offer — used in tool output. */
 export function licenceSentence(): string {
+  if (!LICENCE.status?.onSale) {
+    return `Motion Master is not on sale. ${LICENCE.status?.summary ?? ''}`.trim();
+  }
   return `Motion Master is a paid, one-time licence (${LICENCE.tiers
     .map((tier) => `${tier.label} ${tier.display} once`)
     .join(' / ')}).`;

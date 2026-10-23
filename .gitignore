@@ -27,3 +27,11 @@ hero/.chrome-profile/
 .env
 .env.local
 *.pem
+
+# HyperFrames check artefacts: lint reports, snapshots and layout probes.
+# The composition and the finished MP4 are committed; the reports are not.
+.hyperframes/
+generator/compositions/*/.hyperframes/
+
+# The sample film is committed; its frame sequences are not.
+generator/compositions/*/frames/

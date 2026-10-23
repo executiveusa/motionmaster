@@ -72,6 +72,34 @@ for (const word of BANNED_WORDS) {
   }
 }
 
+/* ---- 2b. the sale state ------------------------------------------------- */
+
+/*
+ * The offer is not on sale. While that is true the page must not tell anyone
+ * to buy anything, and the prices may only appear as recorded terms. This
+ * check is what stops the page quietly going back on sale.
+ */
+const saleState = JSON.parse(readFileSync(join(siteDir, '..', 'licence.json'), 'utf8'));
+const onSale = saleState.status?.onSale !== false;
+if (!onSale) {
+  // Look for invitations to buy, not the mere word "checkout" in a sentence
+  // that says there is none.
+  for (const phrase of ['buy the licence', 'buy now', 'buy solo', 'buy studio', 'add to cart', 'order now']) {
+    if (text.toLowerCase().includes(phrase)) {
+      fail(`"${phrase}" appears in the page but the offer is not on sale`);
+    }
+  }
+  if (/data-buy\s*=/.test(text)) {
+    fail('a purchase button is present but the offer is not on sale');
+  }
+  if (!text.toLowerCase().includes('not on sale')) {
+    fail('the page must say plainly that the offer is not on sale');
+  }
+  notes.push('offer is not on sale — no purchase language in the page');
+} else {
+  notes.push('offer is on sale');
+}
+
 /* ---- 3. emoji ----------------------------------------------------------- */
 
 if (EMOJI.test(text)) fail('emoji or pictograph character in dist/index.html');

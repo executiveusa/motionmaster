@@ -5,14 +5,18 @@
   "type": "module",
   "description": "MOTION MASTER landing page \u2014 Vite + TypeScript (vanilla) + GSAP",
   "scripts": {
-    "prebuild": "node scripts/sync-clips.mjs && node scripts/sync-offer.mjs",
+    "prebuild": "node scripts/sync-clips.mjs && node scripts/sync-offer.mjs && node scripts/sync-skills.mjs && node scripts/sync-library.mjs",
     "build": "tsc --noEmit && vite build && node scripts/verify-content.mjs",
     "dev": "vite",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "typecheck": "tsc --noEmit",
     "check:content": "node scripts/verify-content.mjs",
     "sync:offer": "node scripts/sync-offer.mjs",
-    "check:offer": "node scripts/sync-offer.mjs --check"
+    "check:offer": "node scripts/sync-offer.mjs --check",
+    "sync:skills": "node scripts/sync-skills.mjs",
+    "check:skills": "node scripts/sync-skills.mjs --check",
+    "sync:library": "node scripts/sync-library.mjs",
+    "check:library": "node scripts/sync-library.mjs --check"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.2.5",

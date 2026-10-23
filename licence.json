@@ -4,6 +4,12 @@
   "type": "paid-one-time",
   "currency": "USD",
   "cadence": "one-time",
+  "status": {
+    "onSale": false,
+    "mode": "personal-use",
+    "note": "The founder is not selling this at the moment. The whole package is used personally. The paid terms below are recorded, not published, so that a later launch is one switch rather than a rebuild. Nothing on the page may imply a purchase is available while onSale is false.",
+    "summary": "Motion Master is not on sale. It is the founder's own motion-design agent, used in-house."
+  },
   "summary": "Motion Master is a paid, one-time licence: $99 Solo or $399 Studio. One payment, no subscription.",
   "licenceKey": "The licence key is delivered by email after checkout. It unlocks the paid tier of the plugin; nothing in this server phones home to check it.",
   "tiers": [
@@ -14,10 +20,10 @@
       "display": "$99",
       "priceLine": "$99 once",
       "includes": [
-        "33 motion skills — motion doctrine, GSAP, Remotion, the craft law and 60 film styles",
+        "The full motion skill pack — motion doctrine, GSAP, Remotion, HyperFrames, the craft law, 60 film styles and the full prompt library",
         "One plugin package, 16 agent hosts",
-        "The MCP server: plan_video, build_composition, mix_footage, clip library",
-        "Motion tokens and four scene starters",
+        "The MCP server: plan_video, build_composition, build_hyperframes_composition, mix_footage, and the prompt library with its enhancer",
+        "Motion tokens, four scene starters and a 3,900-item open-source prompt library",
         "Renders on your own machine, no per-minute fee",
         "Commercial use — upstream licences and attribution stay in the package"
       ]

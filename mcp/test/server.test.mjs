@@ -75,10 +75,17 @@ test("the server advertises every tool", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((tool) => tool.name).sort();
   assert.deepEqual(names, [
+    "browse_library",
     "build_composition",
+    "build_hyperframes_composition",
+    "enhance_prompt",
     "get_clip_prompt",
+    "get_library_item",
     "get_motion_tokens",
     "list_clips",
+    "list_library_categories",
+    "list_library_collections",
+    "list_motion_blocks",
     "list_skills",
     "mix_footage",
     "plan_video",

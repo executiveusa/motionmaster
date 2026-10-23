@@ -69,6 +69,10 @@ export interface Config {
   skillsDir: string;
   /** The single file that records the product domain. */
   brandPath: string;
+  /** The normalised open-source motion library. */
+  libraryPath: string;
+  /** The HyperFrames block library. */
+  blocksPath: string;
   montage: MontageConfig;
 }
 
@@ -98,6 +102,10 @@ export function loadConfig(): Config {
     brandPath:
       env("MOTION_MASTER_BRAND_PATH") ??
       join(repoRoot, "plugins", "motion-master", "assets", "brand.json"),
+    libraryPath:
+      env("MOTION_MASTER_LIBRARY_PATH") ?? join(repoRoot, "library", "catalogue.json"),
+    blocksPath:
+      env("MOTION_MASTER_BLOCKS_PATH") ?? join(repoRoot, "library", "blocks.json"),
     montage: {
       baseUrl: montageBase,
       token: env("MOTION_MASTER_MONTAGE_TOKEN"),

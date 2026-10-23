@@ -24,6 +24,7 @@ import { initMenu, initMobileBar } from './modules/nav';
 import { initRail } from './modules/rail';
 import { initReveals } from './modules/reveal';
 import { initPricing } from './modules/pricing';
+import { initLibrary } from './modules/library';
 
 function boot(): void {
   initRail();
@@ -34,6 +35,7 @@ function boot(): void {
   initMenu();
   initMobileBar();
   initPricing();
+  initLibrary();
 }
 
 if (document.readyState === 'loading') {

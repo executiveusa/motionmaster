@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" width="1920" height="1080" />
+    <script src="./gsap-3.14.2.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+        font-weight: 400; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+        font-weight: 600; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2");
+        font-weight: 700; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        src: url("./fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+        font-weight: 400; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        src: url("./fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+        font-weight: 500; font-style: normal; font-display: block;
+      }
+
+      :root {
+        --canvas: #F4F4F2;
+        --ink: #111113;
+        --muted: #6B6B70;
+        --hairline: #DDDEDA;
+        --accent: #FF4A1C;
+        --sans: "IBM Plex Sans", system-ui, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px; overflow: hidden;
+        background: var(--canvas);
+        -webkit-font-smoothing: antialiased;
+      }
+      #root { position: relative; width: 100%; height: 100%; font-family: var(--sans); color: var(--ink); }
+
+      .stage { position: absolute; inset: 0; opacity: 0; }
+      .stage--count { opacity: 1; }
+
+      /* --- Act 1: the count ------------------------------------------------ */
+      .count { display: flex; flex-direction: column; justify-content: center; padding: 0 180px; padding-bottom: 190px; }
+      .count__num {
+        font-size: 250px; font-weight: 700; letter-spacing: -0.05em; line-height: 0.86;
+        font-variant-numeric: tabular-nums;
+      }
+      .count__num sup { font-size: 108px; vertical-align: super; color: var(--accent); letter-spacing: -0.03em; }
+      .count__line { margin-top: 28px; font-size: 38px; font-weight: 400; color: var(--muted); letter-spacing: -0.01em; }
+      .rule { width: 180px; height: 3px; background: var(--ink); margin-top: 44px; }
+      .ticker {
+        position: absolute; left: 0; bottom: 84px; width: 100%; overflow: hidden;
+        border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);
+        padding: 20px 0;
+      }
+      .ticker__row { display: flex; gap: 58px; width: max-content; white-space: nowrap; }
+      .ticker__item {
+        font-family: var(--mono); font-size: 28px; color: var(--muted); letter-spacing: 0.01em;
+      }
+      .ticker__item b { color: var(--ink); font-weight: 500; }
+
+      /* --- Act 2: the map -------------------------------------------------- */
+      .map { padding: 120px 180px; display: flex; flex-direction: column; }
+      .map__head { display: flex; align-items: baseline; gap: 32px; }
+      .map__title { font-size: 62px; font-weight: 700; letter-spacing: -0.035em; }
+      .map__meta { font-family: var(--mono); font-size: 28px; color: var(--muted); letter-spacing: 0.02em; }
+      .map__grid {
+        margin-top: 66px; flex: 1;
+        display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr;
+        column-gap: 46px; row-gap: 30px;
+      }
+      .cell { border-top: 1px solid var(--hairline); padding-top: 20px; opacity: 0; }
+      .cell__name { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+      .cell__meta { margin-top: 10px; font-family: var(--mono); font-size: 28px; color: var(--muted); }
+      .cell__bar { margin-top: 16px; height: 4px; background: var(--hairline); position: relative; }
+      .cell__fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); }
+      .cell:nth-child(3n) .cell__fill { background: var(--ink); }
+
+      /* --- Act 3: the close ------------------------------------------------ */
+      .close { display: flex; flex-direction: column; justify-content: center; padding: 0 180px; }
+      .close__line { font-size: 150px; font-weight: 700; letter-spacing: -0.045em; line-height: 0.98; }
+      .close__line em { font-style: normal; color: var(--accent); }
+      .close__sub { margin-top: 40px; font-family: var(--mono); font-size: 28px; color: var(--muted); letter-spacing: 0.01em; }
+      .close__cols { margin-top: 56px; display: flex; gap: 72px; }
+      .close__col { width: 330px; }
+      .close__col h4 { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+      .close__col p { margin-top: 8px; font-size: 28px; color: var(--muted); line-height: 1.45; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="24" data-width="1920" data-height="1080">
+
+      <div class="stage stage--count clip" id="act-count" data-start="0" data-duration="6" data-track-index="0">
+        <div class="count">
+          <div class="count__num"><span id="num">0</span><sup>+</sup></div>
+          <div class="count__line">prompts, styles, techniques and skills — from nine open-source collections</div>
+          <div class="rule" id="count-rule"></div>
+        </div>
+        <div class="ticker" id="ticker">
+          <div class="ticker__row" id="ticker-row"></div>
+        </div>
+      </div>
+
+      <div class="stage stage--map clip" id="act-map" data-start="5.4" data-duration="13" data-track-index="1">
+        <div class="map">
+          <div class="map__head">
+            <h1 class="map__title">Every category, named</h1>
+            <span class="map__meta">756 categories · 9 collections</span>
+          </div>
+          <div class="map__grid" id="grid"></div>
+        </div>
+      </div>
+
+      <div class="stage stage--close clip" id="act-close" data-start="17.2" data-duration="6.8" data-track-index="2">
+        <div class="close">
+          <div class="close__line">One library.<br /><em>Every style named.</em></div>
+          <div class="close__sub">motion master — open-source motion, indexed</div>
+          <div class="close__cols">
+            <div class="close__col">
+              <h4>For agents</h4>
+              <p>MCP tools browse, filter and return the full prompt, with its author and its licence.</p>
+            </div>
+            <div class="close__col">
+              <h4>For humans</h4>
+              <p>The same index, browsable. Pick a category, read a recipe, copy it.</p>
+            </div>
+            <div class="close__col">
+              <h4>For the weak</h4>
+              <p>A prompt enhancer that turns a sentence into a complete brief.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <audio id="bed" src="./assets/bed.mp3" data-start="0" data-duration="24"></audio>
+    </div>
+
+    <script>
+      const CATS = [
+        { name: "Style recipes", n: 71, p: 100 },
+        { name: "Kinetic typography", n: 45, p: 62 },
+        { name: "Transitions", n: 52, p: 70 },
+        { name: "Product UI", n: 20, p: 34 },
+        { name: "3D and depth", n: 21, p: 36 },
+        { name: "Camera moves", n: 17, p: 30 },
+        { name: "Data and charts", n: 16, p: 28 },
+        { name: "Captions", n: 17, p: 30 },
+        { name: "Generative", n: 20, p: 34 },
+        { name: "Texture and grain", n: 19, p: 32 },
+        { name: "WebGL and shaders", n: 40, p: 56 },
+        { name: "Carousels", n: 27, p: 44 }
+      ];
+
+      const COLLECTIONS = [
+        "HiAPIAI styles", "Leadde prompts", "Li-Evan verified", "maning prompts",
+        "Cindy prompt bank", "zhuyansen skills", "PHY041 playbook", "Awesome AI Motion", "lemo-opuscar"
+      ];
+      const trow = document.getElementById("ticker-row");
+      for (let pass = 0; pass < 2; pass += 1) {
+        COLLECTIONS.forEach((name) => {
+          const el = document.createElement("span");
+          el.className = "ticker__item";
+          el.innerHTML = "<b>" + name + "</b> · 9 collections · one index";
+          trow.appendChild(el);
+        });
+      }
+
+      const grid = document.getElementById("grid");
+      CATS.forEach((c) => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.innerHTML =
+          '<div class="cell__name">' + c.name + "</div>" +
+          '<div class="cell__meta">' + c.n + " items</div>" +
+          '<div class="cell__bar"><span class="cell__fill"></span></div>';
+        grid.appendChild(cell);
+      });
+
+      const tl = gsap.timeline({ paused: true });
+
+      // Act 1 — the count ticks up, then settles.
+      tl.fromTo("#num", { textContent: 0 }, {
+        textContent: 3988, duration: 1.6, ease: "power2.out",
+        snap: { textContent: 1 },
+      }, 0.35);
+      tl.fromTo(".stage--count .count__num", { y: 40 }, { y: 0, duration: 0.7, ease: "power4.out" }, 0);
+      tl.fromTo(".stage--count .count__line", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power4.out" }, 0.7);
+      tl.fromTo("#count-rule", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.7, ease: "power3.out" }, 1.0);
+      // The ticker never stops, so act 1 is never a still frame.
+      tl.to("#ticker-row", { x: -1900, duration: 5.0, ease: "none" }, 0.2);
+      tl.to("#ticker-row", { x: -3800, duration: 5.0, ease: "none" }, 5.2);
+      tl.to(".stage--count", { opacity: 0, duration: 0.5, ease: "power2.in" }, 5.1);
+
+      // Act 2 — the map assembles. Cells stagger in, then their bars fill.
+      tl.fromTo(".stage--map", { opacity: 0 }, { opacity: 1, duration: 0.55, ease: "power2.out" }, 5.5);
+      tl.fromTo(".stage--map .map__title", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: "power4.out" }, 5.7);
+      tl.fromTo(".stage--map .map__meta", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 6.0);
+      tl.fromTo(".cell", { opacity: 0, y: 22 }, {
+        opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.055,
+      }, 6.2);
+      tl.to(".cell__fill", {
+        width: function (i) { return CATS[i].p + "%"; },
+        duration: 0.9, ease: "power2.inOut", stagger: 0.055,
+      }, 6.9);
+      tl.fromTo(".stage--map .map__grid", { x: 0 }, { x: 150, duration: 10.4, ease: "none" }, 6.2);
+      tl.fromTo(".stage--map .map__title", { x: 0 }, { x: 34, duration: 10.2, ease: "none" }, 6.2);
+      tl.to(".cell__fill", {
+        scaleY: 1.35, transformOrigin: "center bottom", duration: 1.1,
+        ease: "sine.inOut", yoyo: true, repeat: 8, stagger: 0.055,
+      }, 8.6);
+      tl.to(".stage--map", { opacity: 0, duration: 0.5, ease: "power2.in" }, 17.4);
+
+      // Act 3 — the close.
+      tl.fromTo(".stage--close", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 17.6);
+      tl.fromTo(".close__line", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.8, ease: "power4.out" }, 17.8);
+      tl.fromTo(".close__sub", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 18.5);
+      tl.fromTo(".close__col", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out", stagger: 0.09 }, 18.9);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

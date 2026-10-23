@@ -26,6 +26,12 @@ const TOOL_NAMES = [
   "plan_video",
   "build_composition",
   "mix_footage",
+  "list_library_collections",
+  "list_library_categories",
+  "browse_library",
+  "get_library_item",
+  "list_motion_blocks",
+  "enhance_prompt",
 ] as const;
 
 export function createMcpServer(config: Config): McpServer {
@@ -33,14 +39,17 @@ export function createMcpServer(config: Config): McpServer {
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
       instructions:
-        "Motion Master — motion design skills and a deterministic storyboard planner. " +
-        "Motion Master is a paid, one-time licence ($99 Solo, $399 Studio); it is not a subscription and " +
-        "this server never renders anything — it hands you the plan and the command. " +
+        "Motion Master — motion design skills, a deterministic storyboard planner, and an " +
+        "open-source prompt library of nearly 4,000 items across 756 categories. " +
+        "Motion Master is not on sale; it is the founder's own agent, used in-house. " +
+        "This server never renders anything — it hands you the plan and the command. " +
         "Start with skills/motion-master/SKILL.md: it routes to the specialised skills, " +
         "states the motion doctrine and the anti-slop rules. " +
         "plan_video turns a brief into a timed storyboard; build_composition turns that " +
-        "storyboard into runnable Remotion TSX; mix_footage hands a Montage timeline to the " +
-        "user's own Montage instance.",
+        "storyboard into runnable Remotion TSX; build_hyperframes_composition turns it into " +
+        "a runnable HyperFrames HTML project; enhance_prompt turns a weak brief into a " +
+        "complete one; browse_library and list_motion_blocks are the prompt and block " +
+        "libraries; mix_footage hands a Montage timeline to the user's own Montage instance.",
     },
   );
   registerTools(server, config);

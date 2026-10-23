@@ -63,7 +63,7 @@
             <li><a class="nav__link" href="#faq">FAQ</a></li>
           </ul>
         </nav>
-        <a class="btn btn--primary btn--sm topbar__cta" href="#pricing">Buy the licence</a>
+        <a class="btn btn--primary btn--sm topbar__cta" href="#library">Browse the library</a>
         <button
           class="menu-toggle"
           type="button"
@@ -87,7 +87,7 @@
         <a class="mobile-menu__link" href="#pricing">Pricing</a>
         <a class="mobile-menu__link" href="#faq">FAQ</a>
       </nav>
-      <a class="btn btn--primary mobile-menu__cta" href="#pricing">Buy the licence — $99</a>
+      <a class="btn btn--primary mobile-menu__cta" href="#library">Browse the library</a>
     </div>
 
     <main id="main">
@@ -122,7 +122,7 @@
             One prompt. A skill pack that writes motion in code. A file you own.
           </p>
           <div class="hero__actions">
-            <a class="btn btn--primary" href="#pricing">Buy the licence — $99</a>
+            <a class="btn btn--primary" href="#library">Browse the library</a>
             <a class="btn btn--ghost" href="#proof">Read the prompts</a>
           </div>
         </div>
@@ -369,6 +369,80 @@
       </section>
 
       <!-- ================= MECHANISM ================= -->
+      <section class="section section--library" id="library" aria-labelledby="library-title" data-library>
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The library</p>
+            <h2 class="h2" id="library-title">Every category, named.</h2>
+            <p class="section__lede">
+              Nine open-source collections, indexed into one catalogue.
+              <span data-library-stat-items>—</span> prompts, styles, techniques and skills in
+              <span data-library-stat-categories>—</span> categories, plus
+              <span data-library-stat-blocks>—</span> installable motion blocks.
+              Browse it here, or let an agent read it over MCP.
+            </p>
+          </header>
+
+          <div class="library__stats" role="list">
+            <div class="library__stat" role="listitem">
+              <span class="library__stat-value" data-library-stat-items>—</span>
+              <span class="library__stat-label">items</span>
+            </div>
+            <div class="library__stat" role="listitem">
+              <span class="library__stat-value" data-library-stat-collections>—</span>
+              <span class="library__stat-label">collections</span>
+            </div>
+            <div class="library__stat" role="listitem">
+              <span class="library__stat-value" data-library-stat-categories>—</span>
+              <span class="library__stat-label">categories</span>
+            </div>
+            <div class="library__stat" role="listitem">
+              <span class="library__stat-value" data-library-stat-blocks>—</span>
+              <span class="library__stat-label">motion blocks</span>
+            </div>
+          </div>
+
+          <div class="library__controls">
+            <div class="library__search">
+              <label class="visually-hidden" for="library-search">Search the library</label>
+              <input
+                id="library-search"
+                type="search"
+                placeholder="Search prompts, styles, techniques"
+                autocomplete="off"
+                data-library-search
+              />
+            </div>
+            <div class="library__kinds" role="group" aria-label="Filter by kind">
+              <button type="button" class="library__kind" data-library-kind="all" aria-pressed="true">All</button>
+              <button type="button" class="library__kind" data-library-kind="style" aria-pressed="false">Styles</button>
+              <button type="button" class="library__kind" data-library-kind="prompt" aria-pressed="false">Prompts</button>
+              <button type="button" class="library__kind" data-library-kind="case" aria-pressed="false">Cases</button>
+              <button type="button" class="library__kind" data-library-kind="skill" aria-pressed="false">Skills</button>
+            </div>
+            <div class="library__select">
+              <label class="visually-hidden" for="library-collection">Collection</label>
+              <select id="library-collection" data-library-collection>
+                <option value="all">All collections</option>
+              </select>
+            </div>
+          </div>
+
+          <p class="library__status" data-library-status aria-live="polite"></p>
+
+          <div class="library__body">
+            <aside class="library__rail" aria-label="Categories">
+              <h3 class="library__rail-title">Categories</h3>
+              <div class="library__categories" data-library-categories></div>
+            </aside>
+            <div class="library__results">
+              <p class="library__count" data-library-count></p>
+              <div class="library__items" data-library-items></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section section--mechanism" id="mechanism" aria-labelledby="mechanism-title">
         <div class="shell">
           <header class="section__head">
@@ -484,9 +558,9 @@
         <div class="shell">
           <header class="section__head">
             <p class="eyebrow"><span class="mark" aria-hidden="true"></span>What&rsquo;s in the box</p>
-            <h2 class="h2" id="box-title">One package. Sixteen hosts. Thirty-three skills.</h2>
+            <h2 class="h2" id="box-title">One package. Sixteen hosts. Thirty-eight skills.</h2>
             <p class="section__lede">
-              Select a folder. Thirty-three skills, each with its upstream licence kept intact.
+              Select a folder. Thirty-eight skills, each with its upstream licence kept intact.
             </p>
           </header>
 
@@ -503,7 +577,7 @@
                   <button class="tree__row" type="button" data-tree-node="skills" aria-expanded="false">
                     <span class="tree__glyph" aria-hidden="true"></span>
                     <span class="tree__name">skills/</span>
-                    <span class="tree__note">33 skills · licences kept</span>
+                    <span class="tree__note">38 skills · licences kept</span>
                   </button>
                 </li>
                 <li class="tree__indent tree__indent--deep">
@@ -712,11 +786,11 @@
       <section class="section section--pricing" id="pricing" aria-labelledby="pricing-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Pricing</p>
-            <h2 class="h2" id="pricing-title">One payment. No subscription for the software.</h2>
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The offer, recorded</p>
+            <h2 class="h2" id="pricing-title">Not on sale. Built for our own use.</h2>
             <p class="section__lede">
-              Two tiers, because the product has two things in it: the skill pack for one person, and
-              the footage bridge for a team.
+              This is the terms the package would ship under, kept in one file so a launch is a single
+              change. Nothing here is for sale today, and no purchase is implied.
             </p>
           </header>
 
@@ -725,14 +799,14 @@
               <p class="tier__name">Solo</p>
               <p class="tier__price"><span class="tier__amount">$99</span> <span class="tier__once">once</span></p>
               <ul class="tier__list" data-tier-list="solo">
-                <li>33 motion skills — motion doctrine, GSAP, Remotion, the craft law and 60 film styles</li>
+                <li>The full motion skill pack — motion doctrine, GSAP, Remotion, HyperFrames, the craft law, 60 film styles and the full prompt library</li>
                 <li>One plugin package, 16 agent hosts</li>
-                <li>The MCP server: plan_video, build_composition, mix_footage, clip library</li>
-                <li>Motion tokens and four scene starters</li>
+                <li>The MCP server: plan_video, build_composition, build_hyperframes_composition, mix_footage, and the prompt library with its enhancer</li>
+                <li>Motion tokens, four scene starters and a 3,900-item open-source prompt library</li>
                 <li>Renders on your own machine, no per-minute fee</li>
                 <li>Commercial use — upstream licences and attribution stay in the package</li>
               </ul>
-              <a class="btn btn--primary btn--block" href="#buy" data-buy="solo" data-buy-label="solo">Buy Solo — $99</a>
+              <p class="tier__note">Not on sale. Solo is the tier this package would ship as.</p>
             </article>
 
             <article class="tier tier--studio" data-tier="studio" aria-labelledby="tier-studio-title">
@@ -744,25 +818,23 @@
                 <li>Hosted rendering, with an allowance in your licence</li>
                 <li>Commercial use, and the bridge ships under AGPL-3.0</li>
               </ul>
-              <a class="btn btn--primary btn--block" href="#buy" data-buy="studio" data-buy-label="studio">Buy Studio — $399</a>
+              <p class="tier__note">Not on sale. Studio is the tier this package would ship as.</p>
             </article>
           </div>
 
           <div class="buy" id="buy">
-            <p class="buy__label">Checkout</p>
+            <p class="buy__label">Status</p>
             <div class="buy__body">
               <p class="buy__line">
-                One payment of <strong data-buy-amount>$99</strong>. You get the licence key, the
-                install command for your host and the skill pack. Nothing renews and nothing renews by
-                default.
+                There is no checkout and no licence key. The package runs as-is, locally, for the
+                people building it.
               </p>
               <p class="buy__line buy__line--muted">
-                Studio includes a hosted render allowance, and the size of it is confirmed in your
-                checkout receipt. You are never charged automatically — if you want more than the
-                allowance, you choose it and you pay for it.
+                The founder is not selling this at the moment. The whole package is used personally. The paid terms below are recorded, not published, so that a later launch is one switch rather than a rebuild. Nothing on the page may imply a purchase is available while onSale is false.
               </p>
               <p class="buy__status" role="status" aria-live="polite" data-buy-status></p>
             </div>
+          </div>
           </div>
         </div>
       </section>
@@ -791,11 +863,11 @@
 
             <details class="faq__item">
               <summary class="faq__q">
-                <h3 class="faq__heading">What do I get the moment I pay?</h3>
+                <h3 class="faq__heading">What is actually in the package?</h3>
               </summary>
               <div class="faq__a">
                 <p>
-                  A licence key, the skill pack, the plugin package and the token and starter
+                  The skill pack, the plugin package, the prompt library and the token and starter
                   libraries, plus a one-line install command for the host you use. The exact command
                   for your host is in the purchase email.
                 </p>
@@ -871,14 +943,14 @@
           <a class="footer__link" href="#faq">FAQ</a>
         </nav>
         <p class="footer__legal">
-          © 2026 Motion Master. Licence terms are sent with every purchase. Skill packs adapted from
-          LottieFiles, GreenSock and Remotion, used under their licences.
+          © 2026 Motion Master. Skill packs adapted from LottieFiles, GreenSock, Remotion and
+          HyperFrames, used under their licences.
         </p>
       </div>
     </footer>
 
     <div class="mobile-bar" data-mobile-bar hidden>
-      <a class="btn btn--primary btn--block" href="#pricing">Buy the licence — $99</a>
+      <a class="btn btn--primary btn--block" href="#library">Browse the library</a>
     </div>
 
     <p class="visually-hidden" role="status" aria-live="polite" data-live-region></p>
