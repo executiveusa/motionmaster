@@ -5,7 +5,9 @@
  * (the transport the official @modelcontextprotocol/sdk provides for remote
  * servers). The endpoint is /mcp; /health returns a small status document.
  */
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { loadConfig, type Config } from "./config.js";
@@ -14,6 +16,9 @@ import { listSkills } from "./skills.js";
 import { readGallery } from "./clips.js";
 import { loadTokens, tokenSource } from "./tokens.js";
 import { LICENCE } from "./licence.js";
+import { handleChat, type ChatRequestBody } from "./chat.js";
+import { listFiles, storeFile, workspaceDir } from "./files.js";
+import { filmsDir, listFilms, readJob } from "./render.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -25,6 +30,7 @@ const TOOL_NAMES = [
   "get_clip_prompt",
   "plan_video",
   "build_composition",
+  "build_hyperframes_composition",
   "mix_footage",
   "list_library_collections",
   "list_library_categories",
@@ -33,6 +39,9 @@ const TOOL_NAMES = [
   "list_motion_blocks",
   "fill_block",
   "compose_film",
+  "render_film",
+  "film_status",
+  "list_films",
   "enhance_prompt",
 ] as const;
 
@@ -56,6 +65,80 @@ export function createMcpServer(config: Config): McpServer {
   );
   registerTools(server, config);
   return server;
+}
+
+/** Read a JSON request body, with a size cap. */
+function readBody(req: IncomingMessage, limitBytes = 1_000_000): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limitBytes) {
+        reject(new Error("The request body is too large."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      if (!raw.trim()) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+/** Guess a content type from a filename. */
+function guessType(name: string): string {
+  const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
+  const types: Record<string, string> = {
+    ".mp4": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm",
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml",
+    ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4",
+    ".json": "application/json", ".txt": "text/plain", ".md": "text/markdown",
+    ".srt": "text/plain", ".vtt": "text/vtt", ".woff2": "font/woff2",
+    ".ttf": "font/ttf", ".otf": "font/otf",
+  };
+  return types[ext] ?? "application/octet-stream";
+}
+
+/**
+ * Read one file out of a multipart body. The file part is the one with a
+ * filename; the other parts are form fields and are ignored.
+ */
+function parseMultipart(
+  body: Buffer,
+  boundary: string,
+): { filename: string; contentType: string; data: Buffer } | null {
+  const marker = Buffer.from(`--${boundary}`);
+  let index = body.indexOf(marker);
+  while (index !== -1) {
+    const start = index + marker.length;
+    if (body.slice(start, start + 2).toString() === "--") return null;
+    const headerEnd = body.indexOf("\r\n\r\n", start);
+    if (headerEnd === -1) return null;
+    const headers = body.slice(start, headerEnd).toString("utf8");
+    const next = body.indexOf(marker, headerEnd);
+    if (next === -1) return null;
+    const data = body.slice(headerEnd + 4, next - 2);
+    const filename = (headers.match(/filename="([^"]*)"/) || [])[1];
+    if (filename) {
+      const contentType = (headers.match(/Content-Type:\s*([^\r\n]+)/i) || [])[1] ?? "";
+      return { filename, contentType: contentType.trim(), data };
+    }
+    index = next;
+  }
+  return null;
 }
 
 function writeJson(res: ServerResponse, status: number, payload: unknown): void {
@@ -107,10 +190,45 @@ function statusDocument(config: Config): Record<string, unknown> {
   };
 }
 
-export async function main(): Promise<void> {
-  const config = loadConfig();
-  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+/**
+ * Cross-origin headers.
+ *
+ * The console is a static site and the server runs on the founder's machine,
+ * so the browser sees two origins. The server binds to 127.0.0.1 by default,
+ * which keeps it on the local machine; the allowlist is here so it can be
+ * narrowed to the exact site that talks to it.
+ */
+function corsOrigin(config: Config, requestOrigin: string | undefined): string {
+  const allowed = (process.env.MOTION_MASTER_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  if (allowed.length === 0) return "*";
+  if (requestOrigin && allowed.includes(requestOrigin)) return requestOrigin;
+  return allowed[0];
+}
+
+/** The request handler.
+ *
+ * It is a plain function so a host can mount the same routes on its own
+ * server — a plugin host, a test, or a reverse proxy in front of it.
+ */
+export function createHttpHandler(config: Config) {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
+    const origin = corsOrigin(config, req.headers.origin);
+    res.setHeader("access-control-allow-origin", origin);
+    res.setHeader("vary", "origin");
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "access-control-allow-methods": "GET, POST, OPTIONS",
+        "access-control-allow-headers": "content-type, x-file-name, x-motion-master",
+        "access-control-max-age": "600",
+      });
+      res.end();
+      return;
+    }
 
     if (url.pathname === "/health" || url.pathname === "/") {
       if (req.method !== "GET") {
@@ -118,6 +236,207 @@ export async function main(): Promise<void> {
         return;
       }
       writeJson(res, 200, statusDocument(config));
+      return;
+    }
+
+    if (url.pathname === "/files") {
+      if (req.method === "GET") {
+        writeJson(res, 200, { files: listFiles(config) });
+        return;
+      }
+      if (req.method !== "POST") {
+        writeJson(res, 405, { error: "Method not allowed" });
+        return;
+      }
+      // A multipart upload, or a raw body with the name in a header.
+      const contentType = req.headers["content-type"] ?? "";
+      if (contentType.includes("multipart/form-data")) {
+        const boundary = contentType.split("boundary=")[1];
+        if (!boundary) {
+          writeJson(res, 400, { error: "The upload had no boundary." });
+          return;
+        }
+        const raw = await readBody(req, 600 * 1024 * 1024);
+        const parsed = parseMultipart(raw as Buffer, boundary);
+        if (!parsed) {
+          writeJson(res, 400, { error: "The upload could not be read." });
+          return;
+        }
+        const stored = storeFile(config, parsed.filename, parsed.data, parsed.contentType);
+        if (!stored.ok) {
+          writeJson(res, stored.status, { error: stored.error });
+          return;
+        }
+        writeJson(res, 201, { file: stored.file });
+        return;
+      }
+      const name = String(req.headers["x-file-name"] ?? "upload.bin");
+      const bytes = (await readBody(req, 600 * 1024 * 1024)) as Buffer;
+      const stored = storeFile(config, name, bytes, contentType || "application/octet-stream");
+      if (!stored.ok) {
+        writeJson(res, stored.status, { error: stored.error });
+        return;
+      }
+      writeJson(res, 201, { file: stored.file });
+      return;
+    }
+
+    if (url.pathname.startsWith("/files/")) {
+      const name = decodeURIComponent(url.pathname.slice("/files/".length));
+      const path = join(workspaceDir(config), name);
+      if (!path.startsWith(workspaceDir(config)) || !existsSync(path)) {
+        writeJson(res, 404, { error: "No such file." });
+        return;
+      }
+      const body = readFileSync(path);
+      res.writeHead(200, {
+        "content-type": guessType(name),
+        "content-length": body.length,
+      });
+      res.end(body);
+      return;
+    }
+
+    if (url.pathname === "/films" && req.method === "GET") {
+      // The films on this machine. Each one names the URL the console plays.
+      const films = listFilms(config.repoRoot).map((film) => {
+        const job = readJob(config.repoRoot, film.id);
+        return {
+          id: film.id,
+          title: film.title,
+          brief: film.brief,
+          createdAt: film.createdAt,
+          seconds: film.seconds,
+          bytes: film.video?.bytes,
+          status: job?.status ?? (film.video ? "ready" : "unknown"),
+          error: job?.error,
+          videoUrl: film.video ? `/films/${film.id}/video` : undefined,
+          posterUrl: film.poster ? `/films/${film.id}/poster` : undefined,
+          sheetUrl: film.sheet ? `/films/${film.id}/sheet` : undefined,
+        };
+      });
+      writeJson(res, 200, { films });
+      return;
+    }
+
+    if (url.pathname.startsWith("/films/")) {
+      const rest = url.pathname.slice("/films/".length);
+      const slash = rest.indexOf("/");
+      const id = decodeURIComponent(slash === -1 ? rest : rest.slice(0, slash));
+      const what = slash === -1 ? "record" : rest.slice(slash + 1);
+
+      // The id is a folder name, never a path. Anything that tries to walk
+      // out of the films directory is refused.
+      if (!/^[a-z0-9][a-z0-9-]*$/i.test(id)) {
+        writeJson(res, 400, { error: "That is not a film id." });
+        return;
+      }
+      const directory = join(filmsDir(config.repoRoot), id);
+      if (!existsSync(directory)) {
+        writeJson(res, 404, { error: "No such film." });
+        return;
+      }
+
+      if (what === "record") {
+        const film = listFilms(config.repoRoot).find((f) => f.id === id);
+        const job = readJob(config.repoRoot, id);
+        writeJson(res, 200, {
+          film,
+          job,
+          status: job?.status ?? (film?.video ? "ready" : "unknown"),
+          videoUrl: film?.video ? `/films/${id}/video` : undefined,
+          posterUrl: film?.poster ? `/films/${id}/poster` : undefined,
+          sheetUrl: film?.sheet ? `/films/${id}/sheet` : undefined,
+        });
+        return;
+      }
+
+      const targets: Record<string, string[]> = {
+        video: ["film.mp4"],
+        poster: ["stills"],
+        sheet: ["stills"],
+      };
+      const allowed = targets[what];
+      if (!allowed) {
+        writeJson(res, 404, { error: "Not found", endpoints: ["/films", "/films/:id/video"] });
+        return;
+      }
+
+      let file: string | undefined;
+      if (what === "video") {
+        const candidate = join(directory, "film.mp4");
+        if (existsSync(candidate)) file = candidate;
+      } else {
+        const stills = join(directory, "stills");
+        if (existsSync(stills)) {
+          const names = readdirSync(stills);
+          const wanted =
+            what === "sheet"
+              ? names.find((n) => /sheet|contact/i.test(n))
+              : names.find((n) => /^frame-.*\.(png|jpe?g)$/i.test(n));
+          if (wanted) file = join(stills, wanted);
+        }
+      }
+      if (!file) {
+        writeJson(res, 404, { error: "That file has not been made." });
+        return;
+      }
+
+      const body = readFileSync(file);
+      res.writeHead(200, {
+        "content-type": guessType(file),
+        "content-length": body.length,
+        "cache-control": "no-store",
+      });
+      res.end(body);
+      return;
+    }
+
+    if (url.pathname === "/chat") {
+      if (req.method !== "POST") {
+        writeJson(res, 405, { error: "Method not allowed" });
+        return;
+      }
+      let body: ChatRequestBody;
+      try {
+        body = (await readBody(req)) as ChatRequestBody;
+      } catch (error) {
+        writeJson(res, 400, {
+          error: "The request body could not be read.",
+          detail: error instanceof Error ? error.message : String(error),
+        });
+        return;
+      }
+      const controller = new AbortController();
+      res.on("close", () => controller.abort());
+      const result = await handleChat(body, config, controller.signal);
+      res.statusCode = result.status;
+      for (const [key, value] of result.response.headers) {
+        if (key === "content-type") continue;
+        res.setHeader(key, value);
+      }
+      if (!result.response.body) {
+        res.end();
+        return;
+      }
+      const reader = result.response.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!res.write(value)) {
+            await new Promise<void>((resolve) => res.once("drain", resolve));
+          }
+        }
+      } catch (error) {
+        if (!res.headersSent) {
+          writeJson(res, 500, {
+            error: "The stream failed.",
+            detail: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      res.end();
       return;
     }
 
@@ -148,11 +467,38 @@ export async function main(): Promise<void> {
     }
 
     writeJson(res, 404, { error: "Not found", endpoints: ["/mcp", "/health"] });
-  });
+  };
+}
 
+/**
+ * Start the server on its configured host and port.
+ *
+ * Returns the running server so a caller — the CLI, a test, another host — can
+ * mount it, probe it, and shut it down again. This is the same server the
+ * console talks to; there is no second implementation.
+ */
+export async function startChatServer(config: Config): Promise<{
+  server: Server;
+  url: string;
+  close: () => Promise<void>;
+}> {
+  const httpServer = createServer(createHttpHandler(config));
   await new Promise<void>((resolve) => {
     httpServer.listen(config.port, config.host, () => resolve());
   });
+  return {
+    server: httpServer,
+    url: `http://${config.host}:${config.port}`,
+    close: () =>
+      new Promise<void>((resolve) => {
+        httpServer.close(() => resolve());
+      }),
+  };
+}
+
+export async function main(): Promise<void> {
+  const config = loadConfig();
+  const { server: httpServer } = await startChatServer(config);
 
   const skills = listSkills(config.skillsDir);
   process.stdout.write(
@@ -180,11 +526,25 @@ export async function main(): Promise<void> {
   process.on("SIGTERM", shutdown);
 }
 
-const isEntrypoint =
-  process.argv[1] !== undefined &&
-  import.meta.url === new URL(`file://${process.argv[1]}`).href;
+/**
+ * Is this module the one the process was started with?
+ *
+ * The real path is used on both sides. Without it, a server started through a
+ * symlink — "/workspace/..." pointing at the real mount — silently exits
+ * instead of listening, because the two paths never match.
+ */
+function isEntrypoint(): boolean {
+  const invoked = process.argv[1];
+  if (!invoked) return false;
+  try {
+    const resolved = realpathSync(invoked);
+    return import.meta.url === new URL(`file://${resolved}`).href;
+  } catch {
+    return import.meta.url === new URL(`file://${invoked}`).href;
+  }
+}
 
-if (isEntrypoint) {
+if (isEntrypoint()) {
   main().catch((error) => {
     process.stderr.write(
       `Failed to start the Motion Master MCP server: ${

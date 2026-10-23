@@ -35,3 +35,11 @@ generator/compositions/*/.hyperframes/
 
 # The sample film is committed; its frame sequences are not.
 generator/compositions/*/frames/
+
+# The workspace: rendered films, their stills and the gate's verdicts. These are
+# output, not source — a film is made again by asking the agent for it.
+workspace/
+
+# The gate's per-film snapshot artefacts.
+generator/films/*/stills/
+generator/films/*/.hyperframes/

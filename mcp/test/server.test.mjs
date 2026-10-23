@@ -81,16 +81,19 @@ test("the server advertises every tool", async () => {
     "compose_film",
     "enhance_prompt",
     "fill_block",
+    "film_status",
     "get_clip_prompt",
     "get_library_item",
     "get_motion_tokens",
     "list_clips",
+    "list_films",
     "list_library_categories",
     "list_library_collections",
     "list_motion_blocks",
     "list_skills",
     "mix_footage",
     "plan_video",
+    "render_film",
   ]);
   for (const tool of tools) {
     assert.ok(tool.description && tool.description.length > 20, `${tool.name} needs a description`);

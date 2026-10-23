@@ -206,3 +206,62 @@
     padding: 12px 14px;
   }
 }
+
+/* --- console ---------------------------------------------------------- */
+@media (max-width: 1023px) {
+  .console__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .console__rail {
+    border-right: 0;
+    border-bottom: 1px solid #2a2a2e;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 560px) {
+  .console__gate {
+    padding: 30px 22px 34px;
+  }
+  .console__rail,
+  .console__composer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .console__turn {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .console__input {
+    font-size: 16px;
+    min-height: 120px;
+  }
+  .console__controls {
+    flex-wrap: wrap;
+  }
+  .console__status {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .console__artifacts {
+    max-height: 260px;
+  }
+}
+@media (max-width: 560px) {
+  .console__starters {
+    padding: 14px 18px;
+  }
+  .console__starters-label {
+    width: 100%;
+  }
+  .console__artifacts {
+    padding: 16px 18px;
+  }
+  .artifact__table th:nth-child(4),
+  .artifact__table td:nth-child(4) {
+    display: none;
+  }
+}

@@ -36,6 +36,19 @@ import {
   type MotionBlock,
 } from "./blocks.js";
 import { buildHyperFramesProject, GSAP_FILE } from "./hyperframes-composer.js";
+import { planFilm, buildFilmProject, rebuildHost, type FilmPlan } from "./film.js";
+import {
+  filmsDir,
+  filmSlug,
+  listFilms,
+  renderProject,
+  videoSeconds,
+  writeFilmMeta,
+  readJob,
+  writeJob,
+  type RenderJob,
+} from "./render.js";
+import { loadVerdicts, recordVerdict } from "./verdicts.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -791,6 +804,302 @@ export function registerTools(server: McpServer, config: Config): void {
           `npx hyperframes add ${chosen.id} --dir <project>`,
           "Render it with the values above, or let compose_film assemble the whole film.",
         ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "render_film",
+    {
+      title: "Build and render a film",
+      description:
+        "Build a real film from a brief and render it to an MP4 on this machine. The brief is turned " +
+        "into a shot list of installed HyperFrames motion blocks, the blocks are mounted in one host " +
+        "composition, the HyperFrames gate runs, and only then is the film encoded. The gate catches " +
+        "what a render cannot — a silent film, a text below the contrast floor, a stretched frame — so a " +
+        "rendered file here is a file that passed. Returns the film's paths and the URLs the console " +
+        "plays and downloads it from.",
+      inputSchema: {
+        brief: z.string().describe("What the film is about, in one sentence."),
+        shots: z.number().int().positive().max(6).optional().describe("How many shots (default 3)."),
+        tags: z.array(z.string()).optional().describe("Require these tags, e.g. typography, transition."),
+        title: z.string().optional().describe("The film's title. Defaults to a slug of the brief."),
+        fps: z.number().int().positive().max(60).optional().describe("Frame rate (default 30)."),
+        build_only: z
+          .boolean()
+          .optional()
+          .describe("Build the project and run the gate, but do not render the MP4."),
+        wait: z
+          .boolean()
+          .optional()
+          .describe("Wait for the render and return the finished file. For a terminal, not a chat."),
+      },
+    },
+    async ({ brief, shots, tags, title, fps, build_only, wait }) => {
+      const file = loadBlocks(config.blocksPath);
+      const tokenFile = tokens() as unknown as TokenShape;
+
+      const known = loadVerdicts(config.repoRoot);
+      const plan = planFilm(brief, {
+        blocks: file,
+        tokens: tokenFile,
+        count: shots ?? 3,
+        tags,
+        exclude: Object.entries(known)
+          .filter(([, verdict]) => !verdict.ok)
+          .map(([id]) => id),
+      });
+
+      if (plan.shots.length === 0) {
+        return fail("No motion block matched that brief.", {
+          hint: "Name a look instead: title card, kinetic type, transition, product demo, data, brand.",
+        });
+      }
+
+      const id = filmSlug(title ?? plan.headline);
+      const directory = join(filmsDir(config.repoRoot), id);
+
+      let built: { plan: FilmPlan; skipped: { id: string; reason: string }[] };
+      try {
+        built = buildFilmProject(config.repoRoot, directory, plan, tokenFile);
+      } catch (error) {
+        return fail("The film project could not be built.", {
+          detail: error instanceof Error ? error.message : String(error),
+          hint: "The blocks are installed from the HyperFrames registry, which needs the network.",
+        });
+      }
+
+      if (built.plan.shots.length === 0) {
+        return fail("None of the matched blocks could be mounted.", {
+          skipped: built.skipped,
+          hint: "Try a different brief, or ask for a look the registry has as a whole composition.",
+        });
+      }
+
+      if (build_only) {
+        return ok({
+          id,
+          title: title ?? plan.headline,
+          brief,
+          directory,
+          headline: plan.headline,
+          durationSeconds: built.plan.total,
+          shotList: built.plan.shots.map((s) => ({
+            id: s.id,
+            title: s.title,
+            duration: s.duration,
+            unresolved: s.unresolved,
+          })),
+          skipped: built.skipped,
+          note: "The project is on disk and the gate has not run yet.",
+          nextSteps: ["Call render_film again without build_only to gate and render it."],
+        });
+      }
+
+      /*
+       * The render runs on its own. A render takes minutes and an MCP call
+       * times out at a minute, so the tool answers at once and the console
+       * polls for the file. Call it with wait=true to block for the file —
+       * that is for a terminal, not for a chat.
+       */
+      const job: RenderJob = {
+        id,
+        status: "rendering",
+        startedAt: new Date().toISOString(),
+        shots: built.plan.shots.map((s) => ({
+          id: s.id,
+          title: s.title,
+          duration: s.duration,
+        })),
+      };
+      writeJob(config.repoRoot, job);
+
+      const run = async (): Promise<void> => {
+        let plan = built.plan;
+        let result = await renderProject(config.repoRoot, directory, { fps: fps ?? 30 });
+        const dropped: { id: string; reasons: string[] }[] = [];
+
+        // Gate, render, and if the gate blames a block, drop that block and
+        // try again. The registry has components that clip their own text or
+        // put a label under the contrast floor. A block that fails is
+        // recorded, so the next film does not pay to learn it again.
+        for (let round = 0; round < 3 && !result.ok; round += 1) {
+          const blamed = new Set<string>();
+          const reasons = new Map<string, string[]>();
+          for (const finding of result.gate?.findings ?? []) {
+            if (!finding.sourceFile) continue;
+            const shot = plan.shots.find((candidate) => candidate.src === finding.sourceFile);
+            if (!shot || blamed.has(shot.id)) continue;
+            blamed.add(shot.id);
+            reasons.set(shot.id, [
+              ...(reasons.get(shot.id) ?? []),
+              `${finding.code}: ${finding.message}`,
+            ]);
+          }
+          if (blamed.size === 0) break;
+
+          // One block at a time. Dropping several at once can empty the film,
+          // and then there is nothing left to check.
+          const [worst] = [...blamed];
+          const why = reasons.get(worst) ?? ["the gate rejected it"];
+          dropped.push({ id: worst, reasons: why });
+          recordVerdict(config.repoRoot, worst, false, why.length, why);
+
+          plan = rebuildHost(directory, plan, tokenFile, [worst]);
+          if (plan.shots.length === 0) break;
+          result = await renderProject(config.repoRoot, directory, { fps: fps ?? 30 });
+        }
+
+        if (!result.ok) {
+          job.status = "failed";
+          job.finishedAt = new Date().toISOString();
+          job.error =
+            plan.shots.length === 0
+              ? "Every shot in this film was rejected by the gate, so there was nothing left to render."
+              : "The gate stopped the render, so no file was produced.";
+          job.dropped = dropped;
+          writeJob(config.repoRoot, job);
+          return;
+        }
+
+        const seconds = result.video ? videoSeconds(result.video.path) : undefined;
+        writeFilmMeta(directory, {
+          id,
+          title: title ?? plan.headline,
+          brief,
+          createdAt: new Date().toISOString(),
+          seconds,
+          gate: result.gate,
+        });
+        job.status = "ready";
+        job.finishedAt = new Date().toISOString();
+        job.seconds = seconds;
+        job.shots = plan.shots.map((s) => ({ id: s.id, title: s.title, duration: s.duration }));
+        job.dropped = dropped;
+        writeJob(config.repoRoot, job);
+      };
+
+      const running = run().catch((error: unknown) => {
+        job.status = "failed";
+        job.finishedAt = new Date().toISOString();
+        job.error = error instanceof Error ? error.message : String(error);
+        writeJob(config.repoRoot, job);
+      });
+
+      if (wait) {
+        await running;
+        const finished = readJob(config.repoRoot, id);
+        return ok({
+          id,
+          title: title ?? plan.headline,
+          brief,
+          headline: plan.headline,
+          directory,
+          status: finished?.status ?? "failed",
+          error: finished?.error,
+          dropped: finished?.dropped,
+          durationSeconds: finished?.seconds ?? built.plan.total,
+          shotList: finished?.shots ?? [],
+          file: finished?.status === "ready" ? { name: "film.mp4", url: `/films/${id}/video` } : undefined,
+          poster: finished?.status === "ready" ? { name: "poster.png", url: `/films/${id}/poster` } : undefined,
+          contactSheet:
+            finished?.status === "ready" ? { name: "contact-sheet.jpg", url: `/films/${id}/sheet` } : undefined,
+        });
+      }
+
+      return ok({
+        id,
+        title: title ?? plan.headline,
+        brief,
+        headline: plan.headline,
+        directory,
+        status: "rendering",
+        durationSeconds: built.plan.total,
+        shotList: built.plan.shots.map((s) => ({
+          id: s.id,
+          title: s.title,
+          duration: s.duration,
+          unresolved: s.unresolved,
+        })),
+        skipped: built.skipped,
+        file: { name: "film.mp4", url: `/films/${id}/video` },
+        poster: { name: "poster.png", url: `/films/${id}/poster` },
+        contactSheet: { name: "contact-sheet.jpg", url: `/films/${id}/sheet` },
+        note:
+          "The render is running on this machine. It takes a minute or two. " +
+          "Call film_status with this id, or let the console poll — the file appears at /films/" +
+          id +
+          "/video when it is ready.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_films",
+    {
+      title: "List the films made on this machine",
+      description:
+        "Every film that has been rendered here, with its length, when it was made, and the URL the " +
+        "console plays it from.",
+      inputSchema: {
+        limit: z.number().int().positive().max(50).optional().describe("How many to return (default 20)."),
+      },
+    },
+    async ({ limit }) => {
+      const films = listFilms(config.repoRoot).map((film) => {
+        const job = readJob(config.repoRoot, film.id);
+        return {
+          id: film.id,
+          title: film.title,
+          brief: film.brief,
+          createdAt: film.createdAt,
+          seconds: film.seconds,
+          status: job?.status ?? (film.video ? "ready" : "unknown"),
+          error: job?.error,
+          videoUrl: film.video ? `/films/${film.id}/video` : undefined,
+          posterUrl: film.poster ? `/films/${film.id}/poster` : undefined,
+          sheetUrl: film.sheet ? `/films/${film.id}/sheet` : undefined,
+        };
+      });
+      return ok({ count: films.length, films: films.slice(0, limit ?? 20) });
+    },
+  );
+
+  server.registerTool(
+    "film_status",
+    {
+      title: "Check on a rendered film",
+      description:
+        "Report where a film got to. The render runs on its own because it takes longer than a tool " +
+        "call is allowed to wait. Ask again in a minute and the status moves from rendering to ready, " +
+        "with the file's URL.",
+      inputSchema: {
+        id: z.string().describe("The film id returned by render_film."),
+      },
+    },
+    async ({ id }) => {
+      if (!/^[a-z0-9][a-z0-9-]*$/i.test(id)) {
+        return fail("That is not a film id.");
+      }
+      const job = readJob(config.repoRoot, id);
+      if (!job) {
+        return fail(`No film with the id "${id}".`, {
+          hint: "Call list_films to see what has been rendered.",
+        });
+      }
+      return ok({
+        id: job.id,
+        status: job.status,
+        startedAt: job.startedAt,
+        finishedAt: job.finishedAt,
+        seconds: job.seconds,
+        error: job.error,
+        dropped: job.dropped,
+        shots: job.shots,
+        file: job.status === "ready" ? { name: "film.mp4", url: `/films/${id}/video` } : undefined,
+        poster: job.status === "ready" ? { name: "poster.png", url: `/films/${id}/poster` } : undefined,
+        contactSheet:
+          job.status === "ready" ? { name: "contact-sheet.jpg", url: `/films/${id}/sheet` } : undefined,
       });
     },
   );

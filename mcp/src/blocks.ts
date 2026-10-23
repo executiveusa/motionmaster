@@ -199,8 +199,25 @@ const PRODUCTION_WORDS = new Set([
   "typography", "animation", "animated", "video", "clip", "film", "piece",
   "social", "spot", "teaser", "opener", "sting", "motion", "graphics",
   "presentation", "deck", "loop", "looping", "seamless", "showcase", "feature",
+  "brand", "chart", "counting", "arriving", "end", "exit", "close", "closing", "end", "exit", "close", "closing", "end", "exit", "close", "closing",
   "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
   "twelve", "first", "second", "third",
+]);
+
+/**
+ * Words that are grammar rather than subject.
+ *
+ * A brief is mostly scaffolding: "for my brand, with the name of the brand
+ * and nothing else" says what to build, not what to write. Left in, they
+ * become the headline, and the headline ends up being the instruction.
+ */
+const STOP_WORDS = new Set([
+  "my", "our", "your", "their", "its", "the", "a", "an", "and", "then", "with",
+  "without", "each", "every", "that", "this", "these", "those", "it", "of", "on",
+  "in", "at", "by", "to", "from", "as", "is", "are", "be", "but", "or", "so",
+  "name", "word", "words", "line", "lines", "beat", "beats", "own", "nothing",
+  "for", "into", "over", "under", "through", "about", "new", "up", "down", "about", "new", "up", "down", "about", "new", "up", "down",
+  "else", "only", "just", "something", "anything", "same", "kind", "sort",
 ]);
 
 /** A word that describes the request rather than the subject. */
@@ -242,8 +259,27 @@ export function headlineFrom(brief: string, fallback = "Your headline here"): st
   if (tail) {
     const candidate = tail[1].trim();
     const words = candidate.split(/\s+/).filter(Boolean);
-    const meaningful = words.filter((w) => !isProductionWord(w));
+    const meaningful = words.filter(
+      (w) => !isProductionWord(w) && !STOP_WORDS.has(w.toLowerCase().replace(/[^a-z]/g, "")),
+    );
     if (meaningful.length > 0 && meaningful.length <= 6) subject = meaningful.join(" ");
+  }
+
+  /*
+   * A brand name is the strongest headline there is, and it is usually in the
+   * brief before anything else: "a launch film for ACME", "a film called ACME".
+   * Without this, "a launch film for ACME" becomes the headline "launch" —
+   * the film's own production word, on screen, in the biggest type.
+   *
+   * It comes after the subject above, because the subject keeps the words
+   * that belong with the name: "ACME coffee", not "ACME".
+   */
+  if (!subject) {
+    const brand = brandFrom(brief);
+    if (brand) subject = brand;
+  }
+  if (subject) {
+    return subject.length > 40 ? `${subject.slice(0, 39).trimEnd()}…` : subject;
   }
 
   // Strip the production phrasing.
@@ -259,8 +295,22 @@ export function headlineFrom(brief: string, fallback = "Your headline here"): st
   let title = subject;
   if (!title) {
     const words = working.split(/\s+/).filter(Boolean);
-    const kept = words.filter((w) => !isProductionWord(w));
-    title = kept.length > 0 ? kept.join(" ") : working;
+    const kept = words.filter(
+      (w) =>
+        !isProductionWord(w) &&
+        !STOP_WORDS.has(w.toLowerCase().replace(/[^a-z]/g, "")),
+    );
+    /*
+     * A gerund describes the animation, not the subject: "each word arriving
+     * on its own beat" is a direction, and "arriving" is not a headline.
+     */
+    const subject = kept.filter((w) => !/ing$/i.test(w));
+    /*
+     * More than five words left over is an instruction that survived the
+     * filter, not a subject. A headline that long overflows the card it is
+     * set in anyway.
+     */
+    title = subject.length > 0 && subject.length <= 5 ? subject.join(" ") : "";
   }
 
   if (!title) return fallback;
@@ -280,6 +330,13 @@ export function shortLabelFrom(brief: string, fallback = "Label"): string {
   return `${first.slice(0, 9)}…`;
 }
 
+/**
+ * The brand name in a brief, if there is one.
+ *
+ * "called ACME", "named ACME" and "for ACME" are the ways a brief names the
+ * thing it is about. A capitalised word later in the sentence counts too —
+ * a brief that bothers to capitalise a word is usually naming something.
+ */
 function isHeadlineVariable(v: BlockVariable): boolean {
   if (v.type !== "string") return false;
   const id = v.id.toLowerCase();
@@ -330,6 +387,12 @@ export function brandFrom(brief: string): string | null {
   const words = brief.trim().split(/\s+/);
   const shout = words.find((w) => /^[A-Z][A-Z0-9&.'-]{1,12}$/.test(w));
   if (shout) return shout;
+
+  // "called Acme", "named Acme" — the most explicit way to name a thing.
+  const called = brief.match(
+    /\b(?:called|named|titled)\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,2})/,
+  );
+  if (called) return called[1].trim();
 
   // "for Acme Coffee" — a name in title case after a preposition.
   for (let i = 1; i < words.length; i += 1) {

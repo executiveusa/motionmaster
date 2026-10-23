@@ -1,0 +1,22 @@
+{
+  "generated": "mcp/src/verdicts.ts",
+  "note": "Blocks the HyperFrames gate rejected on this machine, and why. A block in this list is not used to build a film. Delete the file to try them again.",
+  "verdicts": {
+    "avatar-cloud": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "clipped_text: Text content is clipped by its own box."
+      ],
+      "checkedAt": "2026-10-23T03:05:53.262Z"
+    },
+    "testimonial-card": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "clipped_text: Text content is clipped by its own box."
+      ],
+      "checkedAt": "2026-10-23T03:05:43.158Z"
+    }
+  }
+}

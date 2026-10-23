@@ -101,7 +101,7 @@ const main = async () => {
       "mix_footage",
       "list_library_collections", "list_library_categories", "browse_library",
       "get_library_item", "list_motion_blocks", "fill_block", "compose_film",
-      "enhance_prompt",
+      "render_film", "film_status", "list_films", "enhance_prompt",
     ];
     check(
       "every tool is advertised",

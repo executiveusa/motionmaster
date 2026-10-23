@@ -369,6 +369,88 @@
       </section>
 
       <!-- ================= MECHANISM ================= -->
+      <section class="section section--console" id="console" aria-labelledby="console-title" data-console data-console-endpoint="/chat" data-console-files-endpoint="/files">
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The console</p>
+            <h2 class="h2" id="console-title">Ask for the film. Get the file.</h2>
+            <p class="section__lede">
+              The same tools the plugin exposes, behind one prompt. It reads the
+              library, strengthens a weak brief, assembles a shot list, and
+              renders the film to a file you can play and download.
+            </p>
+          </header>
+
+          <div class="console" data-console-frame>
+            <div class="console__agent" data-console-agent>
+              <span class="console__agent-dot" data-console-agent-dot aria-hidden="true"></span>
+              <span class="console__agent-state" data-console-agent-state>checking the agent…</span>
+              <label class="visually-hidden" for="console-agent-url">Agent address</label>
+              <input
+                id="console-agent-url"
+                class="console__agent-input"
+                type="url"
+                inputmode="url"
+                spellcheck="false"
+                placeholder="http://127.0.0.1:8787"
+                data-console-agent-input
+              />
+              <button type="button" class="btn btn--ghost btn--sm" data-console-agent-save>Use</button>
+            </div>
+
+            <div class="console__gate" data-console-gate>
+              <p class="console__gate-title">Sign in to run the agent</p>
+              <p class="console__gate-body">
+                OpenRouter holds the model. Your key stays in this browser and is
+                sent only with your own requests.
+              </p>
+              <button type="button" class="btn btn--primary" data-console-signin>Sign in with OpenRouter</button>
+              <p class="console__gate-note" data-console-gate-note role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="console__starters" data-console-starters>
+              <p class="console__starters-label">Start from</p>
+              <!-- the starting points are generated from the library -->
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="title-card" data-console-starter-block="titlecard-calm" data-console-starter="A calm title card for my brand, with the name of the brand and nothing else.">title card</button>
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="kinetic-text" data-console-starter-block="carousel-text-circle-1" data-console-starter="Kinetic type for one line of words, each word arriving on its own beat.">kinetic text</button>
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="product-demo" data-console-starter-block="browser-device-stage" data-console-starter="A product reveal: the thing comes forward out of the dark and settles.">product demo</button>
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="data" data-console-starter-block="bar-chart-race" data-console-starter="A data chart that draws itself, with the number counting up to the value.">data</button>
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="brand" data-console-starter-block="logo-brand-close" data-console-starter="A brand end card: the wordmark, one line, and a clean exit.">brand</button>
+                <button type="button" class="console__starter" data-console-starter data-console-starter-tag="transition" data-console-starter-block="curtain-reveal" data-console-starter="A sequence of cuts that each land on the beat of the music.">transition</button>
+              <!-- end of the generated starting points -->
+            </div>
+
+            <form class="console__form" data-console-form hidden>
+              <div class="console__rail" data-console-rail aria-live="polite" aria-label="Conversation"></div>
+              <div class="console__out">
+                <div class="console__artifacts" data-console-artifacts aria-label="Results"></div>
+                <div class="console__composer">
+                  <div class="console__files" data-console-files></div>
+                  <label class="visually-hidden" for="console-input">Brief</label>
+                  <textarea
+                    id="console-input"
+                    class="console__input"
+                    rows="3"
+                    placeholder="a title card and a product reveal for ACME coffee, 12 seconds"
+                    data-console-input
+                  ></textarea>
+                  <div class="console__controls">
+                    <span class="console__status" data-console-status aria-live="polite"></span>
+                    <label class="btn btn--ghost btn--sm console__attach">
+                      Attach
+                      <input type="file" multiple data-console-file class="visually-hidden" aria-label="Attach your own files" />
+                    </label>
+                    <button type="button" class="btn btn--ghost btn--sm" data-console-cancel hidden>Stop</button>
+                    <button type="button" class="btn btn--ghost btn--sm" data-console-signout hidden>Sign out</button>
+                    <button type="submit" class="btn btn--primary btn--sm" data-console-send>Run</button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <section class="section section--library" id="library" aria-labelledby="library-title" data-library>
         <div class="shell">
           <header class="section__head">

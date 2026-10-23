@@ -5,6 +5,18 @@
    player zone #0E0E10 (the only dark surface)
    ============================================================ */
 
+/*
+ * The hidden attribute always wins.
+ *
+ * A control with `display: inline-flex` beats the user agent's
+ * `[hidden] { display: none }`, so a hidden button stays on screen. Every
+ * element that is switched off in this site is switched off with the
+ * attribute, so the attribute has to be authoritative.
+ */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   /* colour */
   --canvas: #f4f4f2;
