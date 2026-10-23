@@ -95,13 +95,23 @@ const main = async () => {
     for (const tool of tools) {
       console.log(`- ${tool.name}: ${tool.description.slice(0, 90)}…`);
     }
+    const REQUIRED_TOOLS = [
+      "list_skills", "get_motion_tokens", "list_clips", "get_clip_prompt",
+      "plan_video", "build_composition", "build_hyperframes_composition",
+      "mix_footage",
+      "list_library_collections", "list_library_categories", "browse_library",
+      "get_library_item", "list_motion_blocks", "enhance_prompt",
+    ];
     check(
-      "all seven tools are advertised",
-      tools.length === 7 &&
-        ["list_skills", "get_motion_tokens", "list_clips", "get_clip_prompt", "plan_video", "build_composition", "mix_footage"].every(
-          (name) => tools.some((tool) => tool.name === name),
-        ),
+      "every tool is advertised",
+      tools.length === REQUIRED_TOOLS.length &&
+        REQUIRED_TOOLS.every((name) => tools.some((tool) => tool.name === name)),
       `${tools.length} tools`,
+    );
+    check(
+      "the tool names are unique",
+      new Set(tools.map((tool) => tool.name)).size === tools.length,
+      `${new Set(tools.map((tool) => tool.name)).size} unique names`,
     );
 
     section("list_skills");
@@ -271,7 +281,10 @@ const main = async () => {
     section("health document");
     const health = await (await fetch(`${baseUrl}/health`)).json();
     console.log(JSON.stringify(health, null, 2));
-    check("the licence is a paid one-time licence", health.licence.type === "paid-one-time");
+    // The offer is recorded but not on sale. Both facts are checked: the
+    // recorded terms must not drift, and the sale state must be false.
+    check("the recorded licence is a paid one-time licence", health.licence.type === "paid-one-time");
+    check("the offer is not on sale", health.licence.status?.onSale === false);
     check("Solo is $99", health.licence.tiers[0].price === 99);
     check("Studio is $399", health.licence.tiers[1].price === 399);
     check("local rendering is available", health.rendering.local.available === true);

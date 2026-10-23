@@ -2,7 +2,7 @@
  * Reads the bundled Motion Master skill catalogue straight from the plugin
  * package on disk, so the server always describes the skills it actually ships.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -23,7 +23,10 @@ export type SkillGroup =
   | "hyperframes";
 
 export interface SkillSummary {
+  /** The skill's identity in this plugin: its directory name. Always unique. */
   name: string;
+  /** The name the upstream project gave it, when it differs. */
+  upstreamName: string | null;
   description: string;
   group: SkillGroup;
   license: string | null;
@@ -40,6 +43,27 @@ export interface Frontmatter {
   version?: string;
   metadata?: { author?: string; [key: string]: unknown };
   [key: string]: unknown;
+}
+
+/**
+ * Read the licence an upstream skill declares next to its SKILL.md.
+ *
+ * Vendored skills that predate the frontmatter `license:` field carry it in a
+ * LICENSE file or an UPSTREAM.md note instead. Both are checked, because a
+ * skill's licence is the one thing about it that must never be guessed.
+ */
+function licenceFromDir(dir: string): string | null {
+  for (const file of ["UPSTREAM.md", "LICENSE"]) {
+    const path = join(dir, file);
+    if (!existsSync(path)) continue;
+    const body = readFileSync(path, "utf8");
+    const declared = body.match(/[-*]\s*[Ll]icen[cs]e:\s*(.+)/);
+    if (declared) return declared[1].trim();
+    if (/MIT License/i.test(body.slice(0, 400))) return "MIT";
+    if (/Apache License/i.test(body.slice(0, 400))) return "Apache-2.0";
+    if (/Creative Commons Attribution/i.test(body.slice(0, 600))) return "CC-BY-4.0";
+  }
+  return null;
 }
 
 /** Minimal YAML frontmatter reader — enough for the flat frontmatter used here. */
@@ -210,16 +234,26 @@ export function listSkills(skillsDir: string): SkillSummary[] {
 
     const source = readFileSync(skillPath, "utf8");
     const { data, body } = parseFrontmatter(source);
-    const name = typeof data.name === "string" ? data.name : entry;
+    // The directory name is the identity. Two vendored skills happen to share
+    // a frontmatter name — "motion-design" is both the LottieFiles doctrine
+    // and the Remotion taste rules — and the directory is the only name that
+    // is guaranteed unique, because it is the path the agent loads.
+    const upstreamName = typeof data.name === "string" ? data.name : null;
+    const name = entry;
     const description =
       typeof data.description === "string" ? data.description : "";
     const group = groupFor(name);
+    const license =
+      typeof data.license === "string"
+        ? data.license
+        : licenceFromDir(join(skillsDir, entry));
 
     skills.push({
       name,
+      upstreamName: upstreamName && upstreamName !== name ? upstreamName : null,
       description: description.replace(/\s+/g, " ").trim(),
       group,
-      license: typeof data.license === "string" ? data.license : null,
+      license,
       version:
         typeof data.version === "string"
           ? data.version

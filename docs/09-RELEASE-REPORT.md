@@ -1,9 +1,16 @@
 # 09 — RELEASE REPORT
 
-**MOTION MASTER v1 — what exists, what is proven, what is still open.**
+**MOTION MASTER — what exists, what is proven, what is still open.**
 
-Date: 2026-10-21. Repository: `motion-master/`. Nothing has been pushed; the founder
-has not approved a push.
+Date: 2026-10-21, updated 2026-10-23. Repository: `motion-master/`. Nothing has been
+pushed; the founder has not approved a push.
+
+> **Updated 2026-10-23 — the offer is not live.** The founder stopped selling the
+> product and is using it in-house. `licence.json` carries `status.onSale = false`;
+> the page, the plugin and the MCP server all read it. The terms are recorded, not
+> published. See [`docs/11-LIBRARY-AND-GENERATOR.md`](11-LIBRARY-AND-GENERATOR.md)
+> for what changed: the nine-collection prompt library, the prompt enhancer, the
+> HyperFrames generator, and the browsable catalogue page.
 
 ---
 
@@ -11,10 +18,13 @@ has not approved a push.
 
 | | | state |
 |---|---|---|
-| **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, mechanism, contents, objections, pricing, FAQ. 0 external requests, 15.3 kB of JavaScript. |
+| **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, 3 demo films, a browsable catalogue of 3,988 library items, mechanism, contents, objections, pricing, FAQ. 0 external requests, 20.1 kB of JavaScript. |
 | **Hero film** | `hero/` | 104 seconds, 1920×1080, rendered frame by frame. The brief, the shot list, the code beside the footage it produced, the renders, the file. |
-| **Agent plugin** | `plugins/motion-master/` | 33 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
-| **MCP server** | `mcp/` | 7 tools: `list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `mix_footage`. 30/30 policy checks. |
+| **Agent plugin** | `plugins/motion-master/` | 38 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
+| **MCP server** | `mcp/` | 13 tools: `list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`, plus the library tools `list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks` and `enhance_prompt`. 30/30 policy checks. |
+| **Prompt library** | `library/` | 9 open-source collections normalised into one index: **3,988 items, 756 categories**, plus **448 HyperFrames motion blocks**. Every item carries its licence. |
+| **Prompt enhancer** | `mcp/src/enhancer.ts` | Deterministic. Checks the 11 things a motion brief needs, rebuilds the prompt with the motion tokens and a matched style recipe, and reports what it assumed. Built from a measurement of the corpus, not a guess. |
+| **Generator** | `generator/` | HyperFrames (Apache-2.0) as the render path, with its lint and layout gate. Sample composition passes with 0 errors and 89/89 contrast checks. |
 | **Montage bridge** | `bridge/` | Clean-room client for the AGPL Montage agent. 24/24 tests. AGPL-3.0-only, isolated, never modifies the Montage repo. |
 | **Proof clips** | `clips/` | 4 compositions rendered to 1280×720 h264 + posters. 3 real skills, 1 real bridge timeline. |
 | **Plan & lock docs** | `docs/00`–`docs/08` | 10 documents written *before* the code, then corrected by the evidence. |
@@ -30,13 +40,13 @@ has not approved a push.
 | `site`: overflow at 320/375/390/430/768/1024/1280/1440 | **0 horizontal overflow at every width** |
 | `site`: WCAG AA contrast, every visible text node | **0 failures** |
 | `site`: touch targets | none under 44px |
-| `site`: built JS | **15.3 kB** uncompressed — the GSAP hero canvas is gone, so the page has no runtime dependency at all |
+| `site`: built JS | **20.1 kB** uncompressed — still zero runtime dependencies; the extra 4.8 kB is the library browser, and its 1 MB index is fetched only when the section is approached |
 | `site`: external runtime requests | **0** |
 | `bridge: npx tsc --noEmit` | clean |
 | `bridge: npm test` | **24/24** |
 | `bridge: npm run validate:example` | valid against the schema and the Montage rules |
 | `mcp: npx tsc --noEmit` | clean |
-| `mcp: npm test` | **15/15** |
+| `mcp: npm test` | **30/30** (15 library + enhancer, 15 pre-existing) |
 | `mcp: node scripts/verify-tools.mjs` | **30/30** |
 | `the-extractor` audit of our page | **0 high**, 1 medium (25 headings) |
 | `the-extractor` audit of motionvideo.xyz (from their source) | 0 high, **2 medium** (37 headings, 93 links) |
@@ -221,7 +231,7 @@ superseded by the hero film and the re-rendered clips.
 What changed in that pass:
 
 - The hero is now a **104-second film** instead of a live GSAP canvas. That removed the
-  page's only runtime dependency: built JavaScript went from **84.7 kB to 15.3 kB** and
+  page's only runtime dependency: built JavaScript went from **84.7 kB to 20.1 kB** and
   GSAP is gone from `site/package.json` entirely.
 - The four clips were re-rendered **without their chrome**.
 - The gallery prompt for `footage-title` was corrected to match its new clip, and the
