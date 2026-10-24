@@ -1,5 +1,8 @@
 # Motion Master
 
+**Motion graphics plug-in for Claude and Codex** — and for ChatGPT, Cursor and a dozen
+more hosts.
+
 **Describe the video. Get the file.**
 
 Motion Master is a motion-design agent. It teaches an AI agent — ChatGPT, Codex,
