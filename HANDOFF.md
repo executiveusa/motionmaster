@@ -94,14 +94,30 @@ ls site/public/film                 # the hero film
 
 ## If this working tree has been lost
 
-The whole history is in one file:
+The whole history is in one file — a **git bundle**, which carries every commit and the
+whole tree:
 
 ```bash
-git clone /workspace/motion-master.bundle recovered
+git clone motion-master.bundle recovered
 cd recovered && git checkout main
 git remote add origin https://github.com/executiveusa/motionmaster.git
 # then push as above
 ```
+
+The bundle is 160 MB, so it travels as five parts. Put them in one directory and
+reassemble:
+
+```bash
+cat motion-master.bundle.part* > motion-master.bundle
+sha256sum -c SHA256SUMS.txt
+```
+
+The bundle's own checksum is `71b8f5e291cca9c7f8368a28ae2b2e4cefec8b04ca4c8854818a88a8359f6ccf`.
+The reassembly has been verified byte-for-byte.
+
+If the bundle is not reachable either, the **working tree** is in the same place as the
+bundle: copy `motion-master/` and run `git init && git add -A` — the files are the
+product, and the history is a nicety.
 
 ## What the repository is
 
