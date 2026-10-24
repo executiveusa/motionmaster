@@ -25,7 +25,7 @@ DRY=0
 [ "${1:-}" = "--dry" ] && DRY=1
 
 TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-if [ -z "$TOKEN" ]; then
+if [ "$DRY" != "1" ] && [ -z "$TOKEN" ]; then
   cat >&2 <<'MSG'
 No token.
 
@@ -47,10 +47,6 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> authenticating"
-printf '%s' "$TOKEN" | gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
-gh auth setup-git >/dev/null
-
 echo "==> remotes"
 git remote remove origin 2>/dev/null || true
 git remote add origin "$TARGET"
@@ -65,6 +61,10 @@ if [ "$DRY" = "1" ]; then
   echo "==> dry run: nothing was pushed"
   exit 0
 fi
+
+echo "==> authenticating"
+printf '%s' "$TOKEN" | gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+gh auth setup-git >/dev/null
 
 echo "==> pushing"
 git push --force-with-lease=main:"$LEASE" origin main
