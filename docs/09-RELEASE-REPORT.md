@@ -2,8 +2,15 @@
 
 **MOTION MASTER — what exists, what is proven, what is still open.**
 
-Date: 2026-10-21, updated 2026-10-23. Repository: `motion-master/`. Nothing has been
-pushed; the founder has not approved a push.
+Date: 2026-10-21, updated 2026-10-24. Repository: **`executiveusa/motionmaster`** —
+the final home. The full history is pushed there: 29 commits, 2,874 files.
+
+> **Updated 2026-10-24 — it is live.** The repository was pushed to
+> `executiveusa/motionmaster` on 2026-10-24, replacing the single README commit that
+> was there. The push was a force push with a lease pinned to the commit it replaced,
+> so it refused to run if anybody had pushed in the meantime. The old repository,
+> `executiveusa/motion-master-`, is untouched and was not written to.
+> See [`HANDOFF.md`](../HANDOFF.md) for the procedure and the recovery bundle.
 
 > **Updated 2026-10-23 — the offer is not live.** The founder stopped selling the
 > product and is using it in-house. `licence.json` carries `status.onSale = false`;
@@ -18,10 +25,12 @@ pushed; the founder has not approved a push.
 
 | | | state |
 |---|---|---|
-| **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, 3 demo films, a browsable catalogue of 3,988 library items, mechanism, contents, objections, pricing, FAQ. 0 external requests, 20.1 kB of JavaScript. |
+| **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, 3 demo films, a browsable catalogue of 3,988 library items, mechanism, contents, objections, pricing, FAQ. 0 external requests, 36.9 kB of JavaScript. |
 | **Hero film** | `hero/` | 104 seconds, 1920×1080, rendered frame by frame. The brief, the shot list, the code beside the footage it produced, the renders, the file. |
 | **Agent plugin** | `plugins/motion-master/` | 38 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
-| **MCP server** | `mcp/` | 13 tools: `list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`, plus the library tools `list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks` and `enhance_prompt`. 30/30 policy checks. |
+| **MCP server** | `mcp/` | **24 tools**: the skill and clip tools (`list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`), the library tools (`list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks`, `enhance_prompt`), the **sound tools** (`list_sfx_kinds`, `browse_sfx`, `search_sfx`, `get_sfx`, `plan_sound`) and the **render tools** (`render_film`, `film_status`, `list_films`). 65/65 tests, 44/44 tool-policy checks. |
+| **Console** | `site/src/modules/chat.ts` | A chat on the front page that talks to our own MCP server. The agent's artifacts are built by the **server from the real tool result**, so the console can never show a description of something that did not happen. Model by OpenRouter, BYO via PKCE — the key never sits on our server. 12/12 browser checks against the deployed page. |
+| **Sound library** | `library/sfx*` | **1,470 sounds, 35 canonical kinds** from three sources — earshot (MIT recipes), uisfx (MIT code, CC0 audio) and Openverse (282 real recordings, each with its own licence). The same 35 kinds are the site's buttons and the agent's search words, so a sound found by clicking and by asking land in the same place. |
 | **Prompt library** | `library/` | 9 open-source collections normalised into one index: **3,988 items, 756 categories**, plus **448 HyperFrames motion blocks**. Every item carries its licence. |
 | **Prompt enhancer** | `mcp/src/enhancer.ts` | Deterministic. Checks the 11 things a motion brief needs, rebuilds the prompt with the motion tokens and a matched style recipe, and reports what it assumed. Built from a measurement of the corpus, not a guess. |
 | **Generator** | `generator/` | HyperFrames (Apache-2.0) as the render path, with its lint and layout gate. Sample composition passes with 0 errors and 89/89 contrast checks. |
@@ -40,14 +49,14 @@ pushed; the founder has not approved a push.
 | `site`: overflow at 320/375/390/430/768/1024/1280/1440 | **0 horizontal overflow at every width** |
 | `site`: WCAG AA contrast, every visible text node | **0 failures** |
 | `site`: touch targets | none under 44px |
-| `site`: built JS | **20.1 kB** uncompressed — still zero runtime dependencies; the extra 4.8 kB is the library browser, and its 1 MB index is fetched only when the section is approached |
+| `site`: built JS | **36.9 kB** uncompressed — still zero runtime dependencies; the extra is the library browser and the sound browser, and its 1 MB index is fetched only when the section is approached |
 | `site`: external runtime requests | **0** |
 | `bridge: npx tsc --noEmit` | clean |
 | `bridge: npm test` | **24/24** |
 | `bridge: npm run validate:example` | valid against the schema and the Montage rules |
 | `mcp: npx tsc --noEmit` | clean |
-| `mcp: npm test` | **30/30** (15 library + enhancer, 15 pre-existing) |
-| `mcp: node scripts/verify-tools.mjs` | **30/30** |
+| `mcp: npm test` | **65/65** (library, enhancer, blocks, sound, chat) |
+| `mcp: node scripts/verify-tools.mjs` | **44/44** (12 of them sound checks) |
 | `the-extractor` audit of our page | **0 high**, 1 medium (25 headings) |
 | `the-extractor` audit of motionvideo.xyz (from their source) | 0 high, **2 medium** (37 headings, 93 links) |
 | clip media | 4 × mp4 + 4 × poster, all 1280×720 / 30fps / h264, `ffprobe` clean |
@@ -223,10 +232,11 @@ media path, and `MONTAGE_TOKEN` was not being sent as a bearer token on the SSE 
 
 ---
 
-## 8. The second deployment
+## 8. The deployments
 
-The site is live at **https://xh96yo5leugpy.space.minimax.io** — the first deployment was
-superseded by the hero film and the re-rendered clips.
+The site is live at **https://psa4q095vyamo.space.minimax.io** — the current build, with
+the console and the sound library. Earlier deployments were superseded by the hero film,
+the re-rendered clips, the library browser, the console and the sound section.
 
 What changed in that pass:
 
