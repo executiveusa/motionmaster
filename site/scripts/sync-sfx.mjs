@@ -57,6 +57,9 @@ const sounds = catalogue.entries.map((entry) => {
     p: entry.sourceUrl ?? "",
     f: `sfx/${entry.file.replace(/^sfx\//, "")}`,
     r: entry.renderable ? 1 : 0,
+    // The same plain-language line the agent searches, so a sound found by
+    // clicking and a sound found by asking are found the same way.
+    x: entry.text ?? "",
   };
 });
 

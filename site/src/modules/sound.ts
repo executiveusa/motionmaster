@@ -33,6 +33,8 @@ interface SoundRow {
   p: string;
   f: string;
   r: 0 | 1;
+  /** The plain-language line the agent searches. */
+  x: string;
 }
 
 interface SfxPayload {
@@ -68,13 +70,38 @@ const SOURCE_LABEL: Record<string, string> = {
   openverse: 'recorded',
 };
 
-function matches(sound: SoundRow): boolean {
-  if (activeKind !== 'all' && sound.k !== activeKind) return false;
-  if (activeSource !== 'all' && sound.s !== activeSource) return false;
-  if (!query) return true;
+/**
+ * The words that only join a sentence together.
+ *
+ * "a short bright pop for a button" is about *bright* and *pop* and
+ * *button*. The words around them are grammar, and a search that insists on
+ * them returns nothing.
+ */
+const STOP_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'for', 'to', 'of', 'in', 'on', 'at',
+  'by', 'with', 'from', 'as', 'is', 'are', 'be', 'it', 'its', 'that', 'this',
+  'into', 'under', 'over', 'through', 'some', 'any', 'very', 'more', 'most',
+  'like', 'than', 'then', 'when', 'what', 'how', 'my', 'our', 'your',
+]);
+
+/**
+ * Score a sound against the question.
+ *
+ * The agent's search scores the same way, so a sound found by clicking and a
+ * sound found by asking are found the same way.
+ */
+function score(sound: SoundRow): number {
+  if (activeKind !== 'all' && sound.k !== activeKind) return -1;
+  if (activeSource !== 'all' && sound.s !== activeSource) return -1;
+  if (!query) return 0;
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const hay = `${sound.n} ${sound.d} ${sound.u} ${sound.g.join(' ')} ${sound.k} ${sound.t}`.toLowerCase();
-  return terms.every((term) => hay.includes(term));
+  const significant = terms.filter((term) => term.length >= 3 && !STOP_WORDS.has(term));
+  const wanted = significant.length > 0 ? significant : terms;
+  const hay = `${sound.x} ${sound.n} ${sound.d} ${sound.u} ${sound.g.join(' ')} ${sound.k} ${sound.t}`.toLowerCase();
+  let value = wanted.filter((term) => hay.includes(term)).length;
+  if (wanted.includes(sound.k)) value += 1;
+  if (wanted.includes(sound.t)) value += 1;
+  return value;
 }
 
 function shape(sound: SoundRow): string {
@@ -118,7 +145,14 @@ function render(): void {
   const list = qs<HTMLElement>('[data-sfx-list]');
   if (!list || !payload) return;
 
-  const filtered = payload.sounds.filter(matches);
+  const filtered = payload.sounds
+    .map((sound) => ({ sound, score: score(sound) }))
+    .filter((entry) => entry.score >= 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.sound.ms - b.sound.ms;
+    })
+    .map((entry) => entry.sound);
   const count = qs<HTMLElement>('[data-sfx-count]');
   if (count) {
     count.textContent = `${filtered.length} of ${payload.sounds.length} sounds`;

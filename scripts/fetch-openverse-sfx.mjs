@@ -98,12 +98,20 @@ async function download(url, path) {
   return bytes;
 }
 
+/**
+ * A file name from a title.
+ *
+ * The title often carries the upstream file's extension; the name here is
+ * ours, and the extension it gets is the one we encode it with.
+ */
 const slug = (value) =>
   String(value)
     .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/\.(wav|mp3|flac|ogg|aiff?)$/i, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+    .slice(0, 72);
 
 async function main() {
   const dry = flag("dry");
