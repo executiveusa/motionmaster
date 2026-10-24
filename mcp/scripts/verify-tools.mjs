@@ -101,7 +101,9 @@ const main = async () => {
       "mix_footage",
       "list_library_collections", "list_library_categories", "browse_library",
       "get_library_item", "list_motion_blocks", "fill_block", "compose_film",
-      "render_film", "film_status", "list_films", "enhance_prompt",
+      "render_film", "film_status", "list_films",
+      "list_sfx_kinds", "browse_sfx", "search_sfx", "get_sfx", "plan_sound",
+      "enhance_prompt",
     ];
     check(
       "every tool is advertised",
@@ -277,6 +279,80 @@ const main = async () => {
     check(
       "the instance received the documented routes",
       montage.requests.some((r) => r.method === "PUT" && r.path === "/api/v1/projects/demo-project/timeline"),
+    );
+
+    section("the sound library");
+    const kinds = await client.callTool({ name: "list_sfx_kinds", arguments: {} });
+    const kindPayload = kinds.structuredContent;
+    console.log(`  ${kindPayload.total} sounds in ${kindPayload.kinds.length} kinds`);
+    check("the sound library is not empty", kindPayload.total > 500, `${kindPayload.total} sounds`);
+    check(
+      "every kind says what it means",
+      kindPayload.kinds.every((kind) => typeof kind.about === "string" && kind.about.length > 8),
+    );
+    check(
+      "every kind has sounds",
+      kindPayload.kinds.every((kind) => kind.count > 0),
+    );
+
+    const searched = await client.callTool({
+      name: "search_sfx",
+      arguments: { query: "a short bright pop for a button", limit: 5 },
+    });
+    const searchPayload = searched.structuredContent;
+    console.log(`  "${searchPayload.query}" → ${searchPayload.total}`);
+    for (const sound of searchPayload.sounds.slice(0, 3)) {
+      console.log(`    ${sound.id} — ${sound.durationMs}ms — matched: ${sound.matched.join(", ") || "—"}`);
+    }
+    check("a plain question finds sounds", searchPayload.total > 0, `${searchPayload.total}`);
+    check(
+      "the closest sound is the kind that was asked for",
+      searchPayload.sounds.some((sound) => sound.kind === "pop"),
+    );
+    check(
+      "every sound says which words matched",
+      searchPayload.sounds.every((sound) => Array.isArray(sound.matched)),
+    );
+
+    const browsed = await client.callTool({
+      name: "browse_sfx",
+      arguments: { kind: "whoosh", limit: 5 },
+    });
+    const browsePayload = browsed.structuredContent;
+    check("a kind leads to sounds", browsePayload.total > 0, `${browsePayload.total} whooshes`);
+    check(
+      "every sound carries a licence",
+      browsePayload.sounds.every((sound) => typeof sound.licence === "string" && sound.licence.length > 0),
+    );
+    check(
+      "every sound carries its measured shape",
+      browsePayload.sounds.every((sound) => typeof sound.durationMs === "number" && sound.durationMs > 0),
+    );
+
+    const kit = await client.callTool({
+      name: "plan_sound",
+      arguments: {
+        storyboard: {
+          beats: [
+            { index: 0, label: "Opening", role: "setup", inSeconds: 0 },
+            { index: 1, label: "The reveal", role: "reveal", inSeconds: 2.5 },
+            { index: 2, label: "End card", role: "exit", inSeconds: 8 },
+          ],
+        },
+      },
+    });
+    const kitPayload = kit.structuredContent;
+    for (const take of kitPayload.takes) {
+      console.log(`  ${take.atSeconds}s  ${take.role.padEnd(8)} ${take.level}  ${take.id}`);
+    }
+    check("every beat gets a sound", kitPayload.takes.length === 3, `${kitPayload.takes.length} takes`);
+    check(
+      "every take says why it is there",
+      kitPayload.takes.every((take) => typeof take.reason === "string" && take.reason.length > 10),
+    );
+    check(
+      "the kit does not stack one sound",
+      new Set(kitPayload.takes.map((take) => take.id)).size === kitPayload.takes.length,
     );
 
     section("health document");

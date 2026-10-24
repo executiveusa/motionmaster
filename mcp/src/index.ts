@@ -42,6 +42,11 @@ const TOOL_NAMES = [
   "render_film",
   "film_status",
   "list_films",
+  "list_sfx_kinds",
+  "browse_sfx",
+  "search_sfx",
+  "get_sfx",
+  "plan_sound",
   "enhance_prompt",
 ] as const;
 

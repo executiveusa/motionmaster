@@ -25,6 +25,7 @@ import { initRail } from './modules/rail';
 import { initReveals } from './modules/reveal';
 import { initPricing } from './modules/pricing';
 import { initLibrary } from './modules/library';
+import { initSound } from './modules/sound';
 import { initConsole } from './modules/chat';
 
 function boot(): void {
@@ -37,6 +38,7 @@ function boot(): void {
   initMobileBar();
   initPricing();
   initLibrary();
+  initSound();
   initConsole();
 }
 

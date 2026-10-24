@@ -5,8 +5,8 @@
   "type": "module",
   "description": "MOTION MASTER landing page \u2014 Vite + TypeScript (vanilla) + GSAP",
   "scripts": {
-    "prebuild": "node scripts/sync-clips.mjs && node scripts/sync-offer.mjs && node scripts/sync-skills.mjs && node scripts/sync-library.mjs",
-    "build": "tsc --noEmit && vite build && node scripts/verify-content.mjs",
+    "prebuild": "node scripts/sync-clips.mjs && node scripts/sync-offer.mjs && node scripts/sync-skills.mjs && node scripts/sync-library.mjs && node scripts/sync-sfx.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/copy-sfx.mjs && node scripts/verify-content.mjs",
     "dev": "vite",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "typecheck": "tsc --noEmit",
@@ -16,6 +16,7 @@
     "sync:skills": "node scripts/sync-skills.mjs",
     "check:skills": "node scripts/sync-skills.mjs --check",
     "sync:library": "node scripts/sync-library.mjs",
+    "sync:sfx": "node scripts/sync-sfx.mjs",
     "check:library": "node scripts/sync-library.mjs --check"
   },
   "dependencies": {

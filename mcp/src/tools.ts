@@ -36,7 +36,15 @@ import {
   type MotionBlock,
 } from "./blocks.js";
 import { buildHyperFramesProject, GSAP_FILE } from "./hyperframes-composer.js";
-import { planFilm, buildFilmProject, rebuildHost, type FilmPlan } from "./film.js";
+import {
+  planFilm,
+  buildFilmProject,
+  rebuildHost,
+  writeHostComposition,
+  copyKitFiles,
+  type FilmPlan,
+  type KitTake,
+} from "./film.js";
 import {
   filmsDir,
   filmSlug,
@@ -49,6 +57,7 @@ import {
   type RenderJob,
 } from "./render.js";
 import { loadVerdicts, recordVerdict } from "./verdicts.js";
+import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -670,6 +679,201 @@ export function registerTools(server: McpServer, config: Config): void {
   );
 
   server.registerTool(
+    "list_sfx_kinds",
+    {
+      title: "The sound vocabulary",
+      description:
+        "The kinds of sound the library holds — whoosh, hit, confirm, error, type, transition and the " +
+        "rest — with what each one means and how many sounds are in it. This is the vocabulary the " +
+        "site's buttons and the agent's search share, so a sound found by a person and a sound found " +
+        "by an agent land in the same place.",
+      inputSchema: {},
+    },
+    async () => {
+      const catalogue = loadSfx(config.sfxPath);
+      return ok({
+        source: config.sfxPath,
+        total: catalogue.counts.total,
+        bySource: catalogue.counts.bySource,
+        kinds: catalogue.kindVocabulary,
+        note:
+          "Each kind says what it means in words, so a sound can be asked for by what it is for " +
+          "rather than by what it is called.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "browse_sfx",
+    {
+      title: "Browse the sound library",
+      description:
+        "Find sounds by kind, source, timbre, tag or length. Every sound carries its own licence, " +
+        "its duration, its measured shape and a plain-language line saying what it sounds like and " +
+        "when it belongs.",
+      inputSchema: {
+        kind: z.string().optional().describe("A kind from list_sfx_kinds, e.g. whoosh, hit, confirm."),
+        source: z.enum(["earshot", "uisfx", "openverse"]).optional().describe("Where the sound came from."),
+        timbre: z.string().optional().describe("The timbre family, e.g. minimal, mechanical, cinematic."),
+        tag: z.string().optional().describe("A tag, e.g. transition, typing, success."),
+        max_duration_ms: z.number().int().positive().optional().describe("Longest sound, in milliseconds."),
+        min_duration_ms: z.number().int().positive().optional().describe("Shortest sound, in milliseconds."),
+        limit: z.number().int().positive().max(100).optional().describe("How many to return (default 30)."),
+        offset: z.number().int().nonnegative().optional().describe("Skip this many sounds."),
+      },
+    },
+    async ({ kind, source, timbre, tag, max_duration_ms, min_duration_ms, limit, offset }) => {
+      const catalogue = loadSfx(config.sfxPath);
+      const result = browseSfx(catalogue, {
+        kind,
+        source,
+        timbre,
+        tag,
+        maxDurationMs: max_duration_ms,
+        minDurationMs: min_duration_ms,
+        limit,
+        offset,
+      });
+      return ok({
+        source: config.sfxPath,
+        total: result.total,
+        returned: result.items.length,
+        sounds: result.items.map((item) => ({
+          id: item.id,
+          kind: item.kind,
+          source: item.source,
+          timbre: item.timbre,
+          title: item.title,
+          description: item.description,
+          use: item.use,
+          durationMs: item.durationMs,
+          attackMs: item.attackMs,
+          centroidHz: item.centroidHz,
+          licence: item.licence,
+          author: item.author ?? item.creator,
+          sourceUrl: item.sourceUrl,
+          text: item.text,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "search_sfx",
+    {
+      title: "Search the sound library in words",
+      description:
+        "Search by description rather than by name — \"a short bright pop for a button\", \"a deep hit " +
+        "for the big reveal\", \"something reassuring and soft\". The search scores every sound against " +
+        "the words over a plain-language line: what it is, when it belongs, how long it is and how it is " +
+        "shaped. The words that join the sentence together are ignored, so the question can be asked the " +
+        "way a person would ask it. The closest sounds come first, and each one says which of its words " +
+        "matched.",
+      inputSchema: {
+        query: z.string().describe("What the sound should be like, in words."),
+        limit: z.number().int().positive().max(50).optional().describe("How many to return (default 12)."),
+      },
+    },
+    async ({ query, limit }) => {
+      const catalogue = loadSfx(config.sfxPath);
+      const result = browseSfx(catalogue, { query, limit: limit ?? 12 });
+      return ok({
+        query,
+        total: result.total,
+        sounds: result.items.map((item) => ({
+          id: item.id,
+          kind: item.kind,
+          source: item.source,
+          timbre: item.timbre,
+          title: item.title,
+          text: item.text,
+          durationMs: item.durationMs,
+          licence: item.licence,
+          file: item.file,
+          matched: result.scores?.[item.id]?.matched ?? [],
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_sfx",
+    {
+      title: "One sound, in full",
+      description:
+        "Everything about one sound: what it sounds like, when it belongs, its measured shape, its " +
+        "licence, where it came from, and the file itself. For a sound that is code rather than a " +
+        "recording, the recipe is included, so it can be re-rendered at another length or pitch.",
+      inputSchema: {
+        id: z.string().describe("The sound's id, e.g. earshot:whoosh_fast/crisp."),
+      },
+    },
+    async ({ id }) => {
+      const catalogue = loadSfx(config.sfxPath);
+      const item = getSfx(catalogue, id);
+      if (!item) {
+        return fail(`No sound with the id "${id}".`, {
+          hint: "Call list_sfx_kinds, or browse_sfx with a kind.",
+        });
+      }
+      return ok({ ...item, filePath: sfxFile(config.repoRoot, item) });
+    },
+  );
+
+  server.registerTool(
+    "plan_sound",
+    {
+      title: "Plan the sound for a film",
+      description:
+        "Put sound under a storyboard. Each beat's role says what the picture is doing and therefore " +
+        "what the ear should get: a setup leads in, a reveal lands just after the cut, a resolve " +
+        "closes the phrase, an exit signs the film off. The result is a kit — a list of takes with " +
+        "their times and levels — which render_film can then mix into the film.",
+      inputSchema: {
+        storyboard: z
+          .object({
+            brief: z.string().optional(),
+            beats: z.array(
+              z.object({
+                index: z.number().optional(),
+                label: z.string().optional(),
+                role: z.string().optional(),
+                inSeconds: z.number().optional(),
+                outSeconds: z.number().optional(),
+                durationSeconds: z.number().optional(),
+              }),
+            ),
+          })
+          .describe("The storyboard, as plan_video returns it."),
+        limit: z.number().int().positive().max(12).optional().describe("How many takes (default 6)."),
+      },
+    },
+    async ({ storyboard, limit }) => {
+      const catalogue = loadSfx(config.sfxPath);
+      const beats = (storyboard?.beats ?? []) as {
+        index?: number;
+        label?: string;
+        role?: string;
+        inSeconds?: number;
+      }[];
+      if (beats.length === 0) {
+        return fail("The storyboard has no beats.", {
+          hint: "Call plan_video first and pass the storyboard it returns.",
+        });
+      }
+      const plan = planSound(catalogue, beats, { limit });
+      return ok({
+        source: config.sfxPath,
+        beats: beats.length,
+        takes: plan.takes,
+        unplaced: plan.unplaced,
+        note:
+          "Each take says why it is there. Pass the takes to render_film as a kit to mix them in.",
+      });
+    },
+  );
+
+  server.registerTool(
     "list_motion_blocks",
     {
       title: "List HyperFrames motion blocks",
@@ -829,13 +1033,28 @@ export function registerTools(server: McpServer, config: Config): void {
           .boolean()
           .optional()
           .describe("Build the project and run the gate, but do not render the MP4."),
+        sound: z
+          .boolean()
+          .optional()
+          .describe("Mix sound under the film (default true). False makes a silent film."),
+        kit: z
+          .array(
+            z.object({
+              id: z.string().describe("A sound id from browse_sfx or search_sfx."),
+              at_seconds: z.number().min(0).optional().describe("When it lands, in seconds."),
+              level: z.number().min(0).max(1).optional().describe("How loud, 0 to 1."),
+              role: z.string().optional().describe("What it is doing there."),
+            }),
+          )
+          .optional()
+          .describe("The sound to mix in. Without it the kit is planned from the shot list."),
         wait: z
           .boolean()
           .optional()
           .describe("Wait for the render and return the finished file. For a terminal, not a chat."),
       },
     },
-    async ({ brief, shots, tags, title, fps, build_only, wait }) => {
+    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput }) => {
       const file = loadBlocks(config.blocksPath);
       const tokenFile = tokens() as unknown as TokenShape;
 
@@ -859,14 +1078,73 @@ export function registerTools(server: McpServer, config: Config): void {
       const id = filmSlug(title ?? plan.headline);
       const directory = join(filmsDir(config.repoRoot), id);
 
+      let kit: KitTake[] = [];
+
       let built: { plan: FilmPlan; skipped: { id: string; reason: string }[] };
       try {
-        built = buildFilmProject(config.repoRoot, directory, plan, tokenFile);
+        built = buildFilmProject(config.repoRoot, directory, plan, tokenFile, kit);
       } catch (error) {
         return fail("The film project could not be built.", {
           detail: error instanceof Error ? error.message : String(error),
           hint: "The blocks are installed from the HyperFrames registry, which needs the network.",
         });
+      }
+
+      /*
+       * The sound.
+       *
+       * A film with no sound is a film with something missing, so the kit is
+       * planned from the shot list when the caller does not supply one: each
+       * cut gets the sound its role calls for, timed against the cut and
+       * levelled for its part in the film.
+       */
+      if (kitInput && kitInput.length > 0) {
+        const catalogue = loadSfx(config.sfxPath);
+        for (const take of kitInput) {
+          const item = getSfx(catalogue, take.id);
+          if (!item) continue;
+          kit.push({
+            id: item.id,
+            atSeconds: take.at_seconds ?? 0,
+            level: take.level ?? 0.4,
+            file: item.file,
+            durationMs: item.durationMs,
+            title: item.title,
+            role: take.role ?? "develop",
+          });
+        }
+      } else if (sound !== false) {
+        const catalogue = loadSfx(config.sfxPath);
+        let cursor = 0;
+        const beats = built.plan.shots.map((shot, index) => {
+          const beat = {
+            index,
+            label: shot.title,
+            role:
+              index === 0
+                ? "setup"
+                : index === built.plan.shots.length - 1
+                  ? "exit"
+                  : "reveal",
+            inSeconds: cursor,
+          };
+          cursor += shot.duration;
+          return beat;
+        });
+        kit = planSound(catalogue, beats).takes.map((take) => ({
+          id: take.id,
+          atSeconds: take.atSeconds,
+          level: take.level,
+          file: take.file,
+          durationMs: take.durationMs,
+          title: take.title,
+          role: take.role,
+        }));
+      }
+
+      if (kit.length > 0) {
+        copyKitFiles(config.repoRoot, directory, kit);
+        writeHostComposition(built.plan, directory, tokenFile, kit);
       }
 
       if (built.plan.shots.length === 0) {
@@ -945,7 +1223,7 @@ export function registerTools(server: McpServer, config: Config): void {
           dropped.push({ id: worst, reasons: why });
           recordVerdict(config.repoRoot, worst, false, why.length, why);
 
-          plan = rebuildHost(directory, plan, tokenFile, [worst]);
+          plan = rebuildHost(directory, plan, tokenFile, [worst], kit);
           if (plan.shots.length === 0) break;
           result = await renderProject(config.repoRoot, directory, { fps: fps ?? 30 });
         }
@@ -1000,6 +1278,13 @@ export function registerTools(server: McpServer, config: Config): void {
           dropped: finished?.dropped,
           durationSeconds: finished?.seconds ?? built.plan.total,
           shotList: finished?.shots ?? [],
+          kit: kit.map((take) => ({
+            id: take.id,
+            title: take.title,
+            atSeconds: take.atSeconds,
+            level: take.level,
+            role: take.role,
+          })),
           file: finished?.status === "ready" ? { name: "film.mp4", url: `/films/${id}/video` } : undefined,
           poster: finished?.status === "ready" ? { name: "poster.png", url: `/films/${id}/poster` } : undefined,
           contactSheet:
@@ -1014,6 +1299,13 @@ export function registerTools(server: McpServer, config: Config): void {
         headline: plan.headline,
         directory,
         status: "rendering",
+        kit: kit.map((take) => ({
+          id: take.id,
+          title: take.title,
+          atSeconds: take.atSeconds,
+          level: take.level,
+          role: take.role,
+        })),
         durationSeconds: built.plan.total,
         shotList: built.plan.shots.map((s) => ({
           id: s.id,

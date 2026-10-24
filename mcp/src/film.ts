@@ -11,7 +11,7 @@
  * in a file.
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { fillBlock, headlineFrom, matchBlocks, type BlockFile, type MotionBlock } from "./blocks.js";
@@ -278,10 +278,28 @@ export function localiseGsap(repoRoot: string, outDir: string): number {
 }
 
 /** Write the host composition that mounts the shots. */
+export interface KitTake {
+  /** The sound's id in the library. */
+  id: string;
+  /** Where it lands, in seconds. */
+  atSeconds: number;
+  /** How loud, 0 to 1. */
+  level: number;
+  /** What it is doing there. */
+  role?: string;
+  /** The file, relative to the library directory. */
+  file: string;
+  /** How long the sound is. */
+  durationMs?: number;
+  /** The sound's title, for the record. */
+  title?: string;
+}
+
 export function writeHostComposition(
   plan: FilmPlan,
   outDir: string,
   tokens: TokenShape,
+  kit: KitTake[] = [],
 ): void {
   let cursor = 0;
   const mounts = plan.shots
@@ -306,7 +324,7 @@ export function writeHostComposition(
     })
     .join("\n");
 
-  const indexHtml = `<!doctype html>
+  let indexHtml = `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -351,6 +369,36 @@ ${mounts}
 </html>
 `;
 
+  /*
+   * The sound.
+   *
+   * Each take is one element with the three attributes HyperFrames reads: when
+   * it starts, when it ends, and how loud it is. The element carries an id,
+   * because a media element without one is a silent one — the gate says so.
+   */
+  const audio = kit
+    .map((take) => {
+      const name = take.file.split("/").pop() ?? take.id;
+      const start = Math.max(0, take.atSeconds);
+      const level = Math.max(0, Math.min(1, take.level));
+      return `      <audio
+        id="sfx-${start.toFixed(2).replace(".", "-")}-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}"
+        src="./assets/sfx/${name}"
+        data-start="${start.toFixed(2)}"
+        data-duration="${(take.durationMs ? take.durationMs / 1000 : 1).toFixed(3)}"
+        data-volume="${level.toFixed(2)}"
+        title="${String(take.title ?? take.id).replace(/"/g, "&quot;")}"
+      ></audio>`;
+    })
+    .join("\n");
+
+  if (audio) {
+    indexHtml = indexHtml.replace(
+      "    </div>\n    <script>",
+      `${audio}\n    </div>\n    <script>`,
+    );
+  }
+
   writeFileSync(join(outDir, "index.html"), indexHtml);
   writeFileSync(
     join(outDir, "hyperframes.json"),
@@ -386,6 +434,7 @@ export function buildFilmProject(
   outDir: string,
   plan: FilmPlan,
   tokens: TokenShape,
+  kit: KitTake[] = [],
 ): { plan: FilmPlan; skipped: { id: string; reason: string }[] } {
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
@@ -399,8 +448,28 @@ export function buildFilmProject(
   const finalPlan: FilmPlan = { ...plan, shots: kept, total };
 
   localiseGsap(repoRoot, outDir);
-  writeHostComposition(finalPlan, outDir, tokens);
+  copyKitFiles(repoRoot, outDir, kit);
+  writeHostComposition(finalPlan, outDir, tokens, kit);
   return { plan: finalPlan, skipped };
+}
+
+/**
+ * Copy the kit's sounds into the project.
+ *
+ * A film carries its own audio. A render must not depend on a file outside
+ * the project, and must not depend on the network to get it.
+ */
+export function copyKitFiles(repoRoot: string, outDir: string, kit: KitTake[]): void {
+  if (kit.length === 0) return;
+  const dest = join(outDir, "assets", "sfx");
+  mkdirSync(dest, { recursive: true });
+  for (const take of kit) {
+    const source = resolve(repoRoot, "library", take.file);
+    if (!source.startsWith(resolve(repoRoot, "library"))) continue;
+    if (!existsSync(source)) continue;
+    const name = take.file.split("/").pop();
+    if (name) copyFileSync(source, join(dest, name));
+  }
 }
 
 /**
@@ -414,6 +483,7 @@ export function rebuildHost(
   plan: FilmPlan,
   tokens: TokenShape,
   drop: string[],
+  kit: KitTake[] = [],
 ): FilmPlan {
   const dropped = new Set(drop);
   const kept = plan.shots
@@ -421,7 +491,7 @@ export function rebuildHost(
     .map((shot, index) => ({ ...shot, index }));
   const total = kept.reduce((sum, shot) => sum + shot.duration, 0);
   const finalPlan: FilmPlan = { ...plan, shots: kept, total };
-  writeHostComposition(finalPlan, outDir, tokens);
+  writeHostComposition(finalPlan, outDir, tokens, kit);
   return finalPlan;
 }
 

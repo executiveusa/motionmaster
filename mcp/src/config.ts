@@ -73,6 +73,8 @@ export interface Config {
   libraryPath: string;
   /** The HyperFrames block library. */
   blocksPath: string;
+  /** The sound library: one index of every sound in the house. */
+  sfxPath: string;
   montage: MontageConfig;
 }
 
@@ -106,6 +108,8 @@ export function loadConfig(): Config {
       env("MOTION_MASTER_LIBRARY_PATH") ?? join(repoRoot, "library", "catalogue.json"),
     blocksPath:
       env("MOTION_MASTER_BLOCKS_PATH") ?? join(repoRoot, "library", "blocks.json"),
+    sfxPath:
+      env("MOTION_MASTER_SFX_PATH") ?? join(repoRoot, "library", "sfx.json"),
     montage: {
       baseUrl: montageBase,
       token: env("MOTION_MASTER_MONTAGE_TOKEN"),

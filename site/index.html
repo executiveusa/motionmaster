@@ -451,6 +451,51 @@
         </div>
       </section>
 
+      <section class="section section--sound" id="sound" aria-labelledby="sound-title" data-sound>
+        <div class="shell">
+          <header class="section__head">
+            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The sound</p>
+            <h2 class="h2" id="sound-title">Every sound, and where it belongs.</h2>
+            <p class="section__lede">
+              Sound made in code, interface sounds, and real recordings of open-licensed audio —
+              one shelf, one vocabulary. Each one says what it sounds like, when it belongs, and
+              what licence it is under. Play one, or let the agent put one under a cut.
+            </p>
+          </header>
+
+          <div class="sfx__controls">
+            <div class="sfx__search">
+              <label class="visually-hidden" for="sfx-search">Search the sounds</label>
+              <input
+                id="sfx-search"
+                type="search"
+                placeholder="a short bright pop for a button"
+                autocomplete="off"
+                data-sfx-search
+              />
+            </div>
+            <div class="sfx__select">
+              <label class="visually-hidden" for="sfx-source">Where the sound came from</label>
+              <select id="sfx-source" data-sfx-source>
+                <option value="all">Every source</option>
+                <option value="earshot">Made in code</option>
+                <option value="uisfx">Interface</option>
+                <option value="openverse">Recorded</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sfx__kinds" data-sfx-kinds role="group" aria-label="Filter by kind"></div>
+
+          <p class="sfx__status" data-sfx-note aria-live="polite"></p>
+          <p class="sfx__count" data-sfx-count aria-live="polite"></p>
+
+          <div class="sfx__list" data-sfx-list></div>
+
+          <button type="button" class="btn btn--ghost sfx__more" data-sfx-more hidden>Show more</button>
+        </div>
+      </section>
+
       <section class="section section--library" id="library" aria-labelledby="library-title" data-library>
         <div class="shell">
           <header class="section__head">
