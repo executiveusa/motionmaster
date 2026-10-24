@@ -25,12 +25,26 @@ DRY=0
 [ "${1:-}" = "--dry" ] && DRY=1
 
 TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-if [ "$DRY" != "1" ] && [ -z "$TOKEN" ]; then
-  cat >&2 <<'MSG'
-No token.
 
-Set GITHUB_TOKEN to a fine-grained token with "Contents: read and write" on
-executiveusa/motionmaster, then run this again:
+# Two ways in. If `gh` is already signed in — the device flow
+# (`gh auth login --web`) — use that session and never touch a token.
+# Otherwise a token has to be supplied.
+gh_signed_in() {
+  command -v gh >/dev/null 2>&1 || return 1
+  gh auth status --hostname github.com >/dev/null 2>&1
+}
+
+if [ "$DRY" != "1" ] && [ -z "$TOKEN" ] && ! gh_signed_in; then
+  cat >&2 <<'MSG'
+No credentials.
+
+Either sign `gh` in first — nothing secret is typed into a chat or a shell
+history, and it can be revoked from GitHub at any time:
+
+    gh auth login --hostname github.com --git-protocol https --web
+
+Or set GITHUB_TOKEN to a fine-grained token with "Contents: read and write"
+on executiveusa/motionmaster:
 
     GITHUB_TOKEN=github_pat_... scripts/push-to-final-home.sh
 
@@ -63,8 +77,11 @@ if [ "$DRY" = "1" ]; then
 fi
 
 echo "==> authenticating"
-printf '%s' "$TOKEN" | gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+if [ -n "$TOKEN" ]; then
+  printf '%s' "$TOKEN" | gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+fi
 gh auth setup-git >/dev/null
+gh auth status --hostname github.com 2>&1 | head -3 || true
 
 echo "==> pushing"
 git push --force-with-lease=main:"$LEASE" origin main
