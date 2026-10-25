@@ -94,17 +94,26 @@ test("MM-05: invalid output fails closed and restart recovery does not silently 
   assert.equal(readProjectJob(root, projectId, job.id).status, "failed");
 });
 
-test("MM-05: a worker cannot render an edited shot list by silently ignoring edits", async (t) => {
+test("MM-08: a saved edited shot list reaches the worker without losing order or trim", async (t) => {
   const { root, config, projectId } = fixture(t);
+  const edits = [
+    { id: "shot-b", title: "Second first", duration: 1.5 },
+    { id: "shot-a", title: "First second", duration: 2 },
+  ];
   saveRevision(root, projectId, 1, {
-    title: "Edited", brief: "A cinematic launch film",
-    shots: [{ id: "unknown", title: "Changed", duration: 2 }],
+    title: "Edited", brief: "A cinematic launch film", shots: edits,
   });
   const job = createProjectJob(root, projectId, 2);
-  // The actual adapter needs the real registry; this test checks that
-  // the explicit unsupported-edits contract is not hidden by a fake renderer.
-  await runProjectJob(config, projectId, job.id, async () => { throw new Error("Edit adapter not ready."); });
-  assert.match(readProjectJob(root, projectId, job.id).error, /Edit adapter not ready/);
+  let received;
+  await runProjectJob(config, projectId, job.id, async (cfg, revision, outputDir) => {
+    received = revision.shots;
+    return ffmpegRenderer(cfg, revision, outputDir);
+  });
+  assert.deepEqual(received, edits);
+  assert.equal(readProjectJob(root, projectId, job.id).status, "ready");
+  assert.deepEqual(readProject(root, projectId).revision.shots, edits);
+  // The injected FFmpeg renderer only verifies revision delivery and durable
+  // lifecycle; default HyperFrames edited MP4 proof is still required.
 });
 
 test("MM-05: empty queue drains without writing anything", async (t) => {
