@@ -297,3 +297,20 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `ade3e4f` and `8723e72` on draft PR #2, or close the draft PR. No schema migration, main merge, production deploy, paid activation, force-push, credential disclosure or Montage edit.
 
 **NEXT:** Inspect CI for the auto-save regression and repair any failure. Then prove one uninterrupted authenticated browser create/edit/render/watch/download/export/import/reopen flow with the real default worker, followed by owner-controlled staging and independent release gates.
+
+
+## Continuation — 2026-10-25 16:20 UTC (MM-09 browser source import)
+
+**DECISION:** Continue private development, release blocked. The immediately preceding CI [40208050254](https://github.com/executiveusa/motionmaster/actions/runs/40208050254) completed **SUCCESS** for the prior save-before-render slice at `7abb6a3`. Do not confuse that success with the new import UI changes.
+
+**CHANGES:** `4026d41` adds an authenticated, progressively disclosed `.json.gz` source-import form to the existing human editor, reusing `POST /api/v1/projects/import` rather than introducing another backend. The form rejects files over 64 MiB before upload, never persists the access key, creates a **new** project rather than overwriting the original, and opens the imported editable revision. `f013bdb` adds English and es-MX translations for the import flow and errors. `f94a99f` and `45c0581` extend the real Chromium test to reject malformed archives without mutating projects and to import/reopen a valid synthetic source archive through the actual authenticated browser file input.
+
+**PROOF STATUS:** CI for `45c0581` [run 40210997653](https://github.com/executiveusa/motionmaster/actions/runs/40210997653) was queued when this ledger was written. No claim of a passing browser import or successful build until this run completes. The synthetic archive test is not evidence of a completed real-worker video-to-export-to-import journey.
+
+**SITE:** Vercel deployment metadata still reports the READY alias `motionmaster-private-preview.vercel.app` on old SHA `33aee7d` (target: production); this branch's source-import UI is **not** deployed. Live site and benchmark HTML could not be independently fetched by the web reader. The gallery-first design, English default, Mexican Spanish toggle, and four prompt-backed videos are preserved in code; no hero rewrite.
+
+**RISKS / REVIEW:** Source assets remain untrusted and require licence review; imported HTML is quarantined by the existing backend. Hosted persistent worker, real browser-to-default-worker edited MP4/export/reimport acceptance, live Codex/Claude MCP host invocations, independent design/security/accessibility gauntlet, 10 E2E repetitions, and 5 uncoached users remain open. The repository visibility is public despite private-v1 development. Builder review is not independent approval.
+
+**ROLLBACK:** Revert `45c0581`, `f94a99f`, `f013bdb`, and `4026d41` on the draft branch. No schema migration, main merge, production deploy, paid service, secret disclosure, force-push, Montage edit or sale-state change.
+
+**NEXT:** Inspect the final CI result, repair any failing Chromium/source-import test, then prove the full real-worker browser lifecycle on an owner-controlled persistent staging host. Founder approval is required before deployment or release.
