@@ -69,6 +69,9 @@ try {
   assert.ok(selected, "Pinned lt-neon-border composition is unavailable; do not silently substitute a different block");
   assert.ok(selected.duration >= 4.8, "Pinned block duration changed; requalify the edit smoke");
   report.selectedBlock = selected.id;
+  const editableText = selected.variables.find((variable) => variable.type === "string");
+  assert.ok(editableText, "Pinned composition has no editable text variable");
+  report.editedVariable = editableText.id;
   const { project } = createProject(temp, { title: "Default worker proof", brief: "A cinematic lower-third for Dr. Maya Chen", shots: [{ id: selected.id, title: "First version", duration: 3.5 }] });
   const first = createProjectJob(temp, project.id, 1);
   await runProjectJob(config, project.id, first.id); // NO renderer override
@@ -83,7 +86,7 @@ try {
   run(process.execPath, ["--input-type=module", "-e", check, temp, project.id, first.id]);
   report.reopenedInNewProcess = true;
 
-  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic lower-third for Dr. Maya Chen", shots: [{ id: selected.id, title: "Shorter version", duration: 3.0 }] });
+  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic lower-third for Dr. Maya Chen", shots: [{ id: selected.id, title: "Shorter version", duration: 3.0, values: { [editableText.id]: "Ana Ruiz" } }] });
   assert.equal(revision.revision.number, 2);
   const second = createProjectJob(temp, project.id, 2);
   await runProjectJob(config, project.id, second.id); // same real renderer
@@ -94,7 +97,13 @@ try {
   assert.equal(source.shots.length, 1);
   assert.equal(source.shots[0].id, selected.id);
   assert.equal(source.shots[0].duration, 3.0);
+  assert.equal(source.shots[0].values[editableText.id], "Ana Ruiz",
+    "Edited text did not reach the generated HyperFrames variable payload");
+  assert.notEqual(hash(join(proof, "original-frame-late.png")),
+    hash(join(proof, "edited-frame-late.png")),
+    "Text edit did not change the actual rendered late frame");
   assert.notEqual(report.renders[0].sha256, report.renders[1].sha256);
+  report.textOverrideVerifiedInSource = true;
   report.status = "passed";
   console.log("PASS: default HyperFrames worker rendered, reopened, edited, rerendered and decoded real MP4s.");
 } catch (error) {
