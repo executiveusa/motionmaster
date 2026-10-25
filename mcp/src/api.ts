@@ -70,6 +70,7 @@ import {
   type RenderJob,
 } from "./render.js";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { createProject, listProjects, readProject, readRevision, saveRevision } from "./projects.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -279,6 +280,37 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           responses: { 200: { description: "ok", content: json(obj) } },
         },
       },
+      [`${API_PREFIX}/projects`]: {
+        get: { summary: "List private local projects.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
+        post: {
+          summary: "Create a private local project and its first immutable revision.",
+          requestBody: { required: true, content: json({
+            type: "object", properties: { title: str, brief: str, shots: arr(obj) },
+            required: ["title", "brief"],
+          }) },
+          responses: { 201: { description: "created", content: json(obj) }, 400: { description: "invalid input", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/projects/{id}`]: {
+        get: { summary: "Reopen the current project revision.", responses: {
+          200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
+        } },
+      },
+      [`${API_PREFIX}/projects/{id}/revisions`]: {
+        post: {
+          summary: "Save a new immutable revision with optimistic concurrency.",
+          requestBody: { required: true, content: json({
+            type: "object", properties: { expectedRevision: num, title: str, brief: str, shots: arr(obj) },
+            required: ["expectedRevision", "title", "brief", "shots"],
+          }) },
+          responses: { 201: { description: "created", content: json(obj) }, 409: { description: "revision conflict", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/projects/{id}/revisions/{number}`]: {
+        get: { summary: "Read an immutable project revision.", responses: {
+          200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
+        } },
+      },
       [`${API_PREFIX}/films`]: {
         get: { summary: "The films rendered here.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
         post: {
@@ -350,6 +382,11 @@ export async function handleApi(
         "GET  /sfx",
         "GET  /sfx/{id}",
         "POST /sound/plan",
+        "GET  /projects",
+        "POST /projects",
+        "GET  /projects/{id}",
+        "POST /projects/{id}/revisions",
+        "GET  /projects/{id}/revisions/{number}",
         "GET  /films",
         "POST /films",
         "GET  /films/{id}",
@@ -580,6 +617,81 @@ export async function handleApi(
     }));
     const kit = planSound(catalogue, beats as never);
     writeJson(res, 200, { beats, takes: kit.takes });
+    return true;
+  }
+
+  // ── private project drafts (MM-03) ─────────────────────────────────────────
+  // No anonymous project storage when bound beyond loopback. Hosted auth,
+  // tenant isolation and worker job execution are separate MM-05/MM-06 gates.
+  if (route === "/projects" || route.startsWith("/projects/")) {
+    if (!process.env.MOTION_MASTER_API_KEY?.trim() &&
+        !["127.0.0.1", "::1", "localhost"].includes(config.host)) {
+      fail(res, 403, "Private project storage requires a configured API key outside loopback.");
+      return true;
+    }
+
+    if (route === "/projects" && method === "GET") {
+      writeJson(res, 200, listProjects(config.repoRoot));
+      return true;
+    }
+
+    if (route === "/projects" && method === "POST") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      if (!body || typeof body.title !== "string" || typeof body.brief !== "string" ||
+          (body.shots !== undefined && !Array.isArray(body.shots))) {
+        fail(res, 400, "Project title and brief are required.");
+        return true;
+      }
+      try {
+        const created = createProject(config.repoRoot, {
+          title: body.title, brief: body.brief, shots: body.shots as never,
+        });
+        writeJson(res, 201, created);
+      } catch (error) {
+        fail(res, 400, error instanceof Error ? error.message : "Invalid project.");
+      }
+      return true;
+    }
+
+    const match = /^\\/projects\\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})(?:\\/revisions(?:\\/([0-9]+))?)?$/.exec(route);
+    if (!match) {
+      fail(res, 400, "Invalid project route or id.");
+      return true;
+    }
+    const id = match[1];
+    if (match[2] && method === "GET") {
+      const number = Number(match[2]);
+      const revision = Number.isSafeInteger(number) ? readRevision(config.repoRoot, id, number) : undefined;
+      if (!revision) fail(res, 404, "Project revision not found.");
+      else writeJson(res, 200, revision);
+      return true;
+    }
+    if (route.endsWith("/revisions") && method === "POST") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      if (!body || !Number.isSafeInteger(body.expectedRevision) ||
+          typeof body.title !== "string" || typeof body.brief !== "string" ||
+          !Array.isArray(body.shots)) {
+        fail(res, 400, "expectedRevision, title, brief and shots are required.");
+        return true;
+      }
+      try {
+        const saved = saveRevision(config.repoRoot, id, body.expectedRevision as number, {
+          title: body.title, brief: body.brief, shots: body.shots as never,
+        });
+        writeJson(res, 201, saved);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Invalid revision.";
+        fail(res, message.includes("conflict") ? 409 : message.includes("not found") ? 404 : 400, message);
+      }
+      return true;
+    }
+    if (route === `/projects/${id}` && method === "GET") {
+      const project = readProject(config.repoRoot, id);
+      if (!project) fail(res, 404, "Project not found.");
+      else writeJson(res, 200, project);
+      return true;
+    }
+    fail(res, 405, "Unsupported project method.");
     return true;
   }
 
