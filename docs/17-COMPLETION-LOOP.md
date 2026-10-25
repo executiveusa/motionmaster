@@ -198,3 +198,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `a30a9f7`, `a1cce73`, `1390105` on the draft branch; immutable project records and `main` are unchanged. No force-push, auto-merge, paid service, production deployment, secret disclosure or Montage edit.
 
 **NEXT:** Inspect latest CI and fix any failures. Then prove an edited revision renders a real MP4 through the default worker (not an injected renderer), survives restart and exports/re-imports. Add a minimal human-facing edit interaction only after the actual render path is verified. Independent reviewers must approve before release.
+
+## 13. Continuation — 2026-10-25 UTC (MM-05 active subprocess cancellation)
+
+**DECISION:** Repair a real P0 lifecycle gap before adding another editor surface. Keep the single-writer local worker, the October 24 gallery-first homepage, PR #2 draft, main and hosted frontend unchanged. No paid service, release, or sale activation.
+
+**CHANGES:** Commits `bba7ad8`, `e4777db`, `202d0f3`, `cbffa11`, `c07f371`, `b533f34` propagate an AbortSignal from the authenticated HTTP cancel route through the active project worker to HyperFrames check/render/snapshot subprocesses. POSIX subprocesses now run in their own process group so cancellation and timeout signal the shell **and its children**, with SIGKILL escalation after two seconds; the caller waits for process exit. Aborted jobs remain cancelled and cannot publish an MP4. New regression tests cover a running worker, the real HTTP cancellation route, a long-running bash child and an already-aborted signal.
+
+**PROOF:** [GitHub Actions run 40188155492](https://github.com/executiveusa/motionmaster/actions/runs/40188155492) **SUCCESS** for code head `b533f34e31b135144ae417a3a625f5dea7d25148`; [artifact 12597571252](https://github.com/executiveusa/motionmaster/actions/runs/40188155492/artifacts/12597571252). All seven completion gates passed, including MCP typecheck/tests and bridge checks. Chromium desktop/mobile capture, English/es-MX click/reload/dynamic-i18n, four decoded gallery MP4s and the independent 15-second HyperFrames smoke passed. These are CI/branch tests; they are not a default edited-project MP4 or hosted API smoke.
+
+**LIVE / REVIEW:** Vercel still reports the older `33aee7d` static frontend as READY at `motionmaster-private-preview.vercel.app`; the new worker is not deployed. Direct live-site and `motionvideo.xyz` fetches were unavailable to this run's web reader. Independent Landing Page Director/taste, security, accessibility, live Codex/Claude and first-time-user approval remain outstanding.
+
+**RISKS:** HyperFrames registry installation uses synchronous `execFileSync` and cannot be interrupted mid-install; abort prevents subsequent gate/render work. Process-group termination is POSIX-specific; Windows falls back to killing the immediate shell. A single-process abort controller is not a distributed cancellation mechanism. The default edited-revision HyperFrames MP4, persistent hosted worker, browser auth, source edit controls, backup/restore and 10 consecutive end-to-end trials are not yet verified. Sale remains `onSale=false`.
+
+**ROLLBACK:** Revert the six code/test commits above from draft PR #2, or close the PR; no persisted project schema changed. `main` remains `adc9685`; existing projects and MP4s remain intact.
+
+**NEXT:** Add a **real default-worker edited-revision** integration proof (select eligible block, render actual MP4, reopen, change shot trim/order, rerender and validate both files), without replacing the renderer with an injected FFmpeg stub. Only then wire a minimal visual editor and owner-controlled staging. Independent reviewer and founder approval remain required before release.
