@@ -182,3 +182,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the six MM-09 commits on the draft branch, or close PR #2. Newly imported project directories can be removed individually; existing source projects, historical MP4s and `main` remain unchanged.
 
 **NEXT:** Check latest CI and repair failures. Then implement a verified manual shot edit using the existing block catalogue and renderer, and prove create → render → restart → reopen → edit → rerender → export → re-import with the real default pipeline. Independent security, accessibility and taste review must approve before any production release.
+
+## 12. Continuation — 2026-10-25 UTC (MM-08 explicit shot order and bounded trims)
+
+**DECISION:** Implement one narrow, reversible editor-to-render prerequisite without rewriting the gallery or claiming that the whole shot editor is ready. Keep draft PR #2 and production untouched.
+
+**CHANGES:** Commits `1390105`, `a1cce73`, `a30a9f7` extend the existing `planFilm` path to accept explicit, ordered, eligible catalogue block IDs from saved project revisions. The real project worker now passes those IDs through to the existing HyperFrames installer rather than rejecting all edited shot lists. It preserves the editor's shot order and descriptive titles and applies requested trim durations only after the installed source declares its natural duration. Longer-than-source trims fail closed rather than rendering blank tail frames. Missing, duplicate, excluded, fragment and ineligible IDs fail rather than being silently replaced. If any selected block fails to install, the worker fails the job instead of publishing a partial edit. Added regression tests for selection order, invalid IDs, trim bounds and generated editable HyperFrames source timing.
+
+**PROOF STATUS:** Before this slice, [CI run 40180189736](https://github.com/executiveusa/motionmaster/actions/runs/40180189736) was SUCCESS on `5dd39a7`. New CI [run 40183876441](https://github.com/executiveusa/motionmaster/actions/runs/40183876441) was **in progress** at ledger time. Do not claim the edited default renderer has produced a real MP4: these new tests validate planning and source generation, while the existing independent HyperFrames smoke does not exercise a saved edited revision. Await latest-head CI before treating the code as verified.
+
+**SITE / REVIEW:** No frontend changes in this slice. Fresh external web reads of the older Vercel preview and `motionvideo.xyz` were unavailable in this execution environment; the Vercel deployment API reported READY for **old** `33aee7d`, not this branch. This is not a new staging deployment, live backend, browser playback test or independent gauntlet approval.
+
+**RISKS:** This slice enables block reorder and safe shortening of an explicit shot list, **not** editable on-screen text, colours, uploaded assets or a full visual editor. The shot title is metadata and does not change the block's visible text. The real edited revision still needs default HyperFrames MP4/reopen/rerender proof. Rendering uses the existing network-dependent registry installer. Worker subprocess cancellation, hosted persistence/authenticated browser UX, Claude/Codex live smoke, independent reviews and first-time-user trials remain open. Sale remains off.
+
+**ROLLBACK:** Revert `a30a9f7`, `a1cce73`, `1390105` on the draft branch; immutable project records and `main` are unchanged. No force-push, auto-merge, paid service, production deployment, secret disclosure or Montage edit.
+
+**NEXT:** Inspect latest CI and fix any failures. Then prove an edited revision renders a real MP4 through the default worker (not an injected renderer), survives restart and exports/re-imports. Add a minimal human-facing edit interaction only after the actual render path is verified. Independent reviewers must approve before release.
