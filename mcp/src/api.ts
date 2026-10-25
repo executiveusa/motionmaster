@@ -758,7 +758,7 @@ export async function handleApi(
         else writeJson(res, 200, { ...job, ...(job.status === "ready" ? { downloadUrl: `${API_PREFIX}/projects/${projectId}/jobs/${jobId}/artifact` } : {}) });
         return true;
       }
-      if (jobId && action && method === "POST") {
+      if (jobId && (action === "cancel" || action === "retry") && method === "POST") {
         try {
           const job = transitionProjectJob(config.repoRoot, projectId, jobId, action as "cancel" | "retry");
           writeJson(res, 200, job);
