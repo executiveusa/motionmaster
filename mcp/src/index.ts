@@ -21,6 +21,7 @@ import { listFiles, storeFile, workspaceDir } from "./files.js";
 import { filmsDir, listFilms, readJob } from "./render.js";
 import { authorised, handleApi } from "./api.js";
 import { recoverInterruptedProjectJobs } from "./projects.js";
+import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -682,6 +683,9 @@ export async function startChatServer(config: Config): Promise<{
   // A single-writer restart cannot leave abandoned jobs looking active.
   // Never automatically execute a recovered job; the owner may retry it.
   recoverInterruptedProjectJobs(config.repoRoot);
+  // Only an explicitly enabled owner-controlled worker resumes queued work.
+  // Interrupted rendering jobs stay failed until manually retried.
+  if (projectWorkerEnabled()) void processProjectQueue(config);
   const httpServer = createServer(createHttpHandler(config));
   await new Promise<void>((resolve) => {
     httpServer.listen(config.port, config.host, () => resolve());
