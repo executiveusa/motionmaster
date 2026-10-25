@@ -79,9 +79,11 @@ test("brief headline appears in the rendered markup, not internal slot names", (
   assert.match(html, />ACME<\/span>/, "actual customer brand must appear on screen");
   assert.doesNotMatch(html, />wordmark<\/span>|>tagline<\/span>|>backdrop<\/span>/,
     "internal element names must never be shown as film copy");
-  assert.match(html, /tl\.fromTo\("\.beat\[data-track-index=\\\"0\\\"\] \.beat__label", \{ opacity: 1, y: 0 \}/,
+  assert.match(html, /tl\.fromTo\("\.beat\[data-track-index=\\\"0\\\"\] \.beat__label", \{ opacity: 1, y: 0, x: -72 \}/,
     "first frame must have a visible title for the HyperFrames thumbnail gate");
   assert.match(html, /duration: 0\.18, ease:/, "closing line must enter promptly enough to be readable");
+  assert.match(html, /x: -72 \}, \{ opacity: 1, y: 0, x: 0, duration: 4\./,
+    "opening must move throughout the setup instead of remaining static for 4+ seconds");
 });
 
 test("explicit tagline is preserved while missing tagline is omitted", () => {
