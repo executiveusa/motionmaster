@@ -335,6 +335,8 @@ try {
   await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); d.open = true; document.documentElement.style.scrollBehavior = "auto"; document.body.style.scrollBehavior = "auto"; document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"}); return true; })()');
   await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140', 'mobile editor visible in screenshot');
   await sleep(400);
+  await until('document.querySelector("[data-mobile-bar]")?.hidden === true',
+    'Spanish mobile editor clears sticky gallery CTA');
   const editorMobile = await command('Page.captureScreenshot', { format: 'png' });
   writeFileSync(resolve(root, '.completion-proof', 'screenshots', 'editor-mobile-es-MX.png'), Buffer.from(editorMobile.result.data, 'base64'));
   const mobile = await evaluate('({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth })');
