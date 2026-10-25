@@ -17,7 +17,7 @@ function eligible() {
   return blocks.blocks.filter((block) =>
     block.variables.length > 0 &&
     !block.tags.includes("transitions-dev-port") &&
-    block.files.some((file) => file.type === "hyperframes:composition" || file.path.endsWith(".html"))
+    block.files.some((file) => file.type === "hyperframes:composition")
   );
 }
 
@@ -38,6 +38,24 @@ test("MM-08: reject missing, duplicate and excluded shot IDs", { skip }, () => {
   assert.throws(() => planFilm("A brand launch", { ...options, selectedIds: [id, id] }), /unique/);
   assert.throws(() => planFilm("A brand launch", { ...options, selectedIds: [id], exclude: [id] }), /ineligible/);
   assert.throws(() => planFilm("A brand launch", { ...options, selectedIds: [] }), /unique/);
+});
+
+
+test("MM-08: HTML snippets cannot be selected or automatically matched as shots", { skip }, () => {
+  const snippet = blocks.blocks.find((block) =>
+    block.variables.length > 0 &&
+    block.files.some((file) => file.type === "hyperframes:snippet") &&
+    !block.files.some((file) => file.type === "hyperframes:composition")
+  );
+  assert.ok(snippet, "catalogue needs a snippet fixture");
+  assert.throws(
+    () => planFilm("A kinetic text effect", { blocks, tokens, selectedIds: [snippet.id] }),
+    /ineligible/
+  );
+  const plan = planFilm("A kinetic text effect", { blocks, tokens, count: 10 });
+  assert.ok(plan.shots.every((shot) =>
+    blocks.blocks.find((block) => block.id === shot.id)?.files.some((file) => file.type === "hyperframes:composition")
+  ), "auto-matching must never mount a snippet");
 });
 
 test("MM-08: trims never extend the installed block or accept invalid durations", () => {
