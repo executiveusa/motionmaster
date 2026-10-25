@@ -265,3 +265,30 @@
     display: none;
   }
 }
+
+/* --- the hero on a narrow screen -------------------------------------
+   Two columns cannot hold a headline and a sentence side by side at 320px,
+   so the spread becomes a stack: the headline first, then the supporting
+   text and the action under it. */
+
+@media (max-width: 767px) {
+  .hero__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'title'
+      'aside';
+    row-gap: 26px;
+  }
+
+  .hero .display {
+    max-width: 14ch;
+  }
+
+  .hero__lede {
+    max-width: 34ch;
+  }
+
+  .hero__actions {
+    gap: 12px 18px;
+  }
+}

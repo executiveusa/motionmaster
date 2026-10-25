@@ -10,16 +10,14 @@ import { COLOR, MOTION, TYPE } from "./tokens";
 
 /**
  * CLIP 2 — "Kinetic type" · 0:09 · gsap-style timeline in Remotion
- * Six words arrive one at a time, then exit in reverse.
+ * The brief arrives one line at a time, then leaves in reverse.
  * Stagger 90ms — inside the standard 50-100ms band, total stagger well under 500ms.
  */
+// The brief, arriving the way a brief arrives: a few words at a time.
+// It is the same sentence the launch-title clip answers.
 const LINES = [
-  { text: "DESCRIBE", accent: false },
-  { text: "IT.", accent: true },
-  { text: "WATCH", accent: false },
-  { text: "IT.", accent: true },
-  { text: "OWN", accent: false },
-  { text: "IT.", accent: true },
+  { text: "a 14s launch title", accent: false },
+  { text: "on a white canvas", accent: true },
 ];
 
 const STAGGER = 3; // frames @30fps = 90ms

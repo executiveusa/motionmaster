@@ -57,6 +57,8 @@ import {
   type RenderJob,
 } from "./render.js";
 import { loadVerdicts, recordVerdict } from "./verdicts.js";
+import { gateProject } from "./render.js";
+import { isAbsolute } from "node:path";
 import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
 
 type TextContent = { type: "text"; text: string };
@@ -935,7 +937,115 @@ export function registerTools(server: McpServer, config: Config): void {
     },
   );
 
+    server.registerTool(
+    "get_motion_block",
+    {
+      title: "Get one motion block in full",
+      description:
+        "The complete spec of a single HyperFrames motion block: every variable with its type, default " +
+        "and role, every file the block is made of, its dimensions and duration. Use this before filling " +
+        "a block, so the values you set are the ones the block actually reads.",
+      inputSchema: {
+        block: z.string().describe("The block id."),
+        brief: z
+          .string()
+          .optional()
+          .describe("If given, the block is also filled from this brief and the filled values are returned."),
+      },
+    },
+    async ({ block, brief }) => {
+      const file = loadBlocks(config.blocksPath);
+      const found = file.blocks.find((b) => b.id === block);
+      if (!found) {
+        return fail(`No block with id "${block}".`, {
+          hint: "Call list_motion_blocks to find one.",
+        });
+      }
+      const payload: Record<string, unknown> = {
+        source: config.blocksPath,
+        generator: file.generated,
+        block: {
+          id: found.id,
+          type: found.type,
+          title: found.title,
+          description: found.description,
+          tags: found.tags,
+          author: found.author,
+          license: found.license,
+          dimensions: found.dimensions,
+          duration: found.duration,
+          variables: found.variables.map((v) => ({
+            id: v.id,
+            type: v.type,
+            role: v.role,
+            label: v.label,
+            description: v.description,
+            default: v.default,
+            min: v.min,
+            max: v.max,
+            options: v.options,
+          })),
+          files: found.files,
+        },
+      };
+      if (brief) {
+        const tokenFile = tokens() as unknown as TokenShape;
+        payload.filled = fillBlock(found, {
+          brief,
+          tokens: tokenFile,
+          values: {},
+        });
+      }
+      return ok(payload);
+    },
+  );
+
   server.registerTool(
+    "check_hyperframes",
+    {
+      title: "Run the HyperFrames gate",
+      description:
+        "Run the HyperFrames gate on a project directory. This is the check that catches what a render " +
+        "cannot: a silent film, a frame stretched to nothing, text under the contrast floor, an element " +
+        "with no id. It returns the findings with the file each one came from, so a failing block can be " +
+        "named and dropped rather than guessed at. Run this before rendering.",
+      inputSchema: {
+        project: z
+          .string()
+          .describe("Path to the HyperFrames project directory, absolute or relative to the repository."),
+        timeoutMs: z
+          .number()
+          .int()
+          .positive()
+          .max(600_000)
+          .optional()
+          .describe("How long the gate may run (default 180000)."),
+      },
+    },
+    async ({ project, timeoutMs }) => {
+      const dir = isAbsolute(project)
+        ? project
+        : join(config.repoRoot, project);
+      if (!existsSync(dir)) {
+        return fail(`No directory at "${project}".`, {
+          hint: "Give the path to a HyperFrames project — the one build_hyperframes_composition writes.",
+        });
+      }
+      const result = await gateProject(config.repoRoot, dir, timeoutMs ?? 180_000);
+      return ok({
+        project: dir,
+        ok: result.ok,
+        errors: result.errors,
+        findings: result.findings,
+        output: result.output,
+        note: result.ok
+          ? "The gate passed. This composition is safe to render."
+          : "The gate failed. Every finding names the file it came from; fix it, or drop the block it came from.",
+      });
+    },
+  );
+
+server.registerTool(
     "fill_block",
     {
       title: "Fill a motion block from a brief",

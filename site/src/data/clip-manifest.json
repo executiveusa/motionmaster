@@ -15,7 +15,7 @@
       "videoSrc": "/clips/kinetic-type.mp4",
       "posterSrc": "/clips/kinetic-type.jpg",
       "posterBytes": 8296,
-      "videoBytes": 104964
+      "videoBytes": 98857
     },
     "product-loop": {
       "video": true,
@@ -23,7 +23,7 @@
       "videoSrc": "/clips/product-loop.mp4",
       "posterSrc": "/clips/product-loop.jpg",
       "posterBytes": 6266,
-      "videoBytes": 166283
+      "videoBytes": 166721
     },
     "footage-title": {
       "video": true,

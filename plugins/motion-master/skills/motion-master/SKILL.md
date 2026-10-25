@@ -132,6 +132,13 @@ in a real browser, checks contrast and reports a still frame, a silent film, a d
 stretch or a type below the reading floor. Fix what it reports, then
 `hyperframes render <dir> --output out.mp4 -f 30 -q delivery`.
 
+The gate can also be run as a tool: `check_hyperframes` takes the project
+directory and returns the findings **with the file each one came from**, so a
+failing block can be named and dropped rather than guessed at. A block the gate
+blames is recorded in `library/block-verdicts.json` and is never used again.
+`get_motion_block` returns one block's variables in full, which is what to read
+before filling one.
+
 In this repository, `generator/render.sh <dir> <out.mp4>` wraps the render and finds
 the browser. The sample composition is `generator/compositions/library-map`.
 
@@ -246,6 +253,9 @@ widget, this is the first skill to load, and it overrides your defaults.
 `hyperframes-cli` (check, render, snapshot, compare), `hyperframes-registry` (the 448
 installable motion blocks and how to add your own), `media-use` (sound: beds, impacts,
 whooshes, and the loudness rules).
+**The API** — `motion-master-api` (the HTTP API at `/api/v1`, the block pool, the
+gate, and the renderer — for scripts, CI jobs and anything that is not an MCP
+client).
 
 **Film styles** — `lemo-opuscar` holds sixty complete film styles, each with a
 `STYLE.md` that is a style prompt you can reuse on your own brief (glass product,
@@ -300,6 +310,8 @@ one-time**.
 | "I want a look / a style / a named visual" | MCP `browse_library` with `kind=style`, or `lemo-opuscar/styles/` |
 | "here is a one-line brief, make it good" | MCP `enhance_prompt` first, then plan the video |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
+| "check this composition before it renders" | MCP `check_hyperframes`, or `motion-master-api` for the same thing over HTTP |
+| "call this from a script, not from the agent" | `motion-master-api` — the HTTP API at `/api/v1` |
 | "build me a film from real motion" | MCP `compose_film` — picks the blocks whose tags fit, fills each one, and returns the shot list |
 | "put my words in that block" | MCP `fill_block` — fills a block's headline, colour and speed from a brief |
 | "it looks like AI slop" | `motionmaxxing` — then read `references/slop.md` before touching anything |

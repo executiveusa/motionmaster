@@ -183,7 +183,7 @@ export const ProductLoop: React.FC = () => {
                 lineHeight: 1,
               }}
             >
-              Four stages.
+              the product,
             </div>
             <div
               style={{
@@ -194,20 +194,7 @@ export const ProductLoop: React.FC = () => {
                 lineHeight: 1,
               }}
             >
-              One file.
-            </div>
-          </div>
-          <div style={{ paddingTop: 26, maxWidth: 620 }}>
-            <div
-              style={{
-                fontFamily: TYPE.mono,
-                fontSize: 22,
-                letterSpacing: 2,
-                color: COLOR.muted,
-                lineHeight: 2.1,
-              }}
-            >
-              SOURCE PROJECT INCLUDED
+              on loop.
             </div>
           </div>
         </div>
@@ -224,7 +211,7 @@ export const ProductLoop: React.FC = () => {
               color: COLOR.ink,
             }}
           >
-            One prompt.
+            and the project
           </div>
           <div
             style={{
@@ -235,7 +222,7 @@ export const ProductLoop: React.FC = () => {
               color: COLOR.accent,
             }}
           >
-            One file.
+            is editable.
           </div>
         </div>
       )}

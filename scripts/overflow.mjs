@@ -36,7 +36,8 @@ const expression = `JSON.stringify({
     let clipped = false;
     for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) {
       const s = getComputedStyle(a);
-      if (/(auto|scroll|hidden)/.test(s.overflowX)) { clipped = true; break; }
+      // clip clips too — it just does not create a scroll container.
+      if (/(auto|scroll|hidden|clip)/.test(s.overflowX)) { clipped = true; break; }
     }
     if (clipped) return null;
     return {

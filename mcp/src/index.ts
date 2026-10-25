@@ -19,6 +19,7 @@ import { LICENCE } from "./licence.js";
 import { handleChat, type ChatRequestBody } from "./chat.js";
 import { listFiles, storeFile, workspaceDir } from "./files.js";
 import { filmsDir, listFilms, readJob } from "./render.js";
+import { handleApi } from "./api.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -244,6 +245,13 @@ export function createHttpHandler(config: Config) {
         "access-control-max-age": "600",
       });
       res.end();
+      return;
+    }
+
+    // The HTTP API. It answers before the MCP route, so /api/v1 is the
+    // product over plain HTTP and /mcp is the same product to an agent.
+    if (url.pathname.startsWith("/api/")) {
+      await handleApi(req, res, url.pathname, config);
       return;
     }
 

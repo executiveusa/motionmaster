@@ -82,8 +82,8 @@
         <a class="mobile-menu__link" href="#proof">Examples</a>
         <a class="mobile-menu__link" href="#mechanism">How it works</a>
         <a class="mobile-menu__link" href="#box">In the box</a>
-        <a class="mobile-menu__link" href="#footage">Footage mix</a>
-        <a class="mobile-menu__link" href="#objections">Straight answers</a>
+        <a class="mobile-menu__link" href="#proof">Footage mix</a>
+        <a class="mobile-menu__link" href="#faq">Straight answers</a>
         <a class="mobile-menu__link" href="#pricing">Pricing</a>
         <a class="mobile-menu__link" href="#faq">FAQ</a>
       </nav>
@@ -95,10 +95,23 @@
       <!-- The film is the hero. It is a real render — the brief, the shot list,
            the composition and the file — made with the skills this product
            ships. Everything else on this page is a caption for it. -->
-      <section class="hero hero--film" id="top" aria-labelledby="hero-title">
-        <figure class="film">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="shell hero__body">
+          <h1 class="display" id="hero-title">Describe the video.<br />Get the file.</h1>
+          <div class="hero__aside">
+            <p class="hero__lede">
+              Describe a video in a sentence. An agent writes it in code and renders the file.
+            </p>
+            <div class="hero__actions">
+              <a class="btn btn--primary" href="#console">Describe a video</a>
+              <a class="btn btn--link" href="#library">Browse the library</a>
+            </div>
+          </div>
+        </div>
+
+        <figure class="hero__film">
           <video
-            class="film__video"
+            class="hero__video"
             data-film
             src="/film/motion-master-hero.mp4"
             poster="/film/hero-poster.jpg"
@@ -109,34 +122,21 @@
             preload="metadata"
             aria-label="A motion film: a brief becomes a shot list, the shot list becomes code, the code renders a file."
           ></video>
-          <figcaption class="visually-hidden">
-            A brief is written, four shots assemble in depth, the shot list
-            becomes a composition beside the footage it produces, the three
-            renders play, and the file lands.
+          <figcaption class="hero__caption">
+            <p class="hero__brief">The brief: make a launch film.</p>
+            <p class="hero__meta">104 seconds · 1920×1080</p>
           </figcaption>
         </figure>
-
-        <div class="shell hero__body">
-          <h1 class="display" id="hero-title">Describe the video.<br />Get the file.</h1>
-          <p class="hero__lede">
-            One prompt. A skill pack that writes motion in code. A file you own.
-          </p>
-          <div class="hero__actions">
-            <a class="btn btn--primary" href="#library">Browse the library</a>
-            <a class="btn btn--ghost" href="#proof">Read the prompts</a>
-          </div>
-        </div>
       </section>
 
       <!-- ================= LIVE PROOF STRIP ================= -->
       <section class="section section--proof" id="proof" aria-labelledby="proof-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Live proof</p>
             <h2 class="h2" id="proof-title">Every clip below ships with the prompt that made it.</h2>
             <p class="section__lede">
-              Rendered with the skills this product ships. The prompt, the stack and the duration are
-              printed under each one — copy it and you start from the same place.
+              Each clip was rendered with the skills in the box. Its prompt is printed underneath —
+              copy it and you start from the same place.
             </p>
           </header>
 
@@ -186,7 +186,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Six words arrive one at a time on a black canvas, one word per line, alternating white and accent, then exit in reverse."
+                    aria-label="On black, the brief arrives one line at a time: “a 14s launch title”, then “on a white canvas”. The second line is in the accent colour."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -203,7 +203,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>Kinetic type on a black canvas. Six words, one word per line, each arriving on its own with a masked reveal, staggered 90ms, cubic-bezier(0.05, 0.7, 0.1, 1), no bounce. Every second word is the accent colour. The words exit in reverse order.</code></pre>
+                <pre class="prompt__text"><code>A 9s kinetic title on black. The brief arrives one line at a time — “a 14s launch title”, then “on a white canvas”. The words enter staggered, the second line in the accent colour, they hold, and they leave in reverse. Nothing else on the ground.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -221,7 +221,7 @@
                     muted
                     loop
                     playsinline
-                    aria-label="Four pipeline stages fill in sequence, each with a progress bar, then a closing card that reads four stages, one file."
+                    aria-label="A product turns on a light ground beside a shot list. Text reads “the product, on loop”, then “and the project is editable”."
                   ></video>
                   <p class="clip__state" data-clip-state hidden>
                     <span class="clip__state-title">Clip not yet rendered</span>
@@ -238,7 +238,7 @@
               </div>
               <div class="prompt">
                 <p class="prompt__label">Prompt</p>
-                <pre class="prompt__text"><code>A 21s product loop. Four stages fill in sequence, staggered 90ms, each with its own progress bar and percentage. Then the finished frame: a stat panel and a rule. Then a closing card that reads "Four stages. One file." One accent, 8px rhythm.</code></pre>
+                <pre class="prompt__text"><code>A 21s product loop. A product turns on a light ground while a shot list builds beside it in monospaced columns. The card ends on “the product, on loop”, then on “and the project is editable”. One accent, no decoration.</code></pre>
                 <div class="prompt__actions">
                   <button class="btn btn--quiet" type="button" data-copy-prompt>Copy prompt</button>
                   <button class="btn btn--quiet btn--link" type="button" data-start-prompt>Start from this prompt</button>
@@ -292,92 +292,106 @@
       <!-- ================= THREE MORE WAYS ================= -->
       <!-- Three films, each made with a different skill from the pack. The four
            clips above are the proof; these are the range. -->
-      <section class="section section--demos" id="demos" aria-labelledby="demos-title">
-        <div class="shell">
-          <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Three more ways</p>
-            <h2 class="h2" id="demos-title">The same brief, three ways.</h2>
-            <p class="section__lede">
-              Three films, three different crafts. Each one is made with a different skill in the
-              pack — a drafting sheet, a brush painting, a whiteboard — and each is about this
-              product.
-            </p>
-          </header>
+      <section class="scene scene--reel" id="demos" data-scene="reel" data-options='{"hold":3}' aria-labelledby="demos-title">
+        <div class="scene-stage">
+          <h2 class="scene__title" id="demos-title">The same brief, three ways.</h2>
+          <p class="scene__caption">Each one is made with a different skill in the pack.</p>
 
-          <div class="demos">
-            <figure class="demo">
-              <div class="demo__frame">
-                <video
-                  class="demo__video"
-                  data-demo
-                  src="/demos/blueprint.mp4"
-                  poster="/demos/blueprint.jpg"
-                  muted
-                  loop
-                  playsinline
-                  preload="none"
-                  aria-label="A blueprint drawing on a drafting table: the shot list is drawn in plan, the shots fill in, and a hand signs the title block."
-                ></video>
-              </div>
-              <figcaption class="demo__caption">
-                <p class="demo__craft">Blueprint</p>
-                <p class="demo__note">The plan, drawn to convention. From the lemo-opuscar style pack.</p>
-              </figcaption>
+          <div class="scene__strip">
+            <figure class="scene__frame">
+              <video
+                class="scene__video"
+                data-reel-film
+                src="/demos/blueprint.mp4"
+                poster="/demos/blueprint.jpg"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="A blueprint drawing on a drafting table: the shot list is drawn in plan, the shots fill in, and a hand signs the title block."
+              ></video>
+              <figcaption class="scene__label">Blueprint</figcaption>
             </figure>
 
-            <figure class="demo">
-              <div class="demo__frame">
-                <video
-                  class="demo__video"
-                  data-demo
-                  src="/demos/ink.mp4"
-                  poster="/demos/ink.jpg"
-                  muted
-                  loop
-                  playsinline
-                  preload="none"
-                  aria-label="An ink painting on rice paper: four shots printed in ink under a brushed title, with bamboo at the edge."
-                ></video>
-              </div>
-              <figcaption class="demo__caption">
-                <p class="demo__craft">Ink</p>
-                <p class="demo__note">Flying white, a bleeding wash, a seal. From the huashu style pack.</p>
-              </figcaption>
+            <figure class="scene__frame">
+              <video
+                class="scene__video"
+                data-reel-film
+                src="/demos/ink.mp4"
+                poster="/demos/ink.jpg"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Black ink on paper: a stroke draws itself into a title, the ink blooms and settles, and the paper takes the mark."
+              ></video>
+              <figcaption class="scene__label">Ink</figcaption>
             </figure>
 
-            <figure class="demo">
-              <div class="demo__frame">
-                <video
-                  class="demo__video"
-                  data-demo
-                  src="/demos/whiteboard.mp4"
-                  poster="/demos/whiteboard.jpg"
-                  muted
-                  loop
-                  playsinline
-                  preload="none"
-                  aria-label="A whiteboard: a hand writes the brief, draws the shot list, pins four shots to the board and writes the file name."
-                ></video>
-              </div>
-              <figcaption class="demo__caption">
-                <p class="demo__craft">Whiteboard</p>
-                <p class="demo__note">The hand draws it, so the board is honest. From the whiteboard pack.</p>
-              </figcaption>
+            <figure class="scene__frame">
+              <video
+                class="scene__video"
+                data-reel-film
+                src="/demos/whiteboard.mp4"
+                poster="/demos/whiteboard.jpg"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="A whiteboard: a marker writes a plan, boxes and arrows appear around it, and the plan is signed off."
+              ></video>
+              <figcaption class="scene__label">Whiteboard</figcaption>
             </figure>
           </div>
+
         </div>
       </section>
 
       <!-- ================= MECHANISM ================= -->
+      <section class="scene scene--source" id="source" data-scene="source" data-options='{"hold":2}' aria-labelledby="source-title">
+        <div class="scene-stage">
+          <h2 class="scene__title" id="source-title">The picture is code you can read.</h2>
+
+          <div class="scene__split">
+            <div class="scene__film">
+              <video
+                class="scene__video"
+                src="/clips/launch-title.mp4"
+                poster="/clips/launch-title.jpg"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="A white title card. A wordmark rises into a masked reveal, an accent rule draws in beneath it, the card holds, then fades out and lifts."
+              ></video>
+            </div>
+
+            <div class="scene__code">
+              <p class="scene__code-file">clips/src/LaunchTitle.tsx</p>
+              <pre class="scene__code-body"><code><span class="scene__code-line">const wordmark = enter(26, 22);</span>
+<span class="scene__code-line">const rule = interpolate(frame, [48, 70], [0, 1], {</span>
+<span class="scene__code-line">  extrapolateLeft: &quot;clamp&quot;,</span>
+<span class="scene__code-line">  extrapolateRight: &quot;clamp&quot;,</span>
+<span class="scene__code-line">  easing: Easing.bezier(...MOTION.easeEnter),</span>
+<span class="scene__code-line">});</span>
+<span class="scene__code-line"> </span>
+<span class="scene__code-line">const exitFrom = durationInFrames - 30;</span>
+<span class="scene__code-line">const exit = interpolate(frame,</span>
+<span class="scene__code-line">  [exitFrom, durationInFrames], [0, 1], {</span>
+<span class="scene__code-line">  easing: Easing.bezier(...MOTION.easeExit),</span>
+<span class="scene__code-line">});</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section section--console" id="console" aria-labelledby="console-title" data-console data-console-endpoint="/chat" data-console-files-endpoint="/files">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The console</p>
             <h2 class="h2" id="console-title">Ask for the film. Get the file.</h2>
             <p class="section__lede">
-              The same tools the plugin exposes, behind one prompt. It reads the
-              library, strengthens a weak brief, assembles a shot list, and
-              renders the film to a file you can play and download.
+              The same tools the plugin exposes, behind one prompt. It reads the library,
+              strengthens a weak brief and renders the file.
             </p>
           </header>
 
@@ -454,12 +468,10 @@
       <section class="section section--sound" id="sound" aria-labelledby="sound-title" data-sound>
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The sound</p>
             <h2 class="h2" id="sound-title">Every sound, and where it belongs.</h2>
             <p class="section__lede">
-              Sound made in code, interface sounds, and real recordings of open-licensed audio —
-              one shelf, one vocabulary. Each one says what it sounds like, when it belongs, and
-              what licence it is under. Play one, or let the agent put one under a cut.
+              Sound made in code, and real recordings of open-licensed audio, on one shelf with
+              one vocabulary. Each one says what it sounds like and where it belongs.
             </p>
           </header>
 
@@ -499,7 +511,6 @@
       <section class="section section--library" id="library" aria-labelledby="library-title" data-library>
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The library</p>
             <h2 class="h2" id="library-title">Every category, named.</h2>
             <p class="section__lede">
               Nine open-source collections, indexed into one catalogue.
@@ -573,11 +584,9 @@
       <section class="section section--mechanism" id="mechanism" aria-labelledby="mechanism-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>How it works</p>
             <h2 class="h2" id="mechanism-title">Three steps, and only the last one needs a renderer.</h2>
             <p class="section__lede">
-              The agent is the author. You are the person who reads the frame and says whether it is
-              right.
+              The agent writes it. You read the frame and say whether it is right.
             </p>
           </header>
 
@@ -684,10 +693,9 @@
       <section class="section section--box" id="box" aria-labelledby="box-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>What&rsquo;s in the box</p>
-            <h2 class="h2" id="box-title">One package. Sixteen hosts. Thirty-eight skills.</h2>
+            <h2 class="h2" id="box-title">Thirty-eight skills, sixteen hosts.</h2>
             <p class="section__lede">
-              Select a folder. Thirty-eight skills, each with its upstream licence kept intact.
+              Select a folder. Every skill keeps the licence it came with.
             </p>
           </header>
 
@@ -704,7 +712,7 @@
                   <button class="tree__row" type="button" data-tree-node="skills" aria-expanded="false">
                     <span class="tree__glyph" aria-hidden="true"></span>
                     <span class="tree__name">skills/</span>
-                    <span class="tree__note">38 skills · licences kept</span>
+                    <span class="tree__note">39 skills · licences kept</span>
                   </button>
                 </li>
                 <li class="tree__indent tree__indent--deep">
@@ -802,118 +810,14 @@
         </div>
       </section>
 
-      <!-- ================= FOOTAGE MIX ================= -->
-      <section class="section section--footage" id="footage" aria-labelledby="footage-title">
-        <div class="shell">
-          <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Footage mix</p>
-            <h2 class="h2" id="footage-title">Use your own footage.</h2>
-            <p class="section__lede">
-              The agent can cut a clip you supply and burn a motion title over it. It talks to a
-              Montage instance you run yourself, over its public API — the footage never touches our
-              infrastructure.
-            </p>
-          </header>
 
-          <div class="mix">
-            <div class="mix__step">
-              <p class="mix__label">1 · Your footage</p>
-              <div class="mix__slot" role="img" aria-label="Placeholder for the source clip you supply">
-                <span class="mix__slot-text">your-clip.mp4</span>
-              </div>
-            </div>
-            <div class="mix__step">
-              <p class="mix__label">2 · The request</p>
-              <p class="mix__request">
-                “Cut the first 3 seconds, add a title card in our brand type at 0:03, hold over the
-                footage, fade out at 0:14.”
-              </p>
-            </div>
-            <div class="mix__step">
-              <p class="mix__label">3 · The result</p>
-              <div class="mix__slot mix__slot--result" data-clip="footage-title">
-                <div class="clip__media">
-                  <video
-                    class="clip__video"
-                    data-clip-video
-                    preload="none"
-                    muted
-                    loop
-                    playsinline
-                    aria-label="Footage and title. Real footage with a motion title sequence burned in over the top."
-                  ></video>
-                  <p class="clip__state" data-clip-state hidden>
-                    <span class="clip__state-title">Clip not yet rendered</span>
-                    <span class="clip__state-note">Rendered by the parallel clip job — the prompt above is the recipe.</span>
-                  </p>
-                  <button class="clip__toggle" type="button" data-clip-toggle aria-pressed="false">
-                    <span class="clip__toggle-label">Play clip</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <p class="mix__note">
-            <span class="mark" aria-hidden="true"></span>
-            The Montage bridge is AGPL-3.0 and ships with the Studio tier. It is a separate work that
-            speaks a public interface; the skill pack is not.
-          </p>
-        </div>
-      </section>
 
-      <!-- ================= OBJECTIONS ================= -->
-      <section class="section section--objections" id="objections" aria-labelledby="objections-title">
-        <div class="shell">
-          <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Straight answers</p>
-            <h2 class="h2" id="objections-title">The four questions everyone asks first.</h2>
-          </header>
-
-          <div class="qa">
-            <article class="qa__item">
-              <h3 class="qa__question">“AI video tools charge every month. Why $99 once?”</h3>
-              <p class="qa__answer">
-                You pay once and the file is yours forever. No credits, no watermark, no model that
-                can be retired underneath you. Your project renders on your own machine, so the
-                twelfth video costs nothing.
-              </p>
-            </article>
-
-            <article class="qa__item">
-              <h3 class="qa__question">“I don&rsquo;t know how to code.”</h3>
-              <p class="qa__answer">
-                You don&rsquo;t. You paste a sentence into your agent and it comes back with a video.
-                If you want to change a word later, you type the change — the project is text, and
-                text is something you can read.
-              </p>
-            </article>
-
-            <article class="qa__item">
-              <h3 class="qa__question">“Won&rsquo;t it look like AI?”</h3>
-              <p class="qa__answer">
-                The motion rules are ours and they are opinionated: fixed durations, fixed easing
-                roles, stagger budgets, one accent colour. Read the rules in the skills — they are in
-                the box, not behind a login.
-              </p>
-            </article>
-
-            <article class="qa__item">
-              <h3 class="qa__question">“Do I own it?”</h3>
-              <p class="qa__answer">
-                The video, the project and the code. Use it commercially, including for clients. No
-                attribution required.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
 
       <!-- ================= PRICING ================= -->
       <section class="section section--pricing" id="pricing" aria-labelledby="pricing-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>The offer, recorded</p>
             <h2 class="h2" id="pricing-title">Not on sale. Built for our own use.</h2>
             <p class="section__lede">
               This is the terms the package would ship under, kept in one file so a launch is a single
@@ -970,11 +874,62 @@
       <section class="section section--faq" id="faq" aria-labelledby="faq-title">
         <div class="shell">
           <header class="section__head">
-            <p class="eyebrow"><span class="mark" aria-hidden="true"></span>Questions</p>
             <h2 class="h2" id="faq-title">The questions we are actually asked.</h2>
           </header>
 
           <div class="faq">
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">I don&rsquo;t know how to code.</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  You don&rsquo;t. You paste a sentence into your agent and it comes back with a
+                  video. If you want to change a word later, you type the change — the project is
+                  text, and text is something you can read.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Won&rsquo;t it look like AI?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  The motion rules are ours, and they are opinionated: how long a card holds, how
+                  fast it leaves, how far a word travels. They are in the skills, and the skills are
+                  in the box, not behind a login. The clips on this page were made with them, and
+                  you can read the prompt that made each one.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Do I own it?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  The video, the project and the code. Use it commercially, including for clients.
+                  No attribution required.
+                </p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">
+                <h3 class="faq__heading">Why can&rsquo;t I buy it?</h3>
+              </summary>
+              <div class="faq__a">
+                <p>
+                  Because we are using it ourselves first, and we would rather tell you that than
+                  take your money for something we have not finished with. The terms are written
+                  down on this page, so you can read them before they change.
+                </p>
+              </div>
+            </details>
+
             <details class="faq__item">
               <summary class="faq__q">
                 <h3 class="faq__heading">Which agents does it work with?</h3>

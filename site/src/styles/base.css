@@ -38,6 +38,7 @@
 
   /* rhythm */
   --rail: 56px;
+  --topbar-h: 72px;
   --margin: 88px;
   --gutter: 24px;
   --section-pad: clamp(72px, 8vw, 128px);
@@ -136,7 +137,9 @@ button {
   line-height: 1.25;
 }
 
-.eyebrow,
+/* A label is a label. Monospace as a "technical voice" is a tell, so it is
+   kept for values — timecodes, shot names, file names, numbers — and not for
+   words a reader reads as words. */
 .prompt__label,
 .artifact__label,
 .mix__label,
@@ -145,12 +148,10 @@ button {
 .tree-detail__label,
 .player__tag,
 .section__stamp {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  line-height: 1.3;
+  letter-spacing: 0;
   color: var(--ink-muted);
 }
 
@@ -160,7 +161,6 @@ button {
   font-size: 13px;
   line-height: 1.5;
 }
-
 /* --- the accent mark -------------------------------------------- */
 /* The accent is a mark: a small square, never a panel or a stripe. */
 
@@ -206,24 +206,10 @@ button {
   top: 8px;
 }
 
-/* --- scroll reveals ------------------------------------------------ */
-/* Only applied when the visitor allows motion: the class is added by
-   src/modules/reveal.ts, so with motion reduced (or without JS) nothing is
-   ever hidden. The independent `translate` property is used so the page never
-   shifts layout. */
-
-.motion-ok [data-reveal] {
-  opacity: 0;
-  translate: 0 12px;
-  transition:
-    opacity 420ms var(--ease-in),
-    translate 420ms var(--ease-in);
-}
-
-.motion-ok [data-reveal].is-visible {
-  opacity: 1;
-  translate: 0 0;
-}
+/* --- motion -------------------------------------------------------------
+   The motion layer hides nothing here: GSAP sets the starting state itself,
+   so a failed script, a reduced-motion preference or a missing bundle all
+   leave the page fully readable. */
 
 /* --- focus ------------------------------------------------------- */
 

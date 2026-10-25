@@ -282,19 +282,34 @@
   }
 
   // ── the brief ──────────────────────────────────────────────────────────────
-  const BRIEF = ['Twenty-one seconds.', 'Four stages.', 'One accent.'];
+  const BRIEF = ['Make a launch film.'];
 
   /**
    * MOVEMENT 1 — the brief.
    * Words arrive whole, one clause at a time, decelerating from oversize into
    * place. Then they lift off the ground and drift apart.
    */
-  function movement1(c, t) {
+  function movement1(c, t, imgs) {
     const cam = { z: 1 + 0.07 * seg(t, 0, 20) };
     drawWorld(c, t, cam);
 
-    const focus = H * 0.44;
-    const left = W * 0.11;
+    // The reel is already running when the film starts: the launch-title
+    // clip sits on the right, lit, and the camera drifts toward it. The
+    // first frame is never an empty ground.
+    {
+      const w = 820;
+      const h = (w * 9) / 16;
+      const img = imgs.launch;
+      const push = 1 + 0.05 * seg(t, 0, 20);
+      drawPanel(c, img, W * 0.70 - w / 2, H * 0.62 - h / 2, w * push, h * push, {
+        alpha: 0.96,
+        rot: -0.025,
+        blur: 1.5,
+      });
+    }
+
+    const focus = H * 0.26;
+    const left = W * 0.075;
     const avail = W * 0.78;
     // Fit every clause to the frame: the longest one sets the size for all,
     // so the three lines share a baseline and a weight.
@@ -307,10 +322,10 @@
       widest = Math.max(widest, w);
     }
     ctx.restore();
-    const size = Math.min(168, (avail / widest) * 100);
+    const size = Math.min(124, (avail / widest) * 100);
 
     for (let i = 0; i < BRIEF.length; i++) {
-      const at = 1.6 + i * 1.7;
+      const at = 0.25 + i * 1.7;
       const p = seg(t, at, at + 1.25);
       if (p <= 0) continue;
 
@@ -401,32 +416,26 @@
   }
 
   // ── movement 3 — the code ──────────────────────────────────────────────────
+  // The source of the launch-title clip in the reel, taken from
+  // clips/src/LaunchTitle.tsx. This is the code that made the picture.
   const CODE_LINES = [
-    ['const LINES = [', 'plain'],
-    ['  { text: "DESCRIBE", accent: false },', 'plain'],
-    ['  { text: "IT.", accent: true },', 'accent'],
-    ['  { text: "WATCH", accent: false },', 'plain'],
-    ['  { text: "IT.", accent: true },', 'accent'],
-    ['  { text: "OWN", accent: false },', 'plain'],
-    ['  { text: "IT.", accent: true },', 'accent'],
-    ['];', 'plain'],
-    ['', 'plain'],
-    ['const STAGGER = 3; // frames @30fps = 90ms', 'comment'],
-    ['const WORD_DUR = 14; // frames @30fps = 466ms', 'comment'],
-    ['', 'plain'],
-    ['const from = 10 + i * STAGGER;', 'plain'],
-    ['const inP = interpolate(frame, [from, from + WORD_DUR], [0, 1], {', 'plain'],
+    ['const wordmark = enter(26, 22);', 'plain'],
+    ['const rule = interpolate(frame, [48, 70], [0, 1], {', 'plain'],
     ['  extrapolateLeft: "clamp",', 'plain'],
     ['  extrapolateRight: "clamp",', 'plain'],
     ['  easing: Easing.bezier(...MOTION.easeEnter),', 'key'],
     ['});', 'plain'],
     ['', 'plain'],
-    ['// exit in reverse order, ease-in', 'comment'],
-    ['const outP = interpolate(frame,', 'plain'],
-    ['  [exitFromForWord, exitFromForWord + 16], [0, 1], {', 'plain'],
+    ['const exitFrom = durationInFrames - 30;', 'plain'],
+    ['const exit = interpolate(frame,', 'plain'],
+    ['  [exitFrom, durationInFrames], [0, 1], {', 'plain'],
     ['  extrapolateLeft: "clamp",', 'plain'],
     ['  extrapolateRight: "clamp",', 'plain'],
+    ['  easing: Easing.bezier(...MOTION.easeExit),', 'key'],
     ['});', 'plain'],
+    ['', 'plain'],
+    ['const contentOpacity = 1 - exit;', 'plain'],
+    ['const contentY = exit * -22;', 'plain'],
   ];
 
   function drawCodePanel(c, t) {
@@ -657,6 +666,9 @@
     const add = (clip, idx) => {
       need[clip] = wrapIndex(clip, idx);
     };
+    // movement 1 — the reel is already running on the right, so the launch
+    // clip has to be primed from the first frame or the opening is empty.
+    if (t < 20) add('launch', Math.floor(t * 30) + 1);
     // movement 2
     if (t >= 19 && t < 50) {
       const local = t - 20;
@@ -692,7 +704,7 @@
       ctx.fillStyle = '#08080a';
       ctx.fillRect(0, 0, W, H);
 
-      if (t < 20) movement1(ctx, t);
+      if (t < 20) movement1(ctx, t, imgs);
       else if (t < 50) movement2(ctx, t, imgs);
       else if (t < 77.5) movement3(ctx, t, imgs);
       else if (t < 96) movement4(ctx, t, imgs);

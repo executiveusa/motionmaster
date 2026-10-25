@@ -72,7 +72,12 @@ export const LICENCE: LicenceFacts = generated;
 /** A short, plain sentence describing the offer — used in tool output. */
 export function licenceSentence(): string {
   if (!LICENCE.status?.onSale) {
-    return `Motion Master is not on sale. ${LICENCE.status?.summary ?? ''}`.trim();
+    // The summary often starts with the same sentence, so only add it when it
+    // says something the first clause does not.
+    const summary = LICENCE.status?.summary?.trim() ?? "";
+    const head = "Motion Master is not on sale.";
+    if (!summary || summary.startsWith(head)) return summary || head;
+    return `${head} ${summary}`;
   }
   return `Motion Master is a paid, one-time licence (${LICENCE.tiers
     .map((tier) => `${tier.label} ${tier.display} once`)

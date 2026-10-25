@@ -148,9 +148,19 @@ if (existsSync(assetDir)) {
   for (const file of readdirSync(assetDir)) {
     if (!/\.(js|css)$/.test(file)) continue;
     const raw = readFileSync(join(assetDir, file), 'utf8');
-    // `text-transform` is a CSS property, not the banned copy word.
-    const body = raw.toLowerCase().split('text-transform').join('text-uppercase');
     const isVendor = file.startsWith('gsap-');
+
+    // Only comments and `content:` strings can carry copy in a stylesheet.
+    // A property named `transform` or a value of `will-change: transform` is
+    // code, and the banned word is about words a reader reads.
+    let body = raw;
+    if (file.endsWith('.css')) {
+      const comments = raw.match(/\/\*[\s\S]*?\*\//g) ?? [];
+      const contents = raw.match(/content\s*:\s*("[^"]*"|'[^']*')/gi) ?? [];
+      body = [...comments, ...contents].join(' ');
+    }
+    body = body.toLowerCase().split('text-transform').join('text-uppercase');
+
     for (const word of BANNED_WORDS) {
       if (!body.includes(word)) continue;
       if (isVendor) {
