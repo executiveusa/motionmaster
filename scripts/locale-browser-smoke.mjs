@@ -139,6 +139,7 @@ try {
   }
   await evaluate('document.querySelector("[data-project-render]").click()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued"', 'render queued through browser');
+  await until('!document.querySelector("[data-project-cancel]").disabled && !document.querySelector("[data-project-cancel]").hidden', 'cancel action enabled');
   await evaluate('document.querySelector("[data-project-cancel]").click()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorCancelled"', 'render cancelled through browser');
   const jobsResponse = await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
