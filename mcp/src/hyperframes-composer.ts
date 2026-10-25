@@ -99,11 +99,18 @@ export function buildHyperFramesProject(
       const ease = GSAP_EASE[beat.easing.name] ?? "power2.out";
       const enter = beat.durationSeconds * 0.38;
       const stag = beat.stagger.intervalMs / 1000;
+      // The generated nodes are b0-text-wordmark, etc., not #b0. Select by the
+      // stable beat track attribute and animate the container as well as its label.
+      const beatSelector = `.beat[data-track-index="${i}"]`;
+      const labelSelector = `${beatSelector} .beat__label`;
+      const exit = Math.min(0.28, beat.durationSeconds * 0.3);
       return [
         `    // beat ${i + 1}: ${beat.label} — ${beat.role}, ${beat.easing.name}`,
-        `    tl.fromTo("#b${i} .beat__label", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: ${round(enter)}, ease: "${ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
+        `    tl.set(${JSON.stringify(beatSelector)}, { opacity: 1 }, ${round(beat.inSeconds)});`,
+        `    tl.fromTo(${JSON.stringify(labelSelector)}, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: ${round(enter)}, ease: "${ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
         `    if (${round(beat.outSeconds)} < ${round(total)}) {`,
-        `      tl.to("#b${i} .beat__label", { opacity: 0, y: -18, duration: ${round(Math.min(0.28, beat.durationSeconds * 0.3))}, ease: "${GSAP_EASE.accelerate}" }, ${round(beat.outSeconds - Math.min(0.28, beat.durationSeconds * 0.3))});`,
+        `      tl.to(${JSON.stringify(labelSelector)}, { opacity: 0, y: -18, duration: ${round(exit)}, ease: "${GSAP_EASE.accelerate}" }, ${round(beat.outSeconds - exit)});`,
+        `      tl.set(${JSON.stringify(beatSelector)}, { opacity: 0 }, ${round(beat.outSeconds)});`,
         `    }`,
       ].join("\n");
     })
