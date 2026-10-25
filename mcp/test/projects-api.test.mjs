@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig } from '../dist/config.js';
 import { createHttpHandler } from '../dist/index.js';
+import { runProjectJob } from '../dist/project-worker.js';
 
 async function fixture(t, host = '127.0.0.1') {
   const root = mkdtempSync(join(tmpdir(), 'mm-project-api-'));
@@ -102,4 +103,31 @@ test('MM-05 HTTP: queue, inspect, reject fake completion, cancel and retry faile
   assert.equal(retried.body.status, 'queued');
   assert.equal(retried.body.error, undefined);
   assert.equal((await request('/projects/' + id + '/jobs', 'POST', { revision: 99 })).status, 404);
+});
+
+test('MM-05 HTTP: cancelling a running job aborts the active worker', async (t) => {
+  const { request, root } = await fixture(t);
+  const created = await request('/projects', 'POST', { title: 'Cancel me', brief: 'A title film' });
+  const projectId = created.body.project.id;
+  const queued = await request('/projects/' + projectId + '/jobs', 'POST', { revision: 1 });
+  const jobId = queued.body.id;
+  let entered;
+  const started = new Promise((resolve) => { entered = resolve; });
+  let aborted = false;
+  const config = { ...loadConfig(), repoRoot: root };
+  const work = runProjectJob(config, projectId, jobId, async (_cfg, _revision, _output, signal) => {
+    entered();
+    await new Promise((_resolve, reject) => signal.addEventListener('abort', () => {
+      aborted = true;
+      reject(new Error('render cancelled by HTTP request'));
+    }, { once: true }));
+    throw new Error('unexpected completion');
+  });
+  await started;
+  const response = await request('/projects/' + projectId + '/jobs/' + jobId + '/cancel', 'POST');
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, 'cancelled');
+  await work;
+  assert.equal(aborted, true, 'the HTTP cancellation must reach the running renderer');
+  assert.equal((await request('/projects/' + projectId + '/jobs/' + jobId)).body.status, 'cancelled');
 });
