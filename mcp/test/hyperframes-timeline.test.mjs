@@ -53,3 +53,22 @@ test("every timeline selector uses a beat track that exists in markup", () => {
     assert.ok(isActualBeat, `timeline references a missing beat: ${line}`);
   }
 });
+
+test("generated composition initializes the HyperFrames timeline registry before writing", () => {
+  const storyboard = planVideo({ brief: "Launch ACME", durationSeconds: 15 }, tokens);
+  const html = buildHyperFramesProject(storyboard, tokens).files.find((file) => file.path.endsWith("/index.html")).contents;
+  const initialize = html.indexOf("window.__timelines = window.__timelines || {};");
+  const assign = html.indexOf('window.__timelines["main"] = tl;');
+  assert.ok(initialize >= 0, "timeline registry is undefined in a clean browser");
+  assert.ok(assign > initialize, "registry must exist before assignment");
+});
+
+test("GSAP runtime is never emitted as a zero-byte placeholder", () => {
+  const storyboard = planVideo({ brief: "Launch ACME", durationSeconds: 15 }, tokens);
+  const absent = buildHyperFramesProject(storyboard, tokens, { projectName: "no-vendor" });
+  assert.equal(absent.files.some((file) => file.path.endsWith("/gsap-3.14.2.min.js")), false,
+    "an empty GSAP file blocks generator/hf.sh from copying the pinned runtime");
+  const supplied = buildHyperFramesProject(storyboard, tokens, { projectName: "with-vendor", gsapSource: "/* local pinned GSAP */" });
+  const gsap = supplied.files.find((file) => file.path.endsWith("/gsap-3.14.2.min.js"));
+  assert.equal(gsap?.contents, "/* local pinned GSAP */");
+});
