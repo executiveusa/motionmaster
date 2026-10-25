@@ -210,6 +210,16 @@ try {
     Object.values(bundle.revisions[1].shots[0].values).includes('Ana Ruiz'));
   copyFileSync(mp4Path, join(proof, 'browser-edited.mp4'));
   copyFileSync(archivePath, join(proof, 'browser-edited-source.json.gz'));
+  const earlyFrame = join(proof, 'browser-edited-frame-early.png');
+  const lateFrame = join(proof, 'browser-edited-frame-late.png');
+  for (const [time, destination] of [['0.3', earlyFrame], ['2.0', lateFrame]]) {
+    const decoded = spawnSync('ffmpeg',
+      ['-v', 'error', '-y', '-ss', time, '-i', mp4Path, '-frames:v', '1', destination],
+      { encoding: 'utf8' });
+    assert.equal(decoded.status, 0, 'Browser MP4 failed to decode frame at ' + time);
+  }
+  assert.notEqual(hash(readFileSync(earlyFrame)), hash(readFileSync(lateFrame)),
+    'Browser-rendered MP4 has no verified frame-to-frame motion');
   report.artifacts = { mp4: 'browser-edited.mp4', mp4Sha256: hash(mp4),
     source: 'browser-edited-source.json.gz', sourceSha256: hash(archive),
     duration: Number(info.format.duration) };
@@ -241,8 +251,15 @@ try {
   report.project = { original: projectId, imported: importedId, revision: imported.revision.number };
   await command('Emulation.setDeviceMetricsOverride',
     { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await evaluate('document.querySelector("[data-project-editor]").scrollIntoView({block:"start"})');
-  await sleep(250);
+  await evaluate('(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    document.body.style.scrollBehavior = "auto";
+    document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"});
+    return true;
+  })()');
+  await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140',
+    'imported editor visible in mobile viewport', 10000);
+  await sleep(350);
   const shot = await command('Page.captureScreenshot', { format: 'png' });
   assert.ok(shot.result?.data, 'Mobile browser screenshot unavailable');
   writeFileSync(join(proof, 'imported-editor-mobile.png'), Buffer.from(shot.result.data, 'base64'));
