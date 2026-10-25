@@ -11,8 +11,12 @@ const chrome = [
   process.env.CHROME_BIN, "google-chrome", "chromium", "chromium-browser"
 ].filter(Boolean).find(command => spawnSync("which", [command], { encoding: "utf8" }).status === 0);
 if (!chrome) { console.error("Browser capture unavailable: Chrome/Chromium missing"); process.exit(1); }
-const server = spawn("node", [resolve(root, "site/node_modules/vite/bin/vite.js"), "preview", "--host", "127.0.0.1", "--port", "4173"], {
-  cwd: resolve(root, "site"), stdio: ["ignore", "pipe", "pipe"]
+// Serve the real build through the real MCP/HTTP host. The console now sees
+// its agent on the same origin, rather than pointing at a dead static route.
+const server = spawn(process.execPath, [resolve(root, "mcp/dist/index.js")], {
+  cwd: root, stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, MOTION_MASTER_SERVE_SITE: "1",
+    MOTION_MASTER_MCP_HOST: "127.0.0.1", MOTION_MASTER_MCP_PORT: "4173" },
 });
 let log = "";
 server.stderr.on("data", b => { log += b.toString(); });
@@ -25,7 +29,7 @@ try {
     } catch {}
     await new Promise(r => setTimeout(r, 200));
   }
-  if (!ready) throw Error("Vite preview was not reachable: " + log.slice(-1000));
+  if (!ready) throw Error("Combined MCP/site preview was not reachable: " + log.slice(-1000));
   for (const [name, width, height, query] of [["desktop",1440,900,""],["mobile",390,844,""],["mobile-es-MX",390,844,"?lang=es-MX"]]) {
     const png = resolve(dir, name + ".png");
     const command = spawnSync(chrome, [
