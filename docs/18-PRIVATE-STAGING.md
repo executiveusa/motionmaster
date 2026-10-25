@@ -42,3 +42,11 @@ The helper rejects symlinks/special files, records SHA-256 checksums and sizes f
 **Rollback anchor:** `main` at `adc9685e6b4b995ab80db214ef237ac0f03d4486` remains untouched. For this focused slice revert commits adding `scripts/staging-workspace*.mjs`, this document and the CI gate. No deployed data migration occurred.
 
 **Known limitation:** The current filesystem store does not support multi-writer or multi-tenant production use. The backup helper is tested with disposable fixtures, not an actual owner workspace or a live recovery exercise. Do not claim staging is ready or sale is enabled.
+
+## Fail-closed staging preflight (MM-13)
+
+Run `node scripts/staging-preflight.mjs` **on the selected owner-controlled host**, after building the pinned release and creating a private `workspace/` directory. It checks the pinned absolute release root, built site/MCP entrypoints, owner-only workspace permissions and location outside the served site, `onSale=false`, loopback-only API listener, explicit render worker, nonempty strong-length bearer configuration, valid port, exact HTTPS origin allowlist and a private HTTPS MCP URL. It emits only check names and pass/fail flags; never prints the bearer.
+
+The script is **read-only** and returns a nonzero exit code when a check fails. A pass is labelled `preflight-passed-not-deployed`, not `ready`. It does **not** prove secret entropy, disk durability or encryption, HTTPS proxy configuration, firewall/private network reachability, actual host backup/restore, live MCP calls or user acceptance. Those require independent, owner-controlled evidence before deployment or release. CI runs `node scripts/staging-preflight-smoke.mjs` against disposable fixtures to test both safe and unsafe configurations; it does not run against a real host.
+
+Do not place a real API key in a shell history, GitHub Actions artifact or issue comment. Configure secrets through the host's secret store. No new hosting resource or deployment is authorized by this preflight.
