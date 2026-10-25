@@ -79,4 +79,8 @@ PR on branch `agent/completion-loop-v1`:
 - MM-06 OpenAPI prefix fix and test; remaining security work explicitly open.
 - Recurring CI evidence runner and this contract.
 
-**NEXT:** Obtain CI evidence for these changes, repair any failures, then run HyperFrames on an actual brief and inspect encoded frames. Only after that move to durable projects/jobs. Keep checkout off.
+**Verified 2026-10-25 UTC (branch, not production):** CI [run 40154081458](https://github.com/executiveusa/motionmaster/actions/runs/40154081458) passed on PR head `3dc2a453`; [artifact 12583931258](https://github.com/executiveusa/motionmaster/actions/runs/40154081458/artifacts/12583931258) includes seven passing quality gates, English and es-MX Chrome DOM/screenshot proof, all four real 1280×720 H.264 gallery clips decoded at two timestamps each, and a 15-second HyperFrames render with four distinct time-separated frames. A prior combined-site byte-range bug (416 instead of 206) was fixed and its regression passed. The first-viewport gallery no longer starts hidden behind an entrance tween. The canonical original prompts and licences remain intact, and `onSale=false`.
+
+**Not verified:** Live Spanish selector-click round trip, translated arbitrary user/agent content, browser playback interaction, independent taste/accessibility/security review, production/staging URL, durable hosted projects/jobs, authenticated downloads, model-to-render/edit/export/reopen, and actual Codex/Claude MCP host calls. A passing screenshot and decoded MP4 are not a working end-to-end product.
+
+**NEXT:** MM-03 persistent project/revision/job schema with migration and reopen test; then MM-05 durable job lifecycle and MM-06 authorization. Keep changes on draft PR #2, never auto-merge, and leave checkout off.
