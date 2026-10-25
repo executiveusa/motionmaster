@@ -13,6 +13,7 @@ on:
       - "scripts/hyperframes-smoke.mjs"
       - "scripts/gallery-media-smoke.mjs"
       - "scripts/capture-site.mjs"
+      - "scripts/locale-browser-smoke.mjs"
       - "licence.json"
       - ".github/workflows/completion-gates.yml"
   workflow_dispatch:
@@ -47,6 +48,8 @@ jobs:
         run: node scripts/completion-gates.mjs
       - name: Capture gallery-first homepage (desktop and mobile)
         run: node scripts/capture-site.mjs
+      - name: Verify live English/Spanish selector and dynamic i18n in Chromium
+        run: node scripts/locale-browser-smoke.mjs
       - name: Install FFmpeg and FFprobe for real encoding
         run: |
           sudo apt-get update -qq
