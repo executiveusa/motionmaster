@@ -42,12 +42,12 @@ function boot(): void {
   initClips();
   initTree();
   initMenu();
-  initMobileBar();
   initPricing();
   initLibrary();
   initSound();
   initConsole();
   initProjectEditor();
+  initMobileBar();
   initLocale();
 }
 
