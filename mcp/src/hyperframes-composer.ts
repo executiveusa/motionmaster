@@ -108,7 +108,7 @@ export function buildHyperFramesProject(
       const ease = GSAP_EASE[beat.easing.name] ?? "power2.out";
       // A visible first frame is required for social thumbnails. The final
       // line must appear early enough to remain readable for at least 2s.
-      const enter = i === 0 ? 0 : beat.role === "exit" ? 0.18 : beat.durationSeconds * 0.38;
+      const enter = i === 0 ? Math.max(0.3, beat.durationSeconds - 0.3) : beat.role === "exit" ? 0.18 : beat.durationSeconds * 0.38;
       const stag = beat.stagger.intervalMs / 1000;
       // The generated nodes are b0-text-wordmark, etc., not #b0. Select by the
       // stable beat track attribute and animate the container as well as its label.
@@ -118,7 +118,7 @@ export function buildHyperFramesProject(
       return [
         `    // beat ${i + 1}: ${beat.label} — ${beat.role}, ${beat.easing.name}`,
         `    tl.set(${JSON.stringify(beatSelector)}, { opacity: 1 }, ${round(beat.inSeconds)});`,
-        `    tl.fromTo(${JSON.stringify(labelSelector)}, { opacity: ${i === 0 ? 1 : 0}, y: ${i === 0 ? 0 : 24} }, { opacity: 1, y: 0, duration: ${round(enter)}, ease: "${ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
+        `    tl.fromTo(${JSON.stringify(labelSelector)}, { opacity: ${i === 0 ? 1 : 0}, y: ${i === 0 ? 0 : 24}, x: ${i === 0 ? -72 : 0} }, { opacity: 1, y: 0, x: 0, duration: ${round(enter)}, ease: "${i === 0 ? "none" : ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
         `    if (${round(beat.outSeconds)} < ${round(total)}) {`,
         `      tl.to(${JSON.stringify(labelSelector)}, { opacity: 0, y: -18, duration: ${round(exit)}, ease: "${GSAP_EASE.accelerate}" }, ${round(beat.outSeconds - exit)});`,
         `      tl.set(${JSON.stringify(beatSelector)}, { opacity: 0 }, ${round(beat.outSeconds)});`,
