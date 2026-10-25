@@ -107,6 +107,33 @@ try {
     throw new Error('Fresh browser did not default to English: ' + JSON.stringify(initial));
   }
 
+  // MM-10: a decoded MP4 is not proof that a human can play it. Click every
+  // actual gallery control in Chromium and verify advancing video time.
+  const playback = [];
+  for (const id of ['launch-title', 'kinetic-type', 'product-loop', 'footage-title']) {
+    const selector = '[data-clip="' + id + '"]';
+    const initialVideo = await evaluate('(() => { const clip = document.querySelector(' +
+      JSON.stringify(selector) + '); const video = clip?.querySelector("[data-clip-video]");' +
+      'return { time: video?.currentTime ?? 0, exists: !!video, disabled: clip?.querySelector("[data-clip-toggle]")?.disabled }; })()');
+    if (!initialVideo.exists || initialVideo.disabled) {
+      throw new Error('Gallery video unavailable before play: ' + id + ' ' + JSON.stringify(initialVideo));
+    }
+    await evaluate('document.querySelector(' + JSON.stringify(selector) + ').querySelector("[data-clip-toggle]").click()');
+    await until('(() => { const clip = document.querySelector(' + JSON.stringify(selector) + ');' +
+      'const video = clip?.querySelector("[data-clip-video]");' +
+      'return !!video && !video.paused && !video.error && video.currentTime > ' +
+      JSON.stringify(initialVideo.time + 0.15) + '; })()', id + ' actual MP4 playback');
+    const result = await evaluate('(() => { const clip = document.querySelector(' +
+      JSON.stringify(selector) + '); const video = clip.querySelector("[data-clip-video]");' +
+      'return { id: ' + JSON.stringify(id) + ', currentTime: video.currentTime, readyState: video.readyState,' +
+      ' videoWidth: video.videoWidth, videoHeight: video.videoHeight, disabled: clip.querySelector("[data-clip-toggle]").disabled }; })()');
+    if (result.disabled || !result.videoWidth || !result.videoHeight) {
+      throw new Error('Gallery video did not decode for playback: ' + JSON.stringify(result));
+    }
+    playback.push(result);
+    await evaluate('document.querySelector(' + JSON.stringify(selector) + ').querySelector("[data-clip-toggle]").click()');
+  }
+
   await change('es-MX');
   const spanish = await state();
   if (spanish.lang !== 'es-MX' || spanish.storage !== 'es-MX' ||
@@ -153,13 +180,14 @@ try {
     kind: 'locale-browser-interaction', passed: true, checkedAt: new Date().toISOString(),
     checks: ['fresh English default', 'Spanish selector click', 'late-mounted data-i18n',
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
-      '390px no horizontal overflow', 'zero uncaught browser exceptions'],
+      '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'zero uncaught browser exceptions'],
+    playback,
     viewport: mobile,
   };
   const proofDir = resolve(root, '.completion-proof');
   mkdirSync(proofDir, { recursive: true });
   writeFileSync(resolve(proofDir, 'locale-browser.json'), JSON.stringify(proof, null, 2) + '\n');
-  console.log('PASS: Chromium English default -> Spanish click -> dynamic i18n -> English click -> Spanish reload; mobile 390px; no exceptions');
+  console.log('PASS: Chromium gallery playback 4/4, English/Spanish click, dynamic i18n, mobile 390px, no exceptions');
 } finally {
   ws?.close();
   browser.kill('SIGTERM');
