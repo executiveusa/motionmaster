@@ -167,7 +167,7 @@ function tryServeLocalSite(
     "cache-control": "no-store",
   };
   // Range responses are needed to seek and play MP4s without reading the entire film.
-  const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+  const range = req.headers.range?.trim().match(/^bytes=([0-9]+)-([0-9]*)$/i);
   if (req.headers.range && !range) {
     res.writeHead(416, { "content-range": `bytes */${bytes}` });
     res.end();
