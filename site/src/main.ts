@@ -29,8 +29,11 @@ import { initPricing } from './modules/pricing';
 import { initLibrary } from './modules/library';
 import { initSound } from './modules/sound';
 import { initConsole } from './modules/chat';
+import { initLocale } from './modules/locale';
+import './styles/simplified.css';
 
 function boot(): void {
+  initLocale();
   initRail();
   initMotion();
   initScenes();
