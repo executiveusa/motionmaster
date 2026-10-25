@@ -195,7 +195,6 @@ export function initProjectEditor(): void {
         caption.textContent = variable.type === 'color' ? 'Color' : 'On-screen text';
         const variableId = document.createElement('small');
         variableId.textContent = ' · ' + variable.id;
-        caption.append(variableId);
         const input = document.createElement('input');
         input.dataset.shotVariable = variable.id;
         input.type = variable.type === 'color' ? 'color' : 'text';
@@ -203,7 +202,7 @@ export function initProjectEditor(): void {
         const original = shot.values?.[variable.id] ?? variable.default;
         input.value = typeof original === 'string' && (variable.type !== 'color' || /^#[0-9a-f]{6}$/i.test(original))
           ? original : variable.type === 'color' ? '#ffffff' : '';
-        label.append(caption, input);
+        label.append(caption, variableId, input);
         group.append(label);
       }
       shotRoot.append(group);
