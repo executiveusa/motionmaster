@@ -214,3 +214,20 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the six code/test commits above from draft PR #2, or close the PR; no persisted project schema changed. `main` remains `adc9685`; existing projects and MP4s remain intact.
 
 **NEXT:** Add a **real default-worker edited-revision** integration proof (select eligible block, render actual MP4, reopen, change shot trim/order, rerender and validate both files), without replacing the renderer with an injected FFmpeg stub. Only then wire a minimal visual editor and owner-controlled staging. Independent reviewer and founder approval remain required before release.
+
+
+## 15. Continuation — 2026-10-25 UTC (MM-08 real default-worker edited MP4 gate)
+
+**DECISION:** Convert the largest remaining unproven rendering claim into a falsifiable CI gate. Keep the private gallery-first design, `main`, existing hosting and sale state unchanged.
+
+**CHANGES:** Commit `12470d6` adds `scripts/default-worker-edit-smoke.mjs`; `0bb13d1` wires it into the existing PR completion workflow with a 20-minute bounded step and artifact retention. The script selects a self-contained, text-capable real catalogue block; uses the shipped `runProjectJob` and default `renderProjectRevision` (no injected renderer); creates a private temporary project; renders its first MP4; reopens the persisted project/job from a **new Node process**; saves a shorter shot-duration revision; rerenders through the default worker; verifies both real MP4s with FFprobe and FFmpeg frame decoding, revision-specific source timing and distinct MP4 hashes. It saves the actual videos, frame images and JSON report to `.completion-proof/default-worker-edit/` and cleans its isolated temporary project.
+
+**PROOF STATUS:** GitHub Actions [run 40192712063](https://github.com/executiveusa/motionmaster/actions/runs/40192712063) was **PENDING** immediately after the CI commit. This is an executable test contract, **not yet proof that the default renderer passes**. Do not report a successful edited MP4 until the run completes and its artifacts are inspected. The prior verified run [40188378062](https://github.com/executiveusa/motionmaster/actions/runs/40188378062) was successful on the preceding documentation head.
+
+**LIVE / BENCHMARK:** A fresh read-only page scrape on 2026-10-25 returned HTTP 200 for the existing preview and for `motionvideo.xyz`. The preview contains four real source-backed video entries with printed prompts, English page metadata and a visible creation-console connection step. The scrape displayed a **kinetic-type 'Not available' state**, which may reflect the scraper's media environment; investigate in a real interactive browser before declaring a live playback failure. The Vercel deployment API reports READY for old frontend commit `33aee7d`, **not this branch**. The benchmark is a larger prompt-backed gallery; do not inflate Motion Master's homepage with unrelated controls.
+
+**RISKS:** Default-worker registry installation requires external access and is synchronous; the new test may expose installation, craft-gate, render or duration failures. The test covers one selected shot and a trim edit, **not** text/color/asset editing, all catalogue blocks, ten consecutive full workflows, source export/import, owner-controlled persistent hosting, authenticated browser-to-worker connection or live Codex/Claude MCP calls. Independent security, accessibility, Landing Page Director and first-time-user reviews remain outstanding. Sale stays `onSale=false`.
+
+**ROLLBACK:** Revert `0bb13d1` and `12470d6` from draft PR #2, or close the PR. No schema changes, merge, force-push, production deployment, paid service, secret disclosure or Montage edits.
+
+**NEXT:** Inspect the new CI report and both MP4/frame artifacts. If it fails, fix the concrete default-renderer failure in a minimal follow-up commit; if it passes, extend the same acceptance path through source export/import and a human-operated editor, then independent review. Founder approval is still required before release.
