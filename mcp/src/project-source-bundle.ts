@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
-import { createProject, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, type ProjectRevision } from "./projects.js";
+import { createProject, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, validShots, type ProjectRevision } from "./projects.js";
 
 const MAX_FILES = 512;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
@@ -131,12 +131,7 @@ export function inspectProjectSource(archive: Buffer): SourceBundle {
         typeof revision.createdAt !== "string" ||
         typeof revision.title !== "string" || !revision.title.trim() || revision.title.length > 300 ||
         typeof revision.brief !== "string" || !revision.brief.trim() || revision.brief.length > 20_000 ||
-        !Array.isArray(revision.shots) || revision.shots.length > 100 ||
-        !revision.shots.every((shot) => shot && typeof shot.id === "string" &&
-          shot.id.length > 0 && shot.id.length <= 100 &&
-          typeof shot.title === "string" && shot.title.length <= 300 &&
-          typeof shot.duration === "number" && Number.isFinite(shot.duration) &&
-          shot.duration > 0 && shot.duration <= 3600)) {
+        !validShots(revision.shots)) {
       throw new Error("Invalid source archive revision history.");
     }
   }
