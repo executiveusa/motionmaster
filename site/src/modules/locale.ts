@@ -163,7 +163,7 @@ const chromeText: Record<string, string> = {
 };
 const originalNodes = new WeakMap<Text, { en: string; es: string }>();
 const originalAttrs = new WeakMap<Element, Map<string, { en: string; es: string }>>();
-const protectedSelectors = 'pre,code,script,style,noscript,textarea,svg,[data-i18n-ignore],.console__text,.library__item-title,.library__item-summary,.library__licence,.sfx__title,.sfx__note,.film__title,.film__shot-title,.artifact__headline,.artifact__notes,.artifact__title';
+const protectedSelectors = 'pre,code,script,style,noscript,textarea,svg,[data-i18n-ignore],.console__text,.library__item-title,.library__item-summary,.library__licence,.sfx__title,.sfx__note,.film__title,.film__shot-title,.artifact__headline,.artifact__notes,.artifact__title,.project-editor__user-text';
 function translateLabel(value: string): string | undefined {
   const normalized = value.replace(/\s+/g, ' ').trim();
   if (chromeText[normalized]) return chromeText[normalized];
