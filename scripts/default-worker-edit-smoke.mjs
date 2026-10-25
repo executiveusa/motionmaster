@@ -52,18 +52,19 @@ try {
     b.variables?.some((v) => v.type === "string") &&
     !b.variables.some((v) => ["image", "video", "audio"].includes(v.type)) &&
     !b.tags.includes("transitions-dev-port") &&
-    b.files.some((f) => f.type === "hyperframes:composition" || f.path.endsWith(".html")) &&
-    (b.duration ?? 5) >= 2
+    b.files.some((f) => f.type === "hyperframes:composition") &&
+    (b.duration ?? 0) >= 3.5
   );
   assert.ok(candidates.length, "No eligible self-contained editable motion blocks");
-  const selected = candidates.find((b) => b.tags.some((tag) => /title|typography|kinetic/i.test(tag))) ?? candidates[0];
+  const selected = candidates.find((b) => b.id === "split-flap-board");
+  assert.ok(selected, "Pinned split-flap-board composition is unavailable; do not silently substitute a different block");
   report.selectedBlock = selected.id;
-  const { project } = createProject(temp, { title: "Default worker proof", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "First version", duration: 1 }] });
+  const { project } = createProject(temp, { title: "Default worker proof", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "First version", duration: 3.5 }] });
   const first = createProjectJob(temp, project.id, 1);
   await runProjectJob(config, project.id, first.id); // NO renderer override
   const initial = readProjectJob(temp, project.id, first.id);
   assert.equal(initial?.status, "ready", "Default first render failed: " + (initial?.error ?? initial?.status));
-  prove("original", project.id, first.id, 1);
+  prove("original", project.id, first.id, 3.5);
 
   // Reopen persisted project and job in a separate Node process.
   const moduleUrl = pathToFileURL(join(root, "mcp", "dist", "projects.js")).href;
@@ -72,17 +73,17 @@ try {
   run(process.execPath, ["--input-type=module", "-e", check, temp, project.id, first.id]);
   report.reopenedInNewProcess = true;
 
-  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "Shorter version", duration: 0.5 }] });
+  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "Shorter version", duration: 3.0 }] });
   assert.equal(revision.revision.number, 2);
   const second = createProjectJob(temp, project.id, 2);
   await runProjectJob(config, project.id, second.id); // same real renderer
   const edited = readProjectJob(temp, project.id, second.id);
   assert.equal(edited?.status, "ready", "Default edited render failed: " + (edited?.error ?? edited?.status));
-  prove("edited", project.id, second.id, 0.5);
+  prove("edited", project.id, second.id, 3.0);
   const source = JSON.parse(readFileSync(join(temp, "workspace", "projects", project.id, "renders", second.id, "brief.json"), "utf8"));
   assert.equal(source.shots.length, 1);
   assert.equal(source.shots[0].id, selected.id);
-  assert.equal(source.shots[0].duration, 0.5);
+  assert.equal(source.shots[0].duration, 3.0);
   assert.notEqual(report.renders[0].sha256, report.renders[1].sha256);
   report.status = "passed";
   console.log("PASS: default HyperFrames worker rendered, reopened, edited, rerendered and decoded real MP4s.");
