@@ -22,6 +22,15 @@ const strings: Record<string, [string, string]> = {
   stop: ['Stop', 'Detener'],
   signOut: ['Sign out', 'Cerrar sesión'],
   categories: ['Categories', 'Categorías'],
+  clipLaunch: ['Launch title', 'Título de lanzamiento'],
+  clipKinetic: ['Kinetic type', 'Tipografía animada'],
+  clipProduct: ['Product loop', 'Video de producto en bucle'],
+  clipFootage: ['Footage + title', 'Video con título'],
+  prompt: ['Prompt', 'Instrucciones'],
+  copyPrompt: ['Copy prompt', 'Copiar instrucciones'],
+  startPrompt: ['Start from this prompt', 'Crear a partir de este ejemplo'],
+  consoleLede: ['Write what you want to make. Your connected agent uses the motion tools to produce the file.', 'Escribe lo que quieres crear. Tu agente conectado usa las herramientas de animación para generar el video.'],
+  libraryLede: ['Search real prompts and reusable motion components.', 'Busca instrucciones reales y elementos de animación reutilizables.'],
 };
 const protectedText = new WeakMap<Element, string>();
 export function locale(): Locale {
