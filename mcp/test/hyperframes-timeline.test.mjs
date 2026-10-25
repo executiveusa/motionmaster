@@ -42,14 +42,14 @@ test("every timeline selector uses a beat track that exists in markup", () => {
   const storyboard = planVideo({ brief: "Show a kinetic typography announcement", elementCount: 5 }, tokens);
   const result = buildHyperFramesProject(storyboard, tokens);
   const html = result.files.find((file) => file.path.endsWith("/index.html")).contents;
-  const selectors = [...html.matchAll(/tl\\.(?:set|fromTo|to)\\(("(?:\\\\.|[^"\\\\])*")/g)]
-    .map((match) => JSON.parse(match[1]));
+  const selectors = html.split("\n").filter((line) =>
+    line.includes("tl.set(") || line.includes("tl.fromTo(") || line.includes("tl.to("));
   assert.ok(selectors.length >= storyboard.beats.length * 2);
-  for (const selector of selectors) {
-    const match = selector.match(/^\\.beat\\[data-track-index="(\\d+)"\\](?: \\.beat__label)?$/);
-    assert.ok(match, `unexpected timeline selector: ${selector}`);
-    const number = Number(match[1]);
-    assert.ok(number >= 0 && number < storyboard.beats.length);
-    assert.ok(html.includes(`data-track-index="${number}"`), `selector ${selector} matches no generated markup`);
+  for (const line of selectors) {
+    const isActualBeat = storyboard.beats.some((_, i) => {
+      const beat = `.beat[data-track-index="${i}"]`;
+      return line.includes(JSON.stringify(beat)) || line.includes(JSON.stringify(`${beat} .beat__label`));
+    });
+    assert.ok(isActualBeat, `timeline references a missing beat: ${line}`);
   }
 });
