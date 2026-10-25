@@ -67,6 +67,8 @@ export function initProjectEditor(): void {
     '<label><span data-i18n="editorProjects">Saved projects</span><select data-project-list aria-label="Saved projects"></select></label>',
     '<button type="button" class="btn btn--ghost" data-project-open data-i18n="editorOpen">Open project</button>',
     '<button type="button" class="btn btn--ghost" data-project-refresh data-i18n="editorRefresh">Refresh</button>',
+    '<button type="button" class="btn btn--ghost" data-project-new-toggle data-i18n="editorNewButton">New video</button>',
+    '<button type="button" class="btn btn--ghost" data-project-change data-i18n="editorChange">Change connection</button>',
     '</div>',
     '<form data-project-create class="project-editor__form">',
     '<h3 data-i18n="editorNew">New lower-third video</h3>',
@@ -103,6 +105,8 @@ export function initProjectEditor(): void {
   let busy = false;
   const blocks = new Map<string, Block>();
   const workspace = q<HTMLElement>(root, '[data-project-workspace]')!;
+  const connectForm = q<HTMLFormElement>(root, '[data-project-connect]')!;
+  const createForm = q<HTMLFormElement>(root, '[data-project-create]')!;
   const editForm = q<HTMLFormElement>(root, '[data-project-edit]')!;
   const result = q<HTMLElement>(root, '[data-project-result]')!;
   const video = q<HTMLVideoElement>(root, '[data-project-video]')!;
@@ -224,6 +228,7 @@ export function initProjectEditor(): void {
       }
       shotRoot.append(group);
     }
+    createForm.hidden = true;
     editForm.hidden = opened.revision.shots.length === 0;
     if (!opened.revision.shots.length) status(root, 'editorNoShots');
     else status(root, 'editorLoaded');
@@ -341,7 +346,7 @@ export function initProjectEditor(): void {
     try { await run(); } catch (error) { failed(error); }
     finally { setBusy(false); }
   }
-  q<HTMLFormElement>(root, '[data-project-connect]')!.addEventListener('submit', (event) => {
+  connectForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void action(async () => {
       const proposed = safeEndpoint(server.value.trim());
@@ -357,6 +362,8 @@ export function initProjectEditor(): void {
       entered.value = '';
       await refresh();
       workspace.hidden = false;
+      connectForm.hidden = true;
+      createForm.hidden = q<HTMLSelectElement>(root, '[data-project-list]')!.options.length > 0;
       status(root, 'editorReady');
     });
   });
@@ -366,7 +373,7 @@ export function initProjectEditor(): void {
     if (id) await openProject(id);
     else status(root, 'editorChoose');
   }));
-  q<HTMLFormElement>(root, '[data-project-create]')!.addEventListener('submit', (event) => {
+  createForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void action(async () => {
       const block = await getBlock(TEMPLATE);
@@ -383,6 +390,15 @@ export function initProjectEditor(): void {
       await openProject(created.project.id);
       status(root, 'editorCreated');
     });
+  });
+  q<HTMLButtonElement>(root, '[data-project-new-toggle]')!.addEventListener('click', () => {
+    createForm.hidden = false;
+    editForm.hidden = true;
+    q<HTMLInputElement>(root, '[data-project-new-title]')!.focus();
+  });
+  q<HTMLButtonElement>(root, '[data-project-change]')!.addEventListener('click', () => {
+    connectForm.hidden = false;
+    q<HTMLInputElement>(root, '[data-project-key]')!.focus();
   });
   editForm.addEventListener('submit', (event) => {
     event.preventDefault();
