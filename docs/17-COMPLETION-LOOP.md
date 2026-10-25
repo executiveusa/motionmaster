@@ -165,3 +165,20 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the four MM-09 source-export commits on draft PR #2; generated project records and MP4s are untouched. Main stays at `adc9685`.
 
 **NEXT:** Resolve any CI failures first. Then add verified source re-import/shot editing and complete the actual render→restart→edit→rerender→export acceptance test. No owner-controlled hosting changes without explicit approval.
+
+
+## 11. Continuation — 2026-10-25 UTC (MM-09 private source re-import)
+
+**DECISION:** Complete the smallest source-reopen slice before attempting hosted worker deployment or manual shot editing. Keep PR #2 draft; preserve `main`, production hosting, paid-service state and the Montage repository.
+
+**CHANGES:** Commits `f846bab`, `ee911fb`, `2742f45`, `06b7fdb`, `991b3da`, `91046e8` harden source-archive inspection, reject malformed provenance, mismatched or invalid immutable revisions and unsafe source paths, and add `importProjectSource`. An archive now creates a **new** private project with restored editable revision content and original source bytes stored under a non-executable `imports/` directory. Original revision timestamps are recorded as provenance. Partial import failures remove only the newly created project. Imported files are **not** executed or silently marked rendered; no ready job is created. Added bearer-protected `POST /api/v1/projects/import` accepting bounded `application/gzip` bytes and OpenAPI/index discovery.
+
+**TEST CONTRACT:** `mcp/test/project-source-import.test.mjs` covers private auth, invalid media, malformed gzip, archive path traversal, mismatched revision IDs/numbers, invalid shot duration, fresh project IDs, revision reopen, binary source integrity, and no fabricated completed jobs. The existing real-FFmpeg source-export suite now performs a source export → new project re-import → reopen round trip. The CI workflow also runs the established desktop/mobile Chromium, es-MX selector, gallery decode and HyperFrames smoke gates. **Do not report this slice as passing until the latest head's CI completes successfully.**
+
+**LIVE / BENCHMARK:** A fresh read-only page scrape on 2026-10-25 retrieved the older Vercel homepage and `motionvideo.xyz`; both expose a prompt-backed gallery-first model. The Vercel deployment API still reports READY for the **old** `33aee7d` commit, not this PR. Scraped page text includes a kinetic clip marked unavailable, but hidden-state text is not proof of actual playback failure; verify it in a real browser. No new staging/production deployment or live backend smoke occurred. Landing Page Director and independent gauntlet are still unapproved.
+
+**RISKS:** Imported source is intentionally inert and cannot be trusted as runnable code. The actual default model → HyperFrames → editable shots → rerender flow, subprocess cancellation, hosted persistent worker, browser bearer UX, Claude/Codex live MCP and first-time-user trials remain release blockers. Import is a single-writer local filesystem operation, not a multi-tenant or multi-instance service. Upstream asset licences remain review-required. `licence.json.status.onSale=false` remains unchanged.
+
+**ROLLBACK:** Revert the six MM-09 commits on the draft branch, or close PR #2. Newly imported project directories can be removed individually; existing source projects, historical MP4s and `main` remain unchanged.
+
+**NEXT:** Check latest CI and repair failures. Then implement a verified manual shot edit using the existing block catalogue and renderer, and prove create → render → restart → reopen → edit → rerender → export → re-import with the real default pipeline. Independent security, accessibility and taste review must approve before any production release.
