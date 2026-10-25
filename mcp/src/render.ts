@@ -7,8 +7,8 @@
  * a file or it did not.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, extname, join, resolve } from "node:path";
+import { constants, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export interface FilmFile {
   /** The file's name, e.g. "acme.mp4". */
@@ -212,14 +212,34 @@ export function writeProject(
   files: { path: string; contents: string }[],
 ): string[] {
   mkdirSync(projectDir, { recursive: true });
+  const root = realpathSync(projectDir);
+  const inside = (target: string): boolean => {
+    const rel = relative(root, target);
+    return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  };
   const written: string[] = [];
   for (const file of files) {
-    // The path is relative to the project, and a path that tries to escape it
-    // is refused rather than written.
-    const target = resolve(projectDir, file.path);
-    if (!target.startsWith(resolve(projectDir))) continue;
-    mkdirSync(resolve(target, ".."), { recursive: true });
-    writeFileSync(target, file.contents, "utf8");
+    // A string prefix is not a containment check: /film-evil starts with /film.
+    // Refuse traversal and absolute paths, rather than silently dropping files.
+    if (!file.path || isAbsolute(file.path)) {
+      throw new Error(`Invalid project file path: ${file.path}`);
+    }
+    const target = resolve(root, file.path);
+    if (!inside(target)) throw new Error(`Project file escapes root: ${file.path}`);
+    mkdirSync(dirname(target), { recursive: true });
+    // Parent symlinks can redirect a seemingly contained path outside root.
+    const realParent = realpathSync(dirname(target));
+    if (realParent !== root && !inside(realParent)) {
+      throw new Error(`Project file parent escapes root: ${file.path}`);
+    }
+    // O_NOFOLLOW also refuses a final-component symlink. Do not truncate the
+    // symlink's target even when the target exists outside the project.
+    const fd = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600);
+    try {
+      writeFileSync(fd, file.contents, "utf8");
+    } finally {
+      closeSync(fd);
+    }
     written.push(target);
   }
   return written;
