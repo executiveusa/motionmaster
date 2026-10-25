@@ -13,6 +13,7 @@
  */
 import type { Storyboard, PlannedBeat } from "./planner.js";
 import type { MotionTokens } from "./tokens.js";
+import { headlineFrom } from "./blocks.js";
 
 export interface HyperFramesResult {
   directory: string;
@@ -38,15 +39,21 @@ export const GSAP_FILE = `gsap-${GSAP_VERSION}.min.js`;
  * The timeline is seeked to the current time before every capture, so the
  * timeline itself is the single source of truth for the picture.
  */
-function clipFor(beat: PlannedBeat, index: number, tokens: MotionTokens): string {
+function clipFor(beat: PlannedBeat, index: number, tokens: MotionTokens, headline: string, tagline?: string): string {
   const easing = beat.easing.name;
   const elements = beat.elements
     .map((el) => {
+      // Do not print internal slot names like "wordmark" or "backdrop" as
+      // customer-facing copy. The brief is the source of the headline.
+      if ((el.name === "tagline" || el.name === "credit") && !tagline) return "";
+      const label = el.name === "tagline" || el.name === "credit" ? tagline! :
+        (el.type === "text" || el.name === "backdrop" ? headline : el.name);
       const id = `b${index}-${el.type}-${slug(el.name)}`;
       return `      <div class="clip beat" id="${id}" data-start="${beat.inSeconds}" data-duration="${beat.durationSeconds}" data-track-index="${index}">
-        <span class="beat__label">${esc(el.name)}</span>
+        <span class="beat__label">${esc(label)}</span>
       </div>`;
     })
+    .filter(Boolean)
     .join("\n");
   void easing;
   void tokens;
@@ -89,15 +96,19 @@ export function buildHyperFramesProject(
   const displayTracking = (display.tracking as string) ?? "-0.03em";
   const displayLine = (display.lineHeight as number) ?? 0.95;
 
+  const headline = headlineFrom(storyboard.brief);
+  const tagline = /\btagline\s*[:=]\s*["“]?([^"”\n.;]+)/i.exec(storyboard.brief)?.[1]?.trim();
   const clips = storyboard.beats
-    .map((beat, i) => clipFor(beat, i, tokens))
+    .map((beat, i) => clipFor(beat, i, tokens, headline, tagline))
     .filter(Boolean)
     .join("\n");
 
   const timeline = storyboard.beats
     .map((beat, i) => {
       const ease = GSAP_EASE[beat.easing.name] ?? "power2.out";
-      const enter = beat.durationSeconds * 0.38;
+      // A visible first frame is required for social thumbnails. The final
+      // line must appear early enough to remain readable for at least 2s.
+      const enter = i === 0 ? 0 : beat.role === "exit" ? 0.18 : beat.durationSeconds * 0.38;
       const stag = beat.stagger.intervalMs / 1000;
       // The generated nodes are b0-text-wordmark, etc., not #b0. Select by the
       // stable beat track attribute and animate the container as well as its label.
@@ -107,7 +118,7 @@ export function buildHyperFramesProject(
       return [
         `    // beat ${i + 1}: ${beat.label} — ${beat.role}, ${beat.easing.name}`,
         `    tl.set(${JSON.stringify(beatSelector)}, { opacity: 1 }, ${round(beat.inSeconds)});`,
-        `    tl.fromTo(${JSON.stringify(labelSelector)}, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: ${round(enter)}, ease: "${ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
+        `    tl.fromTo(${JSON.stringify(labelSelector)}, { opacity: ${i === 0 ? 1 : 0}, y: ${i === 0 ? 0 : 24} }, { opacity: 1, y: 0, duration: ${round(enter)}, ease: "${ease}", stagger: ${round(stag)} }, ${round(beat.inSeconds)});`,
         `    if (${round(beat.outSeconds)} < ${round(total)}) {`,
         `      tl.to(${JSON.stringify(labelSelector)}, { opacity: 0, y: -18, duration: ${round(exit)}, ease: "${GSAP_EASE.accelerate}" }, ${round(beat.outSeconds - exit)});`,
         `      tl.set(${JSON.stringify(beatSelector)}, { opacity: 0 }, ${round(beat.outSeconds)});`,
