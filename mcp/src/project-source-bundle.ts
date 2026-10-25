@@ -4,10 +4,10 @@
  * byte is hashed and every path is relative. No upstream licence is invented.
  */
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
-import { projectsRoot, readProject, readProjectJob, readRevision, type ProjectRevision } from "./projects.js";
+import { createProject, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, type ProjectRevision } from "./projects.js";
 
 const MAX_FILES = 512;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
@@ -17,6 +17,9 @@ const OMIT_DIRS = new Set([".git", ".hyperframes", "node_modules", "stills", "di
 const OMIT_FILES = new Set(["film.mp4", "render.log"]);
 const SAFE_SOURCE = /^(?:index\.html|brief\.json|hyperframes\.json|compositions\/[a-zA-Z0-9_./-]+|assets\/[a-zA-Z0-9_./-]+)$/;
 const hash = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
+const SAFE_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/;
+const safeSourcePath = (path: string): boolean =>
+  SAFE_SOURCE.test(path) && !path.split("/").some((segment) => !segment || segment === "." || segment === "..");
 
 export interface SourceFile {
   path: string;
@@ -60,7 +63,7 @@ export function exportProjectSource(repoRoot: string, projectId: string, jobId: 
       }
       if (!entry.isFile() || OMIT_FILES.has(entry.name)) continue;
       const path = relative(root, absolute).split(sep).join("/");
-      if (!SAFE_SOURCE.test(path) || path.split("/").includes("..")) continue;
+      if (!safeSourcePath(path)) continue;
       const stat = lstatSync(absolute);
       total += stat.size;
       if (stat.size > MAX_FILE_BYTES || total > MAX_TOTAL_BYTES || files.length >= MAX_FILES) {
@@ -110,11 +113,40 @@ export function inspectProjectSource(archive: Buffer): SourceBundle {
       typeof bundle.project?.title !== "string" || typeof bundle.project?.brief !== "string") {
     throw new Error("Unsupported source archive.");
   }
+  // A valid checksum is not enough: provenance and revision records are
+  // untrusted JSON. Validate the complete immutable history before any import.
+  if (!SAFE_ID.test(bundle.project.sourceId) || !SAFE_ID.test(bundle.render?.jobId) ||
+      !Number.isSafeInteger(bundle.render.revision) ||
+      bundle.render.revision < 1 || bundle.render.revision > bundle.revisions.length ||
+      bundle.revisions.length > 100 ||
+      bundle.project.title.length > 300 || !bundle.project.title.trim() ||
+      bundle.project.brief.length > 20_000 || !bundle.project.brief.trim()) {
+    throw new Error("Invalid source archive provenance.");
+  }
+  for (let i = 0; i < bundle.revisions.length; i++) {
+    const revision = bundle.revisions[i];
+    if (!revision || revision.schemaVersion !== 1 ||
+        revision.projectId !== bundle.project.sourceId || revision.number !== i + 1 ||
+        typeof revision.createdAt !== "string" ||
+        typeof revision.title !== "string" || !revision.title.trim() || revision.title.length > 300 ||
+        typeof revision.brief !== "string" || !revision.brief.trim() || revision.brief.length > 20_000 ||
+        !Array.isArray(revision.shots) || revision.shots.length > 100 ||
+        !revision.shots.every((shot) => shot && typeof shot.id === "string" &&
+          shot.id.length > 0 && shot.id.length <= 100 &&
+          typeof shot.title === "string" && shot.title.length <= 300 &&
+          typeof shot.duration === "number" && Number.isFinite(shot.duration) &&
+          shot.duration > 0 && shot.duration <= 3600)) {
+      throw new Error("Invalid source archive revision history.");
+    }
+  }
+  const latest = bundle.revisions[bundle.revisions.length - 1];
+  if (latest.title !== bundle.project.title || latest.brief !== bundle.project.brief) {
+    throw new Error("Source archive project and revision disagree.");
+  }
   let total = 0;
   const seen = new Set<string>();
   for (const file of bundle.files) {
-    if (typeof file.path !== "string" || !SAFE_SOURCE.test(file.path) ||
-        file.path.split("/").includes("..") || seen.has(file.path) ||
+    if (typeof file.path !== "string" || !safeSourcePath(file.path) || seen.has(file.path) ||
         !Number.isSafeInteger(file.size) || file.size < 0 || file.size > MAX_FILE_BYTES ||
         typeof file.base64 !== "string" || typeof file.sha256 !== "string") {
       throw new Error("Unsafe source archive entry.");
@@ -131,4 +163,47 @@ export function inspectProjectSource(archive: Buffer): SourceBundle {
     throw new Error("Source archive is missing required project files.");
   }
   return bundle;
+}
+
+/**
+ * Reopen a portable archive as a NEW private project. Imported HTML/assets are
+ * retained as inert source evidence, never served or executed by this method.
+ * No imported render is marked ready: a fresh, verified MP4 is required.
+ * The original project and its immutable revision history remain untouched.
+ */
+export function importProjectSource(repoRoot: string, archive: Buffer): {
+  project: ReturnType<typeof createProject>["project"];
+  revision: ProjectRevision;
+  sourceId: string;
+  importedFiles: number;
+} {
+  const bundle = inspectProjectSource(archive);
+  const first = bundle.revisions[0];
+  const created = createProject(repoRoot, {
+    title: first.title, brief: first.brief, shots: first.shots,
+  });
+  let current = created;
+  for (const revision of bundle.revisions.slice(1)) {
+    current = saveRevision(repoRoot, created.project.id, current.revision.number, {
+      title: revision.title, brief: revision.brief, shots: revision.shots,
+    });
+  }
+  // This directory is unique to the newly generated project ID and is not
+  // used by the rendering worker. Only the strict source allowlist is written.
+  const root = join(projectsRoot(repoRoot), created.project.id, "imports", bundle.render.jobId);
+  mkdirSync(root, { recursive: true });
+  for (const file of bundle.files) {
+    const target = join(root, file.path);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, Buffer.from(file.base64, "base64"), { flag: "wx", mode: 0o600 });
+  }
+  writeFileSync(join(root, "import.json"), JSON.stringify({
+    format: bundle.format, version: bundle.version, sourceId: bundle.project.sourceId,
+    render: bundle.render, upstreamAssets: "review-required",
+    note: "Imported code is untrusted and must not be executed automatically.",
+  }, null, 2), { flag: "wx", mode: 0o600 });
+  return {
+    project: current.project, revision: current.revision,
+    sourceId: bundle.project.sourceId, importedFiles: bundle.files.length,
+  };
 }
