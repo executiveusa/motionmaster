@@ -251,12 +251,12 @@ try {
   report.project = { original: projectId, imported: importedId, revision: imported.revision.number };
   await command('Emulation.setDeviceMetricsOverride',
     { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await evaluate('(() => {
+  await evaluate(`(() => {
     document.documentElement.style.scrollBehavior = "auto";
     document.body.style.scrollBehavior = "auto";
     document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"});
     return true;
-  })()');
+  })()`);
   await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140',
     'imported editor visible in mobile viewport', 10000);
   await sleep(350);
