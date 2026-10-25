@@ -4,7 +4,7 @@
  * byte is hashed and every path is relative. No upstream licence is invented.
  */
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { createProject, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, type ProjectRevision } from "./projects.js";
@@ -183,28 +183,36 @@ export function importProjectSource(repoRoot: string, archive: Buffer): {
   const created = createProject(repoRoot, {
     title: first.title, brief: first.brief, shots: first.shots,
   });
-  let current = created;
-  for (const revision of bundle.revisions.slice(1)) {
-    current = saveRevision(repoRoot, created.project.id, current.revision.number, {
-      title: revision.title, brief: revision.brief, shots: revision.shots,
-    });
+  // Import is all-or-nothing at the project-directory level. On a disk
+  // write failure, remove only this newly created project, never the source.
+  try {
+    let current = created;
+    for (const revision of bundle.revisions.slice(1)) {
+      current = saveRevision(repoRoot, created.project.id, current.revision.number, {
+        title: revision.title, brief: revision.brief, shots: revision.shots,
+      });
+    }
+    // This directory is unique to the new project and is never executed by
+    // the rendering worker. Imported HTML is retained as untrusted evidence.
+    const root = join(projectsRoot(repoRoot), created.project.id, "imports", bundle.render.jobId);
+    mkdirSync(root, { recursive: true });
+    for (const file of bundle.files) {
+      const target = join(root, file.path);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, Buffer.from(file.base64, "base64"), { flag: "wx", mode: 0o600 });
+    }
+    writeFileSync(join(root, "import.json"), JSON.stringify({
+      format: bundle.format, version: bundle.version, sourceId: bundle.project.sourceId,
+      render: bundle.render, originalRevisionDates: bundle.revisions.map((r) => r.createdAt),
+      upstreamAssets: "review-required",
+      note: "Imported code is untrusted and must not be executed automatically.",
+    }, null, 2), { flag: "wx", mode: 0o600 });
+    return {
+      project: current.project, revision: current.revision,
+      sourceId: bundle.project.sourceId, importedFiles: bundle.files.length,
+    };
+  } catch (error) {
+    rmSync(join(projectsRoot(repoRoot), created.project.id), { recursive: true, force: true });
+    throw error;
   }
-  // This directory is unique to the newly generated project ID and is not
-  // used by the rendering worker. Only the strict source allowlist is written.
-  const root = join(projectsRoot(repoRoot), created.project.id, "imports", bundle.render.jobId);
-  mkdirSync(root, { recursive: true });
-  for (const file of bundle.files) {
-    const target = join(root, file.path);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, Buffer.from(file.base64, "base64"), { flag: "wx", mode: 0o600 });
-  }
-  writeFileSync(join(root, "import.json"), JSON.stringify({
-    format: bundle.format, version: bundle.version, sourceId: bundle.project.sourceId,
-    render: bundle.render, upstreamAssets: "review-required",
-    note: "Imported code is untrusted and must not be executed automatically.",
-  }, null, 2), { flag: "wx", mode: 0o600 });
-  return {
-    project: current.project, revision: current.revision,
-    sourceId: bundle.project.sourceId, importedFiles: bundle.files.length,
-  };
 }
