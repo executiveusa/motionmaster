@@ -101,3 +101,18 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the MM-03 project/API/test commits and the locale/browser-test commits on the draft branch, or close PR #2. Legacy `workspace/films/` files are untouched; main remains `adc9685`. No secrets, paid services, production deploy, auto-merge or sale activation.
 
 **NEXT:** MM-05 wire new revisions/jobs into the existing film renderer with unique IDs, idempotent lifecycle, restart recovery and verified MP4/source reopen; MM-06 protect all private film/file endpoints and downloads. Then owner-controlled staging, live Codex/Claude MCP smoke, independent gauntlet, and founder release decision. The builder cannot approve its own work.
+
+
+## 7. Continuation — 2026-10-25 04:13 UTC (MM-06 / MM-09 safety and intake slice)
+
+**DECISION:** Prioritize a concrete P0 private-route exposure and broken upload intake over starting a new rendering architecture. Keep PR #2 draft, main and production untouched.
+
+**CHANGES:** `mcp/src/index.ts` now enforces the existing `MOTION_MASTER_API_KEY` on **all** private HTTP entrypoints (files, films, chat, MCP and the API), refuses any network-bound private route when the key is unset, and permits cross-origin browser access only from explicit `MOTION_MASTER_ALLOWED_ORIGINS` or the local combined-site origin. Preflight now allows the `Authorization` header. Flat uploaded-file reads reject encoded separators, traversal and symlinks escaping the workspace, and allow only GET/HEAD. Uploads now use a bounded binary reader rather than the JSON body decoder, which previously prevented real raw and multipart media intake.
+
+**TEST CONTRACT:** New `mcp/test/private-http-auth.test.mjs` covers no-key network denial, bearer enforcement, path traversal/symlink rejection, method restrictions, browser-origin allowlist and preflight, and byte-perfect raw/multipart upload round trips. Commits: `0a61a6c`, `ce50ddc`, `1160f6e`, `fad3e67`. CI run [40161207411](https://github.com/executiveusa/motionmaster/actions/runs/40161207411) was queued at the time of this ledger entry; **do not mark these tests passed until the run completes successfully**.
+
+**RISKS:** The UI has no hosted bearer-token entry flow yet, so a network deployment must not be advertised as usable until authorized frontend requests are wired and tested. Local single-writer JSON state, job restart/retry, full render/edit/export/reopen, remote MCP host calls and independent security/taste review remain open. A static Vercel frontend previously reported READY at commit `33aee7d`; that is **not** a deployment of this branch head or a live backend. External fetches of that URL and the benchmark were not independently successful in this run.
+
+**ROLLBACK:** Revert the four commits above on the draft branch or close PR #2; no main merge, force push, secret, paid service, sale activation or Montage edit. Existing local combined mode continues to work without a key; public network listeners now fail closed.
+
+**NEXT:** Inspect the new CI logs, repair any failing test, then implement MM-05 durable render transitions with an actual restart/reopen proof. Wire frontend auth before any owner-controlled staging API is exposed. Independent review and human release approval remain mandatory.
