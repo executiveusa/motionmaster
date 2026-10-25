@@ -132,3 +132,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the MM-05 commits on draft PR #2, or close the draft PR. `main` remains the recovery anchor at `adc9685`; project and legacy film records are not destructively migrated or deleted. No production deploy, paid service, force-push, secret disclosure, auto-merge or Montage edits.
 
 **NEXT:** MM-05 connect queued project jobs to a bounded single-worker execution adapter using the existing film/HyperFrames pipeline; prove brief → project → render → verified MP4 → restart → reopen → edit → rerender → export, with cancellation actually terminating work. Then MM-06 hosted auth/frontend bearer flow, owner-controlled staging, independent gauntlet, live Codex/Claude smoke and founder release approval.
+
+## 9. Continuation — 2026-10-25 07:19 UTC (MM-09 authenticated MP4 download slice)
+
+**DECISION:** Implement the smallest reversible owner-private export prerequisite: authenticated, byte-preserving downloads of already-verified project MP4s. This does **not** claim portable source export, hosted rendering or a human-usable release.
+
+**CHANGES:** Commits `e069833`, `e8eac5e`, `1590988` add `GET/HEAD /api/v1/projects/:id/jobs/:jobId/artifact`, a discoverable `downloadUrl` only for ready jobs, and OpenAPI/index entries. Downloads require the existing private-route bearer boundary, a ready job, the exact server-derived job-local MP4 path, a regular non-symlink file, and a path contained within the project. The response streams rather than buffering large videos, advertises its byte length, disables caching, and sets `nosniff`. Other methods are rejected; client-supplied paths are never accepted.
+
+**TEST CONTRACT:** `mcp/test/project-artifact-download.test.mjs` generates an actual FFmpeg MP4 and verifies missing/wrong bearer denial, not-ready rejection, byte-identical GET, HEAD without a body, download URL discovery, unsupported method, missing job, symlink denial and missing artifact. **CI for this new head is pending / unverified at the time of this entry**; no passing claim is made.
+
+**SITE / REVIEW:** Existing older Vercel preview was not independently fetchable by this run's browser/web tooling, nor was the external benchmark. Do not treat its historical READY status as proof of the new branch. The Landing Page Director and independent gauntlet remain unapproved. English/es-MX and four gallery clips retain the previously reported CI evidence; this slice does not change the UI.
+
+**RISKS:** This is one HTTP download path, not a complete source bundle, shot editor or export UI. The JSON store is single-writer, cancellation does not terminate FFmpeg, and the full default HyperFrames worker/model-to-render/edit/reopen sequence, owner-controlled staging and live Codex/Claude MCP calls remain unverified. The download relies on the local filesystem and existing auth; do not expose an unreviewed host publicly. Sale remains off.
+
+**ROLLBACK:** Revert the three MM-09 commits on draft PR #2, or close the PR. Main, existing videos and the original source/licence records remain unchanged. No merge, force push, paid service or production deployment.
+
+**NEXT:** Inspect new CI and repair failures. Then implement portable source bundle with licence manifest and verified re-import, followed by actual editable shot overrides and end-to-end rendering. Obtain independent security/taste review and founder release approval before any production action.
