@@ -50,11 +50,32 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
   });
   if (plan.shots.length === 0) throw new Error("No eligible motion blocks match this brief.");
   if (edits.length > 0) {
-    // An explicit edit preserves order, block identity and trim. The title is
-    // descriptive metadata; changing on-screen copy needs variable editing.
-    plan.shots = plan.shots.map((shot, index) => ({
-      ...shot, index, title: edits[index].title, requestedDuration: edits[index].duration,
-    }));
+    // Apply only variables declared by the selected upstream composition.
+    // Never trust arbitrary HTML, JS, file paths or undeclared variables from
+    // an HTTP client or imported project. Keep the source block untouched.
+    plan.shots = plan.shots.map((shot, index) => {
+      const overrides = edits[index].values ?? {};
+      const block = blocks.blocks.find((entry) => entry.id === shot.id);
+      if (!block) throw new Error("Selected motion block is missing.");
+      for (const [id, value] of Object.entries(overrides)) {
+        const variable = block.variables.find((entry) => entry.id === id);
+        if (!variable || !["string", "color"].includes(variable.type)) {
+          throw new Error(`Shot variable is not editable: ${id}`);
+        }
+        if (variable.type === "color" && !/^#[0-9a-fA-F]{6}$/.test(value)) {
+          throw new Error(`Shot color must be a six-digit hex value: ${id}`);
+        }
+      }
+      const values = { ...shot.values, ...overrides };
+      const ground = ["background", "bg", "ground"]
+        .map((id) => block.variables.find((entry) => entry.id === id && entry.type === "color"))
+        .map((entry) => entry && values[entry.id])
+        .find((value): value is string => typeof value === "string") ?? shot.ground;
+      return {
+        ...shot, index, title: edits[index].title,
+        requestedDuration: edits[index].duration, values, ground,
+      };
+    });
   }
   const built = buildFilmProject(config.repoRoot, outputDir, plan, tokens);
   // Registry installation is currently synchronous; do not start the gate or
