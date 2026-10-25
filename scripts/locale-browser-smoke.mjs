@@ -160,8 +160,9 @@ try {
 
   // Visual evidence of the actual human editor, not just the homepage.
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-  await evaluate('document.querySelector("[data-project-editor]").scrollIntoView({block:"start"})');
-  await sleep(200);
+  await evaluate('(() => { document.documentElement.style.scrollBehavior = "auto"; document.body.style.scrollBehavior = "auto"; document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"}); return true; })()');
+  await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140', 'desktop editor visible in screenshot');
+  await sleep(400);
   const editorDesktop = await command('Page.captureScreenshot', { format: 'png' });
   const screenshotDir = resolve(root, '.completion-proof', 'screenshots');
   mkdirSync(screenshotDir, { recursive: true });
@@ -240,8 +241,9 @@ try {
   await until('document.querySelector("[data-project-new-title]")?.value === "Mi rótulo"', 'Spanish private editor template default');
 
   await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); d.open = true; document.querySelector("[data-project-editor]").scrollIntoView({block:"start"}); return true; })()');
-  await sleep(200);
+  await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); d.open = true; document.documentElement.style.scrollBehavior = "auto"; document.body.style.scrollBehavior = "auto"; document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"}); return true; })()');
+  await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140', 'mobile editor visible in screenshot');
+  await sleep(400);
   const editorMobile = await command('Page.captureScreenshot', { format: 'png' });
   writeFileSync(resolve(root, '.completion-proof', 'screenshots', 'editor-mobile-es-MX.png'), Buffer.from(editorMobile.result.data, 'base64'));
   const mobile = await evaluate('({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth })');
