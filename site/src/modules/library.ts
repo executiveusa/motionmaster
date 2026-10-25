@@ -61,7 +61,11 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+// Do not surface untranslated Chinese-language catalogue material to users.
+// Preserve the raw index and upstream licence metadata for internal review.
+const HAN = /[\u3400-\u9FFF\uF900-\uFAFF]/u;
 function matches(item: LibraryItem): boolean {
+  if (HAN.test([item.t, item.s, item.p].join(' '))) return false;
   if (activeKind !== 'all' && item.k !== activeKind) return false;
   if (activeCollection !== 'all' && item.c !== activeCollection) return false;
   if (activeCategory && !item.g.includes(activeCategory)) return false;
