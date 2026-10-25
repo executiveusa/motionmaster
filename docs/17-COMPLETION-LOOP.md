@@ -401,3 +401,16 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `6939921` and `3de3bbe` on the draft branch. Main, deployed preview, credentials and owner data remain untouched; no force-push, merge, paid service or Montage edit.
 
 **NEXT:** Verify CI on the code commit, then obtain explicit owner-controlled staging authorization before deploying. Continue only with evidence-backed, small slices.
+
+
+### MM-13 health fix — CI regression repair and verified result (2026-10-25 23:20 UTC)
+
+**FAILURE/REPAIR:** The first full run [40243880087](https://github.com/executiveusa/motionmaster/actions/runs/40243880087) failed 2 of 135 MCP tests and the tool-policy harness because legacy tests expected private licence/tool metadata in the unauthenticated health response. The fix intentionally did **not** restore that disclosure. Commits `d843b37`, `c825d71`, `1618d64` update the API/Montage tests and MCP tool verification to check minimal public liveness and read recorded licence/rendering/domain facts from the existing `/api/v1/licence` endpoint instead. The MCP route remains separately exercised. The security regression stays enforced.
+
+**PROOF:** [GitHub Actions run 40244082534](https://github.com/executiveusa/motionmaster/actions/runs/40244082534) **SUCCESS** at code head `1618d648d97e46bb70f02b31df7727bf6201dd87`. Downloaded and inspected [artifact 12618026972](https://github.com/executiveusa/motionmaster/actions/runs/40244082534/artifacts/12618026972): 135/135 MCP tests, 46/46 MCP policy checks, seven completion quality gates, desktop/mobile Chromium, English/es-MX dynamic translations, four real playable gallery examples/prompts, HyperFrames smoke, default-worker edited MP4, and uninterrupted authenticated browser → render → watch/download → export/import/reopen all passed. The browser report records actual Chromium, default renderer, isolated workspace and 3-second MP4. This is CI/loopback proof, **not hosted staging or live user approval**.
+
+**LIVE:** Owner-linked Vercel deployment metadata was read again and still reports READY on old `33aee7d`, not this branch. Live preview and motionvideo.xyz HTML fetch failed; no new live-site taste verdict. Repo remains public; `onSale=false` unchanged.
+
+**ROLLBACK:** Revert `1618d64`, `c825d71`, `d843b37`, `6939921`, `3de3bbe` on draft PR #2; main, deployment, database and user assets unchanged. No production deployment, merge, force-push, paid service, credential disclosure or Montage edit.
+
+**NEXT:** Stop adding preflight-only features. Obtain owner-controlled private staging authorization, then verify encrypted persistence, backup/restore, ten hosted browser runs, live Codex/Claude MCP calls and independent release reviews. Keep sale blocked.
