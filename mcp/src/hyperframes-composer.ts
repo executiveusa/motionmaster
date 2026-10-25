@@ -176,6 +176,7 @@ export function buildHyperFramesProject(
 ${clips}
     </div>
     <script>
+      window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
 ${timeline}
       window.__timelines["main"] = tl;
@@ -230,7 +231,12 @@ ${timeline}
       { path: `${name}/index.html`, contents: html },
       { path: `${name}/hyperframes.json`, contents: manifest },
       { path: `${name}/package.json`, contents: pkg },
-      { path: `${name}/${GSAP_FILE}`, contents: options.gsapSource ?? "" },
+      // Do not write an empty GSAP file: generator/hf.sh copies the vendored
+      // pinned runtime only when this file is absent. An empty file prevents
+      // that fallback and causes every browser render to fail at gsap.timeline.
+      ...(options.gsapSource?.trim()
+        ? [{ path: `${name}/${GSAP_FILE}`, contents: options.gsapSource }]
+        : []),
     ],
     composition: {
       id: "main",
