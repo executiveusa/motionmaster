@@ -18,13 +18,27 @@ import {
 } from "./projects.js";
 
 export type RevisionRenderer = (
-  config: Config, revision: ProjectRevision, outputDir: string,
+  config: Config, revision: ProjectRevision, outputDir: string, signal?: AbortSignal,
 ) => Promise<string>;
 
 const active = new Map<string, Promise<void>>();
+const runningControllers = new Map<string, AbortController>();
+
+function jobKey(repoRoot: string, projectId: string, jobId: string): string {
+  return `${resolve(repoRoot)}:${projectId}:${jobId}`;
+}
+
+/** Abort an active render after its durable state has been marked cancelled. */
+export function cancelRunningProjectJob(repoRoot: string, projectId: string, jobId: string): boolean {
+  const controller = runningControllers.get(jobKey(repoRoot, projectId, jobId));
+  if (!controller) return false;
+  controller.abort();
+  return true;
+}
 
 /** Use the shipped, gated HyperFrames renderer, not a mock or a remote vendor. */
-export const renderProjectRevision: RevisionRenderer = async (config, revision, outputDir) => {
+export const renderProjectRevision: RevisionRenderer = async (config, revision, outputDir, signal) => {
+  if (signal?.aborted) throw new Error("Render cancelled.");
   const blocks = loadBlocks(config.blocksPath);
   const tokens = loadTokens(config.tokensPath) as never;
   const verdicts = loadVerdicts(config.repoRoot);
@@ -43,12 +57,15 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
     }));
   }
   const built = buildFilmProject(config.repoRoot, outputDir, plan, tokens);
+  // Registry installation is currently synchronous; do not start the gate or
+  // video render if cancellation arrived during installation.
+  if (signal?.aborted) throw new Error("Render cancelled.");
   if (built.plan.shots.length === 0) throw new Error("No renderable shots survived installation.");
   // An explicit edit is all-or-nothing: never quietly drop a chosen shot.
   if (edits.length > 0 && built.plan.shots.length !== edits.length) {
     throw new Error("An edited motion block could not be installed; render was not published.");
   }
-  const result = await renderProject(config.repoRoot, outputDir);
+  const result = await renderProject(config.repoRoot, outputDir, { signal });
   if (!result.ok || !result.video) {
     throw new Error((result.log || "HyperFrames render failed.").slice(-1800));
   }
@@ -72,6 +89,9 @@ export async function runProjectJob(
     return;
   }
   transitionProjectJob(config.repoRoot, projectId, jobId, "start");
+  const controller = new AbortController();
+  const key = jobKey(config.repoRoot, projectId, jobId);
+  runningControllers.set(key, controller);
   const projectPath = join(projectsRoot(config.repoRoot), projectId);
   const outputDir = join(projectPath, "renders", jobId);
   try {
@@ -79,7 +99,7 @@ export async function runProjectJob(
     // clean; immutable revisions remain untouched.
     rmSync(outputDir, { recursive: true, force: true });
     mkdirSync(outputDir, { recursive: true });
-    const source = resolve(await renderer(config, revision, outputDir));
+    const source = resolve(await renderer(config, revision, outputDir, controller.signal));
     // Only a film produced inside this job's own output directory is eligible.
     if (source !== resolve(outputDir, "film.mp4") ||
         !existsSync(source) || !statSync(source).isFile()) {
@@ -106,6 +126,8 @@ export async function runProjectJob(
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  } finally {
+    if (runningControllers.get(key) === controller) runningControllers.delete(key);
   }
 }
 
