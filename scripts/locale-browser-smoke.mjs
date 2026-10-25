@@ -5,6 +5,8 @@
  * profile and the browser's DevTools protocol (no third-party browser service).
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -191,8 +193,51 @@ try {
       projectsAfterInvalidImport.length !== 1) {
     throw new Error('Rejected source import mutated the private project list');
   }
-  await evaluate('document.querySelector("[data-project-open]").click()');
-  await until('!document.querySelector("[data-project-edit]").hidden && document.querySelector("[data-project-import]").hidden', 'return to saved project after rejected import');
+  // A valid portable source must create a distinct private project and reopen
+  // its editable revision through the actual Chromium file-input workflow.
+  const sourceId = 'p_browser_source';
+  const first = { schemaVersion: 1, projectId: sourceId, number: 1,
+    createdAt: '2026-10-25T00:00:00.000Z', title: 'Imported browser project',
+    brief: 'A source-import browser proof', shots: [] };
+  const second = { ...first, number: 2, shots: autoSaved.revision.shots };
+  const fileEntry = (path, value) => { const bytes = Buffer.from(value); return {
+    path, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
+    base64: bytes.toString('base64'),
+  }; };
+  const archive = gzipSync(Buffer.from(JSON.stringify({
+    format: 'motion-master-source', version: 1,
+    project: { title: second.title, brief: second.brief, sourceId },
+    revisions: [first, second], render: { jobId: 'j_browser_source', revision: 2 },
+    licence: { upstreamAssets: 'review-required' },
+    files: [fileEntry('index.html', '<html></html>'), fileEntry('hyperframes.json', '{}')],
+  }))).toString('base64');
+  await evaluate(`(() => {
+    const binary = atob(${JSON.stringify(archive)});
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    const file = new File([bytes], 'valid.json.gz', { type: 'application/gzip' });
+    const transfer = new DataTransfer(); transfer.items.add(file);
+    document.querySelector('[data-project-import-file]').files = transfer.files;
+    document.querySelector('[data-project-import]').requestSubmit();
+    return true;
+  })()`);
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorImported"', 'valid source imported through browser');
+  const importedId = await evaluate('document.querySelector("[data-project-list]").value');
+  if (!/^p_[a-zA-Z0-9_-]+$/.test(importedId) || importedId === editorProjectId) {
+    throw new Error('Browser source import did not create a distinct project');
+  }
+  const importedResponse = await fetch(base + 'api/v1/projects/' + importedId, {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  });
+  if (!importedResponse.ok) throw new Error('Imported browser project cannot reopen');
+  const imported = await importedResponse.json();
+  if (imported.revision.number !== 2 || imported.revision.shots[0].duration !== 2.8 ||
+      !Object.values(imported.revision.shots[0].values ?? {}).includes('Ana Ruiz Updated')) {
+    throw new Error('Browser import lost editable revision data');
+  }
+  if (!await evaluate('!document.querySelector("[data-project-edit]").hidden && document.querySelector("[data-project-import]").hidden')) {
+    throw new Error('Imported project did not open in the human editor');
+  }
+
 
   const compactEditor = await evaluate('({ connectionHidden: document.querySelector("[data-project-connect]").hidden, newHidden: document.querySelector("[data-project-create]").hidden, editVisible: !document.querySelector("[data-project-edit]").hidden })');
   if (!compactEditor.connectionHidden || !compactEditor.newHidden || !compactEditor.editVisible) {
@@ -303,9 +348,11 @@ try {
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
       'browser create/edit/reopen immutable revision', 'browser queue/cancel', 'one-task-at-a-time editor controls',
-      'editor Mexican Spanish labels', 'authenticated malformed-source import rejected without mutation', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
+      'editor Mexican Spanish labels', 'authenticated malformed-source import rejected without mutation',
+      'valid source imported and reopened as editable project through Chromium', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
-    editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
+    editor: { projectId: editorProjectId, importedProjectId: importedId,
+      savedRevision: savedProject.revision.number, importedRevision: imported.revision.number, authenticated: true },
     viewport: mobile,
   };
   const proofDir = resolve(root, '.completion-proof');
