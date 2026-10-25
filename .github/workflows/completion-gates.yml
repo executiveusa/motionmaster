@@ -11,6 +11,7 @@ on:
       - "plugins/**"
       - "scripts/completion-gates.mjs"
       - "scripts/hyperframes-smoke.mjs"
+      - "scripts/gallery-media-smoke.mjs"
       - "scripts/capture-site.mjs"
       - "licence.json"
       - ".github/workflows/completion-gates.yml"
@@ -52,6 +53,8 @@ jobs:
           sudo apt-get install -y ffmpeg
           ffmpeg -version | head -1
           ffprobe -version | head -1
+      - name: Decode every gallery MP4 and check exact source prompts
+        run: node scripts/gallery-media-smoke.mjs
       - name: Render real HyperFrames smoke video
         timeout-minutes: 15
         run: node scripts/hyperframes-smoke.mjs
