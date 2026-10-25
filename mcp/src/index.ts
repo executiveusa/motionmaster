@@ -6,8 +6,8 @@
  * servers). The endpoint is /mcp; /health returns a small status document.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { createReadStream, existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { loadConfig, type Config } from "./config.js";
@@ -113,9 +113,79 @@ function guessType(name: string): string {
     ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4",
     ".json": "application/json", ".txt": "text/plain", ".md": "text/markdown",
     ".srt": "text/plain", ".vtt": "text/vtt", ".woff2": "font/woff2",
+    ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8", ".ico": "image/x-icon",
+    ".woff": "font/woff",
     ".ttf": "font/ttf", ".otf": "font/otf",
   };
   return types[ext] ?? "application/octet-stream";
+}
+
+/**
+ * Opt-in local combined mode: the Vite build and the agent are served from
+ * the same loopback origin. This is a DEVELOPMENT/PRIVATE test surface.
+ * Do not bind to the public Internet: the private file/job routes still need
+ * an authorization boundary before a hosted deployment.
+ */
+function tryServeLocalSite(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: Config,
+  pathname: string,
+): boolean {
+  if (process.env.MOTION_MASTER_SERVE_SITE !== "1") return false;
+  if (req.method !== "GET" && req.method !== "HEAD") return false;
+  if (!["127.0.0.1", "::1", "localhost"].includes(config.host)) {
+    writeJson(res, 403, { error: "Combined site mode is loopback-only until private API auth is complete." });
+    return true;
+  }
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    writeJson(res, 400, { error: "Malformed asset path." });
+    return true;
+  }
+  if (decoded.includes("\\") || decoded.includes("\0") || decoded.split("/").includes("..")) {
+    writeJson(res, 403, { error: "Asset path rejected." });
+    return true;
+  }
+  const base = resolve(config.repoRoot, "site", "dist");
+  const candidate = resolve(base, "." + (decoded === "/" ? "/index.html" : decoded));
+  if (!candidate.startsWith(base + sep) || !existsSync(candidate)) return false;
+  let target: string;
+  try {
+    target = realpathSync(candidate);
+    if (!target.startsWith(realpathSync(base) + sep) || !statSync(target).isFile()) return false;
+  } catch {
+    return false;
+  }
+  const bytes = statSync(target).size;
+  const headers: Record<string, string | number> = {
+    "content-type": guessType(target),
+    "accept-ranges": "bytes",
+    "cache-control": "no-store",
+  };
+  // Range responses are needed to seek and play MP4s without reading the entire film.
+  const range = req.headers.range?.match(/^bytes=(\\d+)-(\\d*)$/);
+  if (req.headers.range && !range) {
+    res.writeHead(416, { "content-range": `bytes */${bytes}` });
+    res.end();
+    return true;
+  }
+  const start = range ? Number(range[1]) : 0;
+  const end = range && range[2] ? Number(range[2]) : bytes - 1;
+  if (start >= bytes || end < start || end >= bytes) {
+    res.writeHead(416, { "content-range": `bytes */${bytes}` });
+    res.end();
+    return true;
+  }
+  headers["content-length"] = end - start + 1;
+  if (range) headers["content-range"] = `bytes ${start}-${end}/${bytes}`;
+  res.writeHead(range ? 206 : 200, headers);
+  if (req.method === "HEAD") { res.end(); return true; }
+  createReadStream(target, { start, end }).pipe(res);
+  return true;
 }
 
 /**
@@ -254,6 +324,9 @@ export function createHttpHandler(config: Config) {
       await handleApi(req, res, url.pathname, config);
       return;
     }
+
+    // Prefer the built frontend on / only when private combined mode is on.
+    if (url.pathname === "/" && tryServeLocalSite(req, res, config, url.pathname)) return;
 
     if (url.pathname === "/health" || url.pathname === "/") {
       if (req.method !== "GET") {
@@ -491,6 +564,7 @@ export function createHttpHandler(config: Config) {
       return;
     }
 
+    if (tryServeLocalSite(req, res, config, url.pathname)) return;
     writeJson(res, 404, { error: "Not found", endpoints: ["/mcp", "/health"] });
   };
 }
