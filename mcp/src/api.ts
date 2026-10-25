@@ -653,7 +653,7 @@ export async function handleApi(
       return true;
     }
 
-    const match = /^\\/projects\\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})(?:\\/revisions(?:\\/([0-9]+))?)?$/.exec(route);
+    const match = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})(?:\/revisions(?:\/([0-9]+))?)?$/.exec(route);
     if (!match) {
       fail(res, 400, "Invalid project route or id.");
       return true;
