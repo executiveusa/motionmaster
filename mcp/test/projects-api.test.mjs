@@ -58,7 +58,7 @@ test('MM-03 HTTP: create, reopen, edit and read old revision; reject stale write
 
 test('MM-03 HTTP: invalid IDs and missing revisions fail closed', async (t) => {
   const { request } = await fixture(t);
-  assert.equal((await request('/projects/%2e%2e')).status, 400);
+  assert.equal((await request('/projects/%2Fetc')).status, 400);
   assert.equal((await request('/projects/unknown')).status, 404);
   assert.equal((await request('/projects/unknown/revisions/99')).status, 404);
   assert.equal((await request('/projects', 'POST', { title: '', brief: 'x' })).status, 400);
