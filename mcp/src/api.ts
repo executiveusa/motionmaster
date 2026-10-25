@@ -35,8 +35,8 @@
  * open, which is the right thing for a server running on your own machine.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { createReadStream, existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { join, sep } from "node:path";
 import type { Config } from "./config.js";
 import { listSkills } from "./skills.js";
 import { loadTokens, tokenSource } from "./tokens.js";
@@ -70,7 +70,7 @@ import {
   type RenderJob,
 } from "./render.js";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { createProject, createProjectJob, listProjectJobs, listProjects, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
+import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 
 export const API_PREFIX = "/api/v1";
@@ -321,6 +321,10 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       [`${API_PREFIX}/projects/{id}/jobs/{jobId}`]: {
         get: { summary: "Read a durable job's current status.", responses: { 200: { description: "ok", content: json(obj) } } },
       },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/artifact`]: {
+        get: { summary: "Download an authenticated completed MP4.", responses: { 200: { description: "video/mp4" }, 401: { description: "unauthorized" }, 409: { description: "not ready" } } },
+        head: { summary: "Inspect an authenticated completed MP4.", responses: { 200: { description: "video/mp4" } } },
+      },
       [`${API_PREFIX}/projects/{id}/jobs/{jobId}/cancel`]: {
         post: { summary: "Cancel a queued job (or mark a running job cancelled).", responses: { 200: { description: "cancelled", content: json(obj) } } },
       },
@@ -406,6 +410,7 @@ export async function handleApi(
         "GET  /projects/{id}/jobs",
         "POST /projects/{id}/jobs",
         "GET  /projects/{id}/jobs/{jobId}",
+        "GET  /projects/{id}/jobs/{jobId}/artifact",
         "POST /projects/{id}/jobs/{jobId}/cancel",
         "POST /projects/{id}/jobs/{jobId}/retry",
         "GET  /films",
@@ -676,7 +681,7 @@ export async function handleApi(
 
     // A client can queue, inspect, cancel or retry a job. Only the trusted
     // worker may transition it to rendering/ready/failed.
-    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry))?)?$/.exec(route);
+    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry|artifact))?)?$/.exec(route);
     if (jobMatch) {
       const [, projectId, jobId, action] = jobMatch;
       if (!readProject(config.repoRoot, projectId)) {
@@ -702,10 +707,55 @@ export async function handleApi(
         }
         return true;
       }
+      // MM-09: never trust an artifact path supplied by the client.
+      if (jobId && action === "artifact" && (method === "GET" || method === "HEAD")) {
+        const job = readProjectJob(config.repoRoot, projectId, jobId);
+        if (!job) {
+          fail(res, 404, "Project job not found.");
+          return true;
+        }
+        if (job.status !== "ready" || job.artifact !== `artifacts/${jobId}.mp4`) {
+          fail(res, 409, "This job has no completed MP4 to download.");
+          return true;
+        }
+        const projectDir = join(projectsRoot(config.repoRoot), projectId);
+        const artifactDir = join(projectDir, "artifacts");
+        const path = join(artifactDir, `${jobId}.mp4`);
+        let size: number;
+        try {
+          const dir = lstatSync(artifactDir);
+          const file = lstatSync(path);
+          if (!dir.isDirectory() || dir.isSymbolicLink() ||
+              !file.isFile() || file.isSymbolicLink() || file.size <= 0 ||
+              !realpathSync(path).startsWith(realpathSync(projectDir) + sep)) {
+            fail(res, 403, "Artifact access denied.");
+            return true;
+          }
+          size = statSync(path).size;
+        } catch {
+          fail(res, 404, "The completed MP4 is missing.");
+          return true;
+        }
+        res.writeHead(200, {
+          "content-type": "video/mp4",
+          "content-length": size,
+          "content-disposition": `attachment; filename="${jobId}.mp4"`,
+          "cache-control": "private, no-store",
+          "x-content-type-options": "nosniff",
+        });
+        if (method === "HEAD") {
+          res.end();
+        } else {
+          const stream = createReadStream(path);
+          stream.on("error", () => res.destroy());
+          stream.pipe(res);
+        }
+        return true;
+      }
       if (jobId && !action && method === "GET") {
         const job = readProjectJob(config.repoRoot, projectId, jobId);
         if (!job) fail(res, 404, "Project job not found.");
-        else writeJson(res, 200, job);
+        else writeJson(res, 200, { ...job, ...(job.status === "ready" ? { downloadUrl: `${API_PREFIX}/projects/${projectId}/jobs/${jobId}/artifact` } : {}) });
         return true;
       }
       if (jobId && action && method === "POST") {
