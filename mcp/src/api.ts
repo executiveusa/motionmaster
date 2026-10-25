@@ -81,7 +81,8 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
-    "access-control-allow-origin": "*",
+    // Preserve the exact allowlisted CORS origin set by createHttpHandler.
+    // A wildcard here silently overrides the private-route origin policy.
   });
   res.end(payload);
 }
