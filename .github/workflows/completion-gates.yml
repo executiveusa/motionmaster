@@ -43,6 +43,12 @@ jobs:
           npm ci --prefix bridge --no-audit --no-fund
       - name: Run completion quality gates
         run: node scripts/completion-gates.mjs
+      - name: Install FFmpeg and FFprobe for real encoding
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
       - name: Render real HyperFrames smoke video
         timeout-minutes: 15
         run: node scripts/hyperframes-smoke.mjs
