@@ -28,18 +28,26 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
   const blocks = loadBlocks(config.blocksPath);
   const tokens = loadTokens(config.tokensPath) as never;
   const verdicts = loadVerdicts(config.repoRoot);
+  const edits = revision.shots;
   const plan = planFilm(revision.brief, {
-    blocks, tokens, count: revision.shots.length || 3,
+    blocks, tokens, count: edits.length || 3,
     exclude: Object.entries(verdicts).filter(([, verdict]) => !verdict.ok).map(([id]) => id),
+    ...(edits.length > 0 ? { selectedIds: edits.map((shot) => shot.id) } : {}),
   });
   if (plan.shots.length === 0) throw new Error("No eligible motion blocks match this brief.");
-  // Do not silently discard manual shot edits. A separate MM-08 slice must
-  // resolve shot IDs, variable overrides and durations into editable renders.
-  if (revision.shots.length > 0) {
-    throw new Error("Manual shot edits are not renderable yet. Use a brief-only revision.");
+  if (edits.length > 0) {
+    // An explicit edit preserves order, block identity and trim. The title is
+    // descriptive metadata; changing on-screen copy needs variable editing.
+    plan.shots = plan.shots.map((shot, index) => ({
+      ...shot, index, title: edits[index].title, requestedDuration: edits[index].duration,
+    }));
   }
   const built = buildFilmProject(config.repoRoot, outputDir, plan, tokens);
   if (built.plan.shots.length === 0) throw new Error("No renderable shots survived installation.");
+  // An explicit edit is all-or-nothing: never quietly drop a chosen shot.
+  if (edits.length > 0 && built.plan.shots.length !== edits.length) {
+    throw new Error("An edited motion block could not be installed; render was not published.");
+  }
   const result = await renderProject(config.repoRoot, outputDir);
   if (!result.ok || !result.video) {
     throw new Error((result.log || "HyperFrames render failed.").slice(-1800));
