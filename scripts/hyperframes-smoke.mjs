@@ -87,7 +87,7 @@ try {
       "-filter_complex", "[0:v][1:v]blend=all_mode=difference,signalstats,metadata=print:file=-",
       "-frames:v", "1", "-f", "null", "-",
     ], 30_000);
-    const average = Number(/lavfi\\.signalstats\\.YAVG=([0-9.]+)/.exec(diff)?.[1]);
+    const average = Number(/lavfi\.signalstats\.YAVG=([0-9.]+)/.exec(diff)?.[1]);
     if (!Number.isFinite(average)) throw new Error("FFmpeg could not measure the visual difference");
     report.visualDeltas.push({ from: report.samples[i - 1].second, to: report.samples[i].second, averageLumaDelta: average });
   }
