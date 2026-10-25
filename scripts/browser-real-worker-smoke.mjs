@@ -110,7 +110,7 @@ try {
       await evaluate('document.querySelector("[data-project-status]")?.dataset.i18n'));
   };
   const api = async (path) => {
-    const response = await fetch(base + 'api/v1' + path, {
+    const response = await fetch(base + 'api/v1/' + path.replace(/^\\/+/, ''), {
       headers: { Authorization: 'Bearer ' + fixtureKey },
     });
     assert.equal(response.status, 200, path + ' did not return 200');
