@@ -70,7 +70,7 @@ import {
   type RenderJob,
 } from "./render.js";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { createProject, listProjects, readProject, readRevision, saveRevision } from "./projects.js";
+import { createProject, createProjectJob, listProjectJobs, listProjects, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -311,6 +311,21 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
         } },
       },
+      [`${API_PREFIX}/projects/{id}/jobs`]: {
+        get: { summary: "List durable render jobs for a private project.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
+        post: { summary: "Queue a project revision for rendering (does not start the worker).",
+          requestBody: { required: true, content: json({ type: "object", properties: { revision: num }, required: ["revision"] }) },
+          responses: { 201: { description: "queued", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}`]: {
+        get: { summary: "Read a durable job's current status.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/cancel`]: {
+        post: { summary: "Cancel a queued job (or mark a running job cancelled).", responses: { 200: { description: "cancelled", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/retry`]: {
+        post: { summary: "Requeue a failed job; execution requires a worker.", responses: { 200: { description: "queued", content: json(obj) } } },
+      },
       [`${API_PREFIX}/films`]: {
         get: { summary: "The films rendered here.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
         post: {
@@ -387,6 +402,10 @@ export async function handleApi(
         "GET  /projects/{id}",
         "POST /projects/{id}/revisions",
         "GET  /projects/{id}/revisions/{number}",
+        "GET/POST /projects/{id}/jobs",
+        "GET  /projects/{id}/jobs/{jobId}",
+        "POST /projects/{id}/jobs/{jobId}/cancel",
+        "POST /projects/{id}/jobs/{jobId}/retry",
         "GET  /films",
         "POST /films",
         "GET  /films/{id}",
@@ -650,6 +669,51 @@ export async function handleApi(
       } catch (error) {
         fail(res, 400, error instanceof Error ? error.message : "Invalid project.");
       }
+      return true;
+    }
+
+    // A client can queue, inspect, cancel or retry a job. Only the trusted
+    // worker may transition it to rendering/ready/failed.
+    const jobMatch = /^\\/projects\\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\\/jobs(?:\\/(j_[a-zA-Z0-9_-]+)(?:\\/(cancel|retry))?)?$/.exec(route);
+    if (jobMatch) {
+      const [, projectId, jobId, action] = jobMatch;
+      if (!readProject(config.repoRoot, projectId)) {
+        fail(res, 404, "Project not found.");
+        return true;
+      }
+      if (!jobId && method === "GET") {
+        writeJson(res, 200, listProjectJobs(config.repoRoot, projectId));
+        return true;
+      }
+      if (!jobId && method === "POST") {
+        const body = (await readJson(req)) as { revision?: unknown };
+        if (!body || !Number.isSafeInteger(body.revision) || (body.revision as number) < 1) {
+          fail(res, 400, "A valid project revision is required.");
+          return true;
+        }
+        try {
+          writeJson(res, 201, createProjectJob(config.repoRoot, projectId, body.revision as number));
+        } catch (error) {
+          fail(res, 404, error instanceof Error ? error.message : "Revision not found.");
+        }
+        return true;
+      }
+      if (jobId && !action && method === "GET") {
+        const job = readProjectJob(config.repoRoot, projectId, jobId);
+        if (!job) fail(res, 404, "Project job not found.");
+        else writeJson(res, 200, job);
+        return true;
+      }
+      if (jobId && action && method === "POST") {
+        try {
+          writeJson(res, 200, transitionProjectJob(config.repoRoot, projectId, jobId, action));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Job transition failed.";
+          fail(res, message.includes("not found") ? 404 : 409, message);
+        }
+        return true;
+      }
+      fail(res, 405, "Unsupported job method.");
       return true;
     }
 
