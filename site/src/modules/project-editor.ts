@@ -110,6 +110,19 @@ export function initProjectEditor(): void {
   const cancelButton = q<HTMLButtonElement>(root, '[data-project-cancel]')!;
   const server = q<HTMLInputElement>(root, '[data-project-server]')!;
   if (localHost(location.hostname)) server.value = location.origin;
+  const newTitle = q<HTMLInputElement>(root, '[data-project-new-title]')!;
+  const newBrief = q<HTMLTextAreaElement>(root, '[data-project-new-brief]')!;
+  function translateDefaults(): void {
+    const spanish = document.documentElement.lang === 'es-MX';
+    if (['My lower-third', 'Mi rótulo'].includes(newTitle.value)) {
+      newTitle.value = spanish ? 'Mi rótulo' : 'My lower-third';
+    }
+    if (['A clean lower-third introduction', 'Una presentación con rótulo inferior'].includes(newBrief.value)) {
+      newBrief.value = spanish ? 'Una presentación con rótulo inferior' : 'A clean lower-third introduction';
+    }
+  }
+  queueMicrotask(translateDefaults);
+  q<HTMLSelectElement>(document, '[data-locale]')?.addEventListener('change', () => queueMicrotask(translateDefaults));
 
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
