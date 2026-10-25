@@ -154,5 +154,9 @@ try {
   ws?.close();
   browser.kill('SIGTERM');
   server.kill('SIGTERM');
-  rmSync(profile, { recursive: true, force: true });
+  // Chromium may still be writing its profile when SIGTERM returns. Cleanup
+  // must never mask the actual browser assertion that failed.
+  await sleep(350);
+  try { rmSync(profile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); }
+  catch (error) { console.warn('Chromium profile cleanup:', error.message); }
 }
