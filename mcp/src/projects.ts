@@ -40,7 +40,7 @@ export interface ProjectRevision {
   title: string;
   brief: string;
   /** The editable shot list; the render adapter is wired in MM-05/MM-08. */
-  shots: { id: string; title: string; duration: number }[];
+  shots: { id: string; title: string; duration: number; /** Exact HyperFrames string/color variable IDs. */ values?: Record<string, string> }[];
 }
 
 export type JobState = 'queued' | 'rendering' | 'ready' | 'failed' | 'cancelled';
@@ -108,13 +108,25 @@ function asProject(data: unknown, id: string): ProjectRecord {
   return p as ProjectRecord;
 }
 
-function validShots(value: unknown): value is ProjectRevision['shots'] {
+export function validShotOverrides(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const entries = Object.entries(value);
+  return entries.length <= 12 && entries.every(([key, text]) =>
+    /^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(key) &&
+    !['constructor', 'prototype', '__proto__'].includes(key) &&
+    typeof text === 'string' && text.trim().length > 0 && text.length <= 120 &&
+    !/[<>\u0000-\u001f\u007f]/.test(text));
+}
+
+export function validShots(value: unknown): value is ProjectRevision['shots'] {
   return Array.isArray(value) && value.length <= 100 && value.every((shot) =>
     shot !== null && typeof shot === 'object' &&
     typeof shot.id === 'string' && shot.id.length > 0 && shot.id.length <= 100 &&
     typeof shot.title === 'string' && shot.title.length <= 300 &&
     typeof shot.duration === 'number' && Number.isFinite(shot.duration) &&
-    shot.duration > 0 && shot.duration <= 3600);
+    shot.duration > 0 && shot.duration <= 3600 &&
+    validShotOverrides(shot.values));
 }
 
 function validCopy(title: string, brief: string): boolean {
