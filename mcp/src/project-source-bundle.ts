@@ -62,7 +62,8 @@ export function exportProjectSource(repoRoot: string, projectId: string, jobId: 
       const path = relative(root, absolute).split(sep).join("/");
       if (!SAFE_SOURCE.test(path) || path.split("/").includes("..")) continue;
       const stat = lstatSync(absolute);
-      if (stat.size > MAX_FILE_BYTES || ++total > MAX_TOTAL_BYTES || files.length >= MAX_FILES) {
+      total += stat.size;
+      if (stat.size > MAX_FILE_BYTES || total > MAX_TOTAL_BYTES || files.length >= MAX_FILES) {
         throw new Error("Source export exceeds size or file-count limits.");
       }
       const bytes = readFileSync(absolute);
