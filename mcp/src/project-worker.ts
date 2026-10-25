@@ -105,7 +105,7 @@ export async function runProjectJob(
  * A single in-process drain for the local JSON store. Queued jobs survive a
  * restart; in-flight jobs are marked failed by startup recovery and need retry.
  */
-export function processProjectQueue(config: Config): Promise<void> {
+export function processProjectQueue(config: Config, renderer: RevisionRenderer = renderProjectRevision): Promise<void> {
   const key = resolve(config.repoRoot);
   const running = active.get(key);
   if (running) return running;
@@ -116,11 +116,12 @@ export function processProjectQueue(config: Config): Promise<void> {
         .filter((job) => job.status === "queued")
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
       if (!next) return;
-      await runProjectJob(config, next.projectId, next.id);
+      await runProjectJob(config, next.projectId, next.id, renderer);
     }
   })();
   active.set(key, work);
-  void work.finally(() => { if (active.get(key) === work) active.delete(key); });
+  const release = () => { if (active.get(key) === work) active.delete(key); };
+  void work.then(release, release);
   return work;
 }
 
