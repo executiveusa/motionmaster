@@ -49,7 +49,7 @@ function clipFor(beat: PlannedBeat, index: number, tokens: MotionTokens, headlin
       const label = el.name === "tagline" || el.name === "credit" ? tagline! :
         (el.type === "text" || el.name === "backdrop" ? headline : el.name);
       const id = `b${index}-${el.type}-${slug(el.name)}`;
-      return `      <div class="clip beat" id="${id}" data-start="${beat.inSeconds}" data-duration="${beat.durationSeconds}" data-track-index="${index}">
+      return `      <div class="clip beat" id="${id}" data-start="${beat.inSeconds}" data-duration="${beat.durationSeconds}" data-track-index="${index}" data-role="${beat.role}">
         <span class="beat__label">${esc(label)}</span>
       </div>`;
     })
@@ -164,6 +164,35 @@ export function buildHyperFramesProject(
         align-items: center;
         justify-content: center;
         opacity: 0;
+      }
+      /* Scene changes are structural, not just tiny opacity differences.
+         A readable first frame, contrasting reveal, and quiet resolve make
+         a genuine motion sequence instead of 15 seconds of one static card. */
+      .beat[data-role="reveal"], .beat[data-role="exit"] {
+        background: var(--ink);
+        color: var(--canvas);
+      }
+      .beat[data-role="setup"] .beat__label {
+        font-size: clamp(26px, 3.2vw, 46px);
+        font-weight: 500;
+        letter-spacing: 0.12em;
+      }
+      .beat[data-role="reveal"] .beat__label {
+        font-size: clamp(64px, 9vw, 132px);
+        letter-spacing: -0.05em;
+      }
+      .beat[data-role="exit"] .beat__label {
+        font-size: clamp(30px, 3.6vw, 56px);
+        letter-spacing: 0.08em;
+      }
+      .beat[data-role="reveal"]::after,
+      .beat[data-role="hold"]::after {
+        content: "";
+        position: absolute;
+        bottom: 14%;
+        width: 72px;
+        height: 3px;
+        background: var(--accent);
       }
       .beat__label {
         font-size: ${displaySize};
