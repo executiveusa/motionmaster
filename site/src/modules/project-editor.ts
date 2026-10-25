@@ -153,6 +153,7 @@ export function initProjectEditor(): void {
     for (const item of list) {
       const option = document.createElement('option');
       option.value = item.id;
+      option.className = 'project-editor__user-text';
       option.textContent = item.title;
       select.append(option);
     }
@@ -172,6 +173,7 @@ export function initProjectEditor(): void {
       const group = document.createElement('fieldset');
       group.dataset.shotIndex = String(index);
       const legend = document.createElement('legend');
+      legend.className = 'project-editor__user-text';
       legend.textContent = shot.title || block.id;
       group.append(legend);
       const durationLabel = document.createElement('label');
@@ -194,6 +196,7 @@ export function initProjectEditor(): void {
         caption.dataset.i18n = variable.type === 'color' ? 'editorColor' : 'editorText';
         caption.textContent = variable.type === 'color' ? 'Color' : 'On-screen text';
         const variableId = document.createElement('small');
+        variableId.className = 'project-editor__user-text';
         variableId.textContent = ' · ' + variable.id;
         const input = document.createElement('input');
         input.dataset.shotVariable = variable.id;
