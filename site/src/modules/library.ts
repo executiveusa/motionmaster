@@ -86,6 +86,7 @@ function countFor(category: string): number {
   return payload.items.filter(
     (i) =>
       i.g.includes(category) &&
+      !HAN.test([i.t, i.s, i.p].join(' ')) &&
       (activeKind === 'all' || i.k === activeKind) &&
       (activeCollection === 'all' || i.c === activeCollection),
   ).length;
@@ -98,7 +99,7 @@ function renderCategories(): void {
   const all = el('button', 'library__category');
   all.type = 'button';
   all.textContent = `All`;
-  const allCount = el('span', 'library__count', String(payload.items.length));
+  const allCount = el('span', 'library__count', String(payload.items.filter(matches).length));
   all.appendChild(allCount);
   all.setAttribute('aria-pressed', activeCategory === '' ? 'true' : 'false');
   if (!activeCategory) all.classList.add('is-active');
@@ -111,6 +112,7 @@ function renderCategories(): void {
   list.replaceChildren(all);
 
   for (const cat of payload.categories) {
+    if (HAN.test(cat.slug)) continue;
     const n = countFor(cat.slug);
     if (n === 0) continue;
     const button = el('button', 'library__category');
@@ -136,7 +138,7 @@ function renderItems(): void {
 
   const found = currentItems();
   if (count) {
-    count.textContent = `${found.length} of ${payload.items.length} items`;
+    count.textContent = `${found.length} visible items`;
   }
 
   if (found.length === 0) {
