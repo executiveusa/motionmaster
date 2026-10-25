@@ -158,6 +158,15 @@ try {
   const keyFieldEmpty = await evaluate('document.querySelector("[data-project-key]").value === ""');
   if (secretStored || !keyFieldEmpty) throw new Error('Private key leaked into browser persistence or visible form');
 
+  const compactEditor = await evaluate('({ connectionHidden: document.querySelector("[data-project-connect]").hidden, newHidden: document.querySelector("[data-project-create]").hidden, editVisible: !document.querySelector("[data-project-edit]").hidden })');
+  if (!compactEditor.connectionHidden || !compactEditor.newHidden || !compactEditor.editVisible) {
+    throw new Error('Editor left setup forms open over the saved edit task: ' + JSON.stringify(compactEditor));
+  }
+  await evaluate('document.querySelector("[data-project-new-toggle]").click()');
+  if (!await evaluate('!document.querySelector("[data-project-create]").hidden')) throw new Error('New video control did not reveal create form');
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('!document.querySelector("[data-project-edit]").hidden', 'reopen project after new-video toggle');
+
   // Visual evidence of the actual human editor, not just the homepage.
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate('(() => { document.documentElement.style.scrollBehavior = "auto"; document.body.style.scrollBehavior = "auto"; document.querySelector("[data-project-editor]").scrollIntoView({behavior:"instant",block:"start"}); return true; })()');
@@ -256,7 +265,7 @@ try {
     checks: ['fresh English default', 'Spanish selector click', 'late-mounted data-i18n',
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
-      'browser create/edit/reopen immutable revision', 'browser queue/cancel',
+      'browser create/edit/reopen immutable revision', 'browser queue/cancel', 'one-task-at-a-time editor controls',
       'editor Mexican Spanish labels', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
     editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
