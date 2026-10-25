@@ -10,6 +10,7 @@
  * control are implemented (MM-05/MM-06).
  */
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync,
   renameSync, rmSync, writeFileSync,
@@ -288,6 +289,23 @@ export function transitionProjectJob(
     if (!existsSync(path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() ||
         lstatSync(path).size === 0) {
       throw new Error('The render artifact is missing or invalid.');
+    }
+    // A nonempty .mp4 filename is not proof of a playable film. ffprobe must
+    // identify a real video stream before the job can become ready.
+    try {
+      const raw = execFileSync('ffprobe', [
+        '-v', 'error', '-select_streams', 'v:0',
+        '-show_entries', 'stream=codec_type,width,height',
+        '-of', 'json', path,
+      ], { encoding: 'utf8', timeout: 10_000, maxBuffer: 100_000 });
+      const probe = JSON.parse(raw) as { streams?: { codec_type?: string; width?: number; height?: number }[] };
+      if (!probe.streams?.some((stream) => stream.codec_type === 'video' &&
+          Number.isInteger(stream.width) && (stream.width ?? 0) > 0 &&
+          Number.isInteger(stream.height) && (stream.height ?? 0) > 0)) {
+        throw new Error('No decodable video stream.');
+      }
+    } catch {
+      throw new Error('The MP4 artifact failed ffprobe video validation.');
     }
   }
   const now = new Date().toISOString();
