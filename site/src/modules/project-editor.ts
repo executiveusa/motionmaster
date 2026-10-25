@@ -270,8 +270,27 @@ export function initProjectEditor(): void {
     status(root, 'editorSaved');
     await refresh();
   }
+  function hasUnsavedChanges(): boolean {
+    if (!current) return false;
+    const title = q<HTMLInputElement>(root, '[data-project-title]')!.value.trim();
+    const brief = q<HTMLTextAreaElement>(root, '[data-project-brief]')!.value.trim();
+    if (title !== current.revision.title || brief !== current.revision.brief) return true;
+    const edited = editedShots();
+    return edited.some((shot, index) => {
+      const saved = current!.revision.shots[index];
+      if (!saved || shot.id !== saved.id || shot.title !== saved.title || shot.duration !== saved.duration) return true;
+      const values = shot.values ?? {};
+      const previous = saved.values ?? {};
+      const keys = new Set([...Object.keys(values), ...Object.keys(previous)]);
+      return [...keys].some((id) => values[id] !== previous[id]);
+    });
+  }
   async function render(): Promise<void> {
     if (!current || (job && ['queued', 'rendering'].includes(job.status))) return;
+    // Render must reflect the visible form, not a stale revision. Persist
+    // edits first; a 409 conflict or validation failure must prevent queueing.
+    if (hasUnsavedChanges()) await save();
+    if (!current) return;
     clearVideo();
     const projectId = current.project.id;
     const queued = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs', {
