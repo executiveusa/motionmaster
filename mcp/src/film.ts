@@ -89,6 +89,10 @@ export function planFilm(
   const count = options.count ?? 3;
   const query = `${brief} ${(options.tags ?? []).join(" ")}`.trim();
   const excluded = new Set(options.exclude ?? []);
+  // HTML snippets are not mountable HyperFrames compositions, even when they
+  // expose editable variables or have a .html source file.
+  const mountable = (block: MotionBlock): boolean =>
+    block.files.some((file) => file.type === "hyperframes:composition");
 
   const matched = matchBlocks(options.blocks, query, {
     limit: count * 8,
@@ -98,7 +102,8 @@ export function planFilm(
     // The registry marks a handful of entries as ports: markup to paste into
     // a composition, not a composition to mount. Every one of them is a
     // fragment, and mounting a fragment produces a shot with no identity.
-    .filter((candidate) => !candidate.block.tags.includes("transitions-dev-port"));
+    .filter((candidate) => !candidate.block.tags.includes("transitions-dev-port"))
+    .filter((candidate) => mountable(candidate.block));
 
   const chosen: MotionBlock[] = [];
   const selected = options.selectedIds;
@@ -110,7 +115,7 @@ export function planFilm(
       const block = options.blocks.blocks.find((entry) => entry.id === id);
       if (!block || excluded.has(id) || block.variables.length === 0 ||
           block.tags.includes("transitions-dev-port") ||
-          !block.files.some((file) => file.type === "hyperframes:composition" || file.path.endsWith(".html"))) {
+          !mountable(block)) {
         throw new Error(`Edited shot block is unavailable or ineligible: ${id}`);
       }
       chosen.push(block);
