@@ -202,6 +202,7 @@ export function initProjectEditor(): void {
         const original = shot.values?.[variable.id] ?? variable.default;
         input.value = typeof original === 'string' && (variable.type !== 'color' || /^#[0-9a-f]{6}$/i.test(original))
           ? original : variable.type === 'color' ? '#ffffff' : '';
+        input.dataset.initialValue = input.value;
         label.append(caption, variableId, input);
         group.append(label);
       }
@@ -218,9 +219,14 @@ export function initProjectEditor(): void {
       const fieldset = q<HTMLFieldSetElement>(shotRoot, '[data-shot-index="' + index + '"]')!;
       const duration = Number(q<HTMLInputElement>(fieldset, '[data-shot-duration]')!.value);
       if (!Number.isFinite(duration) || duration <= 0) throw new Error('Invalid duration');
-      const values: Record<string, string> = {};
+      const values: Record<string, string> = { ...(shot.values ?? {}) };
       for (const input of fieldset.querySelectorAll<HTMLInputElement>('[data-shot-variable]')) {
-        values[input.dataset.shotVariable!] = input.value;
+        const id = input.dataset.shotVariable!;
+        // An untouched metadata default must not silently overwrite the
+        // saved palette. Only submit explicit edits and existing overrides.
+        if (input.value !== input.dataset.initialValue || Object.hasOwn(values, id)) {
+          values[id] = input.value;
+        }
       }
       return { ...shot, duration, values };
     });
