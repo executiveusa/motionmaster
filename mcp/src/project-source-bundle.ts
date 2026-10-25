@@ -115,7 +115,8 @@ export function inspectProjectSource(archive: Buffer): SourceBundle {
   }
   // A valid checksum is not enough: provenance and revision records are
   // untrusted JSON. Validate the complete immutable history before any import.
-  if (!SAFE_ID.test(bundle.project.sourceId) || !SAFE_ID.test(bundle.render?.jobId) ||
+  if (!SAFE_ID.test(bundle.project.sourceId) || typeof bundle.render?.jobId !== "string" ||
+      !SAFE_ID.test(bundle.render.jobId) ||
       !Number.isSafeInteger(bundle.render.revision) ||
       bundle.render.revision < 1 || bundle.render.revision > bundle.revisions.length ||
       bundle.revisions.length > 100 ||
