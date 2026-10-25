@@ -137,6 +137,17 @@ try {
       !Object.values(savedProject.revision.shots[0].values ?? {}).includes('Ana Ruiz')) {
     throw new Error('Browser edits did not persist as an immutable revision');
   }
+  await evaluate('document.querySelector("[data-project-render]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued"', 'render queued through browser');
+  await evaluate('document.querySelector("[data-project-cancel]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorCancelled"', 'render cancelled through browser');
+  const jobsResponse = await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  });
+  const jobs = await jobsResponse.json();
+  if (!jobsResponse.ok || jobs.length !== 1 || jobs[0].status !== 'cancelled') {
+    throw new Error('Browser cancel did not persist in private backend');
+  }
   const secretStored = await evaluate('Object.values(localStorage).some((value) => value.includes("mm-browser-fixture-key"))');
   const keyFieldEmpty = await evaluate('document.querySelector("[data-project-key]").value === ""');
   if (secretStored || !keyFieldEmpty) throw new Error('Private key leaked into browser persistence or visible form');
@@ -170,6 +181,12 @@ try {
 
   await change('es-MX');
   const spanish = await state();
+  const spanishEditor = await evaluate('({ summary: document.querySelector("[data-project-editor] summary")?.textContent, save: document.querySelector("[data-project-save]")?.textContent, cancel: document.querySelector("[data-project-cancel]")?.textContent })');
+  if (!spanishEditor.summary?.includes('Editar un video guardado') ||
+      !spanishEditor.cancel?.includes('Cancelar generación')) {
+    throw new Error('Private editor did not translate to Mexican Spanish: ' + JSON.stringify(spanishEditor));
+  }
+
   if (spanish.lang !== 'es-MX' || spanish.storage !== 'es-MX' ||
       !spanish.hero?.includes('Crea un video') || !spanish.cta?.includes('Crear un video')) {
     throw new Error('Spanish selector interaction failed: ' + JSON.stringify(spanish));
@@ -215,7 +232,8 @@ try {
     checks: ['fresh English default', 'Spanish selector click', 'late-mounted data-i18n',
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
-      'browser create/edit/reopen immutable revision', 'private key never persisted', 'zero uncaught browser exceptions'],
+      'browser create/edit/reopen immutable revision', 'browser queue/cancel',
+      'editor Mexican Spanish labels', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
     editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
     viewport: mobile,
