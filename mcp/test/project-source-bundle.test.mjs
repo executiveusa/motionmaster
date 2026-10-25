@@ -8,8 +8,8 @@ import { join } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { loadConfig } from "../dist/config.js";
 import { createHttpHandler } from "../dist/index.js";
-import { createProject, createProjectJob, saveRevision, transitionProjectJob } from "../dist/projects.js";
-import { exportProjectSource, inspectProjectSource } from "../dist/project-source-bundle.js";
+import { createProject, createProjectJob, listProjectJobs, readProject, saveRevision, transitionProjectJob } from "../dist/projects.js";
+import { exportProjectSource, importProjectSource, inspectProjectSource } from "../dist/project-source-bundle.js";
 
 test("MM-09: source export retains immutable revisions, exact source bytes and licence warning", async (t) => {
   const prior = process.env.MOTION_MASTER_API_KEY;
@@ -66,6 +66,18 @@ test("MM-09: source export retains immutable revisions, exact source bytes and l
   assert.ok(unpacked.files.some((f) => f.path === "compositions/shot.html" &&
     Buffer.from(f.base64, "base64").equals(binary)));
   assert.ok(!unpacked.files.some((f) => f.path === "film.mp4"));
+  // End-to-end archive path: a real completed FFmpeg job exports source;
+  // the same bytes reopen as a distinct private project with no false MP4.
+  const restored = importProjectSource(root, archive);
+  assert.notEqual(restored.project.id, project.id);
+  assert.equal(restored.sourceId, project.id);
+  assert.equal(restored.project.currentRevision, 2);
+  assert.equal(readProject(root, restored.project.id).revision.brief, "New brief");
+  assert.deepEqual(listProjectJobs(root, restored.project.id), []);
+  assert.deepEqual(
+    readFileSync(join(root, "workspace", "projects", restored.project.id, "imports", job.id, "compositions", "shot.html")),
+    binary,
+  );
   assert.equal((await fetch(endpoint, { method: "POST", headers })).status, 405);
 
   const altered = JSON.parse(gunzipSync(archive).toString("utf8"));
