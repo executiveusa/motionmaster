@@ -39,6 +39,8 @@ const strings: Record<string, [string, string]> = {
   editorProjects: ['Saved projects', 'Proyectos guardados'],
   editorOpen: ['Open project', 'Abrir proyecto'],
   editorRefresh: ['Refresh', 'Actualizar'],
+  editorNewButton: ['New video', 'Nuevo video'],
+  editorChange: ['Change connection', 'Cambiar conexión'],
   editorNew: ['New lower-third video', 'Nuevo video con rótulo inferior'],
   editorTitle: ['Project title', 'Título del proyecto'],
   editorBrief: ['Video brief', 'Descripción del video'],
