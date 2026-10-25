@@ -79,24 +79,35 @@ function wireCopy(clip: HTMLElement): void {
   const text = code ? (code.textContent ?? '').trim() : '';
   if (!text) return;
 
-  const buttons = qsa<HTMLButtonElement>('[data-copy-prompt], [data-start-prompt]', clip);
-  for (const button of buttons) {
+  for (const button of qsa<HTMLButtonElement>('[data-copy-prompt], [data-start-prompt]', clip)) {
     const original = button.textContent ?? '';
     button.addEventListener('click', async () => {
+      if (button.hasAttribute('data-start-prompt')) {
+        // Clicking "start" must lead into the actual product, not merely copy text.
+        const composer = qs<HTMLTextAreaElement>('[data-console-input]');
+        const consoleSection = qs<HTMLElement>('#console');
+        if (composer && consoleSection) {
+          composer.value = text;
+          composer.dispatchEvent(new Event('input', { bubbles: true }));
+          consoleSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Focus even when the live agent is not connected; do not send a request
+          // until the user explicitly clicks Create.
+          if (!composer.hidden && composer.offsetParent !== null) {
+            composer.focus({ preventScroll: true });
+          }
+          announce('Example loaded into the video brief. Connect your agent if prompted, then create.');
+          return;
+        }
+        announce('The creation console is not available. Copy the prompt instead.');
+      }
       const ok = await copyText(text);
       if (!ok) {
         announce('Copy failed — select the prompt text and copy it manually.');
         return;
       }
       button.textContent = 'Copied';
-      window.setTimeout(() => {
-        button.textContent = original;
-      }, 1800);
-      if (button.hasAttribute('data-start-prompt')) {
-        announce('Prompt copied. Paste it into ChatGPT, Codex or Claude to start from here.');
-      } else {
-        announce('Prompt copied to the clipboard.');
-      }
+      window.setTimeout(() => { button.textContent = original; }, 1800);
+      announce('Prompt copied to the clipboard.');
     });
   }
 }
