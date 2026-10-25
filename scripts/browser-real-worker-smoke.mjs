@@ -260,6 +260,18 @@ try {
   await until('Math.abs(document.querySelector("[data-project-editor]").getBoundingClientRect().top) < 140',
     'imported editor visible in mobile viewport', 10000);
   await sleep(350);
+  await until('document.querySelector("[data-mobile-bar]")?.hidden === true',
+    'mobile gallery CTA hidden while editing', 10000);
+  const toolbar = await evaluate(`(() => {
+    const buttons = [...document.querySelectorAll('.project-editor__toolbar > button')];
+    const positions = buttons.map((button) => Math.round(button.getBoundingClientRect().top));
+    return { rows: new Set(positions).size, buttons: buttons.length,
+      hiddenCta: document.querySelector('[data-mobile-bar]').hidden };
+  })()`);
+  assert.equal(toolbar.buttons, 5, 'Mobile editor toolbar actions unexpectedly changed');
+  assert.ok(toolbar.rows <= 3, 'Mobile editor controls are stacked into too many rows');
+  assert.equal(toolbar.hiddenCta, true, 'Sticky gallery CTA covers the active editor');
+  report.checks.push('mobile editor compact toolbar and no overlapping sticky gallery CTA');
   const shot = await command('Page.captureScreenshot', { format: 'png' });
   assert.ok(shot.result?.data, 'Mobile browser screenshot unavailable');
   writeFileSync(join(proof, 'imported-editor-mobile.png'), Buffer.from(shot.result.data, 'base64'));
