@@ -100,6 +100,8 @@ const chromeText: Record<string, string> = {
   'A dark moving source clip with a title sequence burned in over the top.': 'Un video oscuro en movimiento con títulos integrados.',
   'checking the agent…': 'comprobando el agente…',
   'Agent address': 'Dirección del agente',
+  'Your rendered video': 'Tu video generado',
+  'Your name': 'Tu nombre',
   'OpenRouter holds the model. Your key stays in this browser and is sent only with your own requests.': 'OpenRouter proporciona el modelo. Tu clave permanece en este navegador y solo se envía con tus solicitudes.',
   'title card': 'título',
   'kinetic text': 'texto animado',
