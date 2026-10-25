@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import {
   createProject, createProjectJob, listProjectJobs, readProjectJob,
@@ -46,6 +47,13 @@ test('MM-05 completed jobs require a real project-local MP4 and cannot be cancel
   const artifacts = join(root, 'workspace', 'projects', projectId, 'artifacts');
   mkdirSync(artifacts);
   writeFileSync(join(artifacts, 'movie.mp4'), Buffer.from([0, 0, 0, 1]));
+  assert.throws(() => transitionProjectJob(root, projectId, job.id, 'complete', {
+    artifact: 'artifacts/movie.mp4',
+  }), /ffprobe/);
+  execFileSync('ffmpeg', [
+    '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=320x180:r=12:d=0.5',
+    '-c:v', 'mpeg4', '-y', join(artifacts, 'movie.mp4'),
+  ], { timeout: 20_000 });
   const ready = transitionProjectJob(root, projectId, job.id, 'complete', { artifact: 'artifacts/movie.mp4' });
   assert.equal(ready.status, 'ready');
   assert.equal(ready.artifact, 'artifacts/movie.mp4');
