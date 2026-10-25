@@ -56,6 +56,8 @@ export interface ProjectJob {
   error?: string;
   /** A relative artifact path, not an authorization to download it. */
   artifact?: string;
+  /** Count of started attempts, retained across manual retries. */
+  attempts?: number;
 }
 
 export function projectsRoot(repoRoot: string): string {
@@ -233,6 +235,98 @@ export function readProjectJob(repoRoot: string, projectId: string, jobId: strin
     throw new Error('Invalid job record.');
   }
   return job as ProjectJob;
+}
+
+/**
+ * MM-05: durable, single-writer job state machine. These transitions record
+ * lifecycle facts; they do NOT claim a render succeeded without an artifact.
+ * The worker, not the browser, is allowed to mark a job ready.
+ */
+export type JobEvent = 'start' | 'complete' | 'fail' | 'cancel' | 'retry';
+
+export function listProjectJobs(repoRoot: string, projectId: string): ProjectJob[] {
+  const dir = join(projectDir(repoRoot, projectId), 'jobs');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^j_[a-zA-Z0-9_-]+\\.json$/.test(entry.name))
+    .map((entry) => readProjectJob(repoRoot, projectId, entry.name.slice(0, -5))!)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function transitionProjectJob(
+  repoRoot: string,
+  projectId: string,
+  jobId: string,
+  event: JobEvent,
+  options: { artifact?: string; error?: string } = {},
+): ProjectJob {
+  const current = readProjectJob(repoRoot, projectId, jobId);
+  if (!current) throw new Error('Project job not found.');
+  const target: Record<JobEvent, JobState> = {
+    start: 'rendering', complete: 'ready', fail: 'failed',
+    cancel: 'cancelled', retry: 'queued',
+  };
+  const permitted: Record<JobEvent, JobState[]> = {
+    start: ['queued'], complete: ['rendering'], fail: ['rendering'],
+    cancel: ['queued', 'rendering'], retry: ['failed'],
+  };
+  // Retried requests must not advance attempts or rewrite timestamps.
+  if (current.status === target[event]) return current;
+  if (!permitted[event].includes(current.status)) {
+    throw new Error(`Invalid job transition: ${current.status} -> ${target[event]}.`);
+  }
+
+  let artifact: string | undefined;
+  if (event === 'complete') {
+    artifact = options.artifact;
+    // Only a local, regular, nonempty MP4 under this project's artifact
+    // directory can be recorded as complete. No URL or path traversal.
+    if (!artifact || !/^artifacts\\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\\.mp4$/.test(artifact)) {
+      throw new Error('A project-local MP4 artifact is required.');
+    }
+    const path = join(projectDir(repoRoot, projectId), artifact);
+    if (!existsSync(path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() ||
+        lstatSync(path).size === 0) {
+      throw new Error('The render artifact is missing or invalid.');
+    }
+  }
+  const now = new Date().toISOString();
+  const next: ProjectJob = {
+    ...current,
+    status: target[event],
+    updatedAt: now,
+    ...(event === 'start' ? { startedAt: now, attempts: (current.attempts ?? 0) + 1 } : {}),
+    ...(event === 'complete' ? { artifact, finishedAt: now } : {}),
+    ...(event === 'fail' || event === 'cancel' ? { finishedAt: now } : {}),
+    ...(event === 'fail' ? { error: (options.error ?? 'Render failed.').slice(0, 2000) } : {}),
+  };
+  if (event === 'retry') {
+    delete next.startedAt;
+    delete next.finishedAt;
+    delete next.error;
+    delete next.artifact;
+  }
+  atomicJson(join(projectDir(repoRoot, projectId), 'jobs', `${jobId}.json`), next);
+  return next;
+}
+
+/**
+ * Call once before a single-writer service starts accepting requests.
+ * A process death leaves rendering jobs stranded; mark them failed instead
+ * of pretending they are running or re-executing untrusted work on restart.
+ */
+export function recoverInterruptedProjectJobs(repoRoot: string): number {
+  let recovered = 0;
+  for (const project of listProjects(repoRoot)) {
+    for (const job of listProjectJobs(repoRoot, project.id)) {
+      if (job.status !== 'rendering') continue;
+      transitionProjectJob(repoRoot, project.id, job.id, 'fail', {
+        error: 'Render interrupted by process restart. Retry to queue a new attempt.',
+      });
+      recovered++;
+    }
+  }
+  return recovered;
 }
 
 /** Explicit, non-destructive import of legacy film metadata and job states. */
