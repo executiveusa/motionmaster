@@ -37,10 +37,15 @@ function prove(label, projectId, jobId, expected) {
   assert.ok(video?.width > 0 && video?.height > 0, label + ": missing video stream");
   const duration = Number(info.format?.duration);
   assert.ok(Math.abs(duration - expected) < 0.3, label + ": expected " + expected + "s, got " + duration);
-  const still = join(proof, label + "-frame.png");
-  run("ffmpeg", ["-v", "error", "-y", "-ss", String(Math.min(0.2, duration / 2)), "-i", path, "-frames:v", "1", still]);
+  // A decodable MP4 alone is not proof of motion. Decode two actual times and
+  // require changed pixels; archive both frames for independent review.
+  const still = join(proof, label + "-frame-early.png");
+  const late = join(proof, label + "-frame-late.png");
+  run("ffmpeg", ["-v", "error", "-y", "-ss", "0.3", "-i", path, "-frames:v", "1", still]);
+  run("ffmpeg", ["-v", "error", "-y", "-ss", "1.8", "-i", path, "-frames:v", "1", late]);
+  assert.notEqual(hash(still), hash(late), label + ": frames at 0.3s and 1.8s are identical (no proven motion)");
   copyFileSync(path, join(proof, label + ".mp4"));
-  report.renders.push({ label, jobId, duration, width: video.width, height: video.height, sha256: hash(path), frameSha256: hash(still), video: label + ".mp4", frame: label + "-frame.png" });
+  report.renders.push({ label, jobId, duration, width: video.width, height: video.height, sha256: hash(path), earlyFrameSha256: hash(still), lateFrameSha256: hash(late), video: label + ".mp4", earlyFrame: label + "-frame-early.png", lateFrame: label + "-frame-late.png" });
 }
 
 try {
@@ -56,10 +61,15 @@ try {
     (b.duration ?? 0) >= 3.5
   );
   assert.ok(candidates.length, "No eligible self-contained editable motion blocks");
-  const selected = candidates.find((b) => b.id === "split-flap-board");
-  assert.ok(selected, "Pinned split-flap-board composition is unavailable; do not silently substitute a different block");
+  // Split-flap-board is deliberately NOT used: its intermediate rotating glyphs
+  // fail the shipped HyperFrames readability gate (13 line_unread warnings in
+  // CI 40193303487). Use a text-forward composition whose copy holds while
+  // its border moves. Keep this pinned: a catalogue change must fail visibly.
+  const selected = candidates.find((b) => b.id === "lt-neon-border");
+  assert.ok(selected, "Pinned lt-neon-border composition is unavailable; do not silently substitute a different block");
+  assert.ok(selected.duration >= 4.8, "Pinned block duration changed; requalify the edit smoke");
   report.selectedBlock = selected.id;
-  const { project } = createProject(temp, { title: "Default worker proof", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "First version", duration: 3.5 }] });
+  const { project } = createProject(temp, { title: "Default worker proof", brief: "A cinematic lower-third for Dr. Maya Chen", shots: [{ id: selected.id, title: "First version", duration: 3.5 }] });
   const first = createProjectJob(temp, project.id, 1);
   await runProjectJob(config, project.id, first.id); // NO renderer override
   const initial = readProjectJob(temp, project.id, first.id);
@@ -73,7 +83,7 @@ try {
   run(process.execPath, ["--input-type=module", "-e", check, temp, project.id, first.id]);
   report.reopenedInNewProcess = true;
 
-  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic launch title for ACME", shots: [{ id: selected.id, title: "Shorter version", duration: 3.0 }] });
+  const revision = saveRevision(temp, project.id, 1, { title: "Trimmed", brief: "A cinematic lower-third for Dr. Maya Chen", shots: [{ id: selected.id, title: "Shorter version", duration: 3.0 }] });
   assert.equal(revision.revision.number, 2);
   const second = createProjectJob(temp, project.id, 2);
   await runProjectJob(config, project.id, second.id); // same real renderer
