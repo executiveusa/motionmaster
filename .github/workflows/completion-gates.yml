@@ -11,6 +11,7 @@ on:
       - "plugins/**"
       - "scripts/completion-gates.mjs"
       - "scripts/hyperframes-smoke.mjs"
+      - "scripts/capture-site.mjs"
       - "licence.json"
       - ".github/workflows/completion-gates.yml"
   workflow_dispatch:
@@ -43,6 +44,8 @@ jobs:
           npm ci --prefix bridge --no-audit --no-fund
       - name: Run completion quality gates
         run: node scripts/completion-gates.mjs
+      - name: Capture gallery-first homepage (desktop and mobile)
+        run: node scripts/capture-site.mjs
       - name: Install FFmpeg and FFprobe for real encoding
         run: |
           sudo apt-get update -qq
