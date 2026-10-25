@@ -237,6 +237,7 @@ try {
   if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea un video')) {
     throw new Error('Spanish preference did not persist across reload: ' + JSON.stringify(reloaded));
   }
+  await until('document.querySelector("[data-project-new-title]")?.value === "Mi rótulo"', 'Spanish private editor template default');
 
   await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); d.open = true; document.querySelector("[data-project-editor]").scrollIntoView({block:"start"}); return true; })()');
