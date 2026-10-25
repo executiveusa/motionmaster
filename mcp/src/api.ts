@@ -72,6 +72,7 @@ import {
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
+import { exportProjectSource } from "./project-source-bundle.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -325,6 +326,9 @@ export function openApiDocument(config: Config): Record<string, unknown> {
         get: { summary: "Download an authenticated completed MP4.", responses: { 200: { description: "video/mp4" }, 401: { description: "unauthorized" }, 409: { description: "not ready" } } },
         head: { summary: "Inspect an authenticated completed MP4.", responses: { 200: { description: "video/mp4" } } },
       },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/source`]: {
+        get: { summary: "Download a private, checksum-verified editable source archive (gzip JSON; not MP4).", responses: { 200: { description: "application/gzip" }, 401: { description: "unauthorized" }, 409: { description: "source unavailable" } } },
+      },
       [`${API_PREFIX}/projects/{id}/jobs/{jobId}/cancel`]: {
         post: { summary: "Cancel a queued job (or mark a running job cancelled).", responses: { 200: { description: "cancelled", content: json(obj) } } },
       },
@@ -411,6 +415,7 @@ export async function handleApi(
         "POST /projects/{id}/jobs",
         "GET  /projects/{id}/jobs/{jobId}",
         "GET  /projects/{id}/jobs/{jobId}/artifact",
+        "GET  /projects/{id}/jobs/{jobId}/source",
         "POST /projects/{id}/jobs/{jobId}/cancel",
         "POST /projects/{id}/jobs/{jobId}/retry",
         "GET  /films",
@@ -681,7 +686,7 @@ export async function handleApi(
 
     // A client can queue, inspect, cancel or retry a job. Only the trusted
     // worker may transition it to rendering/ready/failed.
-    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry|artifact))?)?$/.exec(route);
+    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry|artifact|source))?)?$/.exec(route);
     if (jobMatch) {
       const [, projectId, jobId, action] = jobMatch;
       if (!readProject(config.repoRoot, projectId)) {
@@ -704,6 +709,24 @@ export async function handleApi(
           if (projectWorkerEnabled()) void processProjectQueue(config);
         } catch (error) {
           fail(res, 404, error instanceof Error ? error.message : "Revision not found.");
+        }
+        return true;
+      }
+      // MM-09: source archives are private, bounded and independently hashed.
+      if (jobId && action === "source" && method === "GET") {
+        try {
+          const archive = exportProjectSource(config.repoRoot, projectId, jobId);
+          res.writeHead(200, {
+            "content-type": "application/gzip",
+            "content-length": archive.length,
+            "content-disposition": `attachment; filename="motion-master-${projectId}-${jobId}.json.gz"`,
+            "cache-control": "private, no-store",
+            "x-content-type-options": "nosniff",
+          });
+          res.end(archive);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Source export unavailable.";
+          fail(res, message.includes("not found") ? 404 : 409, message);
         }
         return true;
       }
