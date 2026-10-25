@@ -158,6 +158,15 @@ try {
   const keyFieldEmpty = await evaluate('document.querySelector("[data-project-key]").value === ""');
   if (secretStored || !keyFieldEmpty) throw new Error('Private key leaked into browser persistence or visible form');
 
+  // Visual evidence of the actual human editor, not just the homepage.
+  await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate('document.querySelector("[data-project-editor]").scrollIntoView({block:"start"})');
+  await sleep(200);
+  const editorDesktop = await command('Page.captureScreenshot', { format: 'png' });
+  const screenshotDir = resolve(root, '.completion-proof', 'screenshots');
+  mkdirSync(screenshotDir, { recursive: true });
+  writeFileSync(resolve(screenshotDir, 'editor-desktop.png'), Buffer.from(editorDesktop.result.data, 'base64'));
+
   // MM-10: a decoded MP4 is not proof that a human can play it. Click every
   // actual gallery control in Chromium and verify advancing video time.
   const playback = [];
@@ -230,6 +239,10 @@ try {
   }
 
   await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); d.open = true; document.querySelector("[data-project-editor]").scrollIntoView({block:"start"}); return true; })()');
+  await sleep(200);
+  const editorMobile = await command('Page.captureScreenshot', { format: 'png' });
+  writeFileSync(resolve(root, '.completion-proof', 'screenshots', 'editor-mobile-es-MX.png'), Buffer.from(editorMobile.result.data, 'base64'));
   const mobile = await evaluate('({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth })');
   if (mobile.scrollWidth > mobile.width + 2) {
     throw new Error('Mobile page has horizontal overflow: ' + JSON.stringify(mobile));
@@ -241,7 +254,7 @@ try {
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
       'browser create/edit/reopen immutable revision', 'browser queue/cancel',
-      'editor Mexican Spanish labels', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
+      'editor Mexican Spanish labels', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
     editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
     viewport: mobile,
