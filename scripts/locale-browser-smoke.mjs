@@ -20,7 +20,8 @@ const profile = mkdtempSync(join(tmpdir(), 'mm-locale-chrome-'));
 const server = spawn(process.execPath, [resolve(root, 'mcp/dist/index.js')], {
   cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, MOTION_MASTER_SERVE_SITE: '1',
-    MOTION_MASTER_MCP_HOST: '127.0.0.1', MOTION_MASTER_MCP_PORT: String(port) },
+    MOTION_MASTER_MCP_HOST: '127.0.0.1', MOTION_MASTER_MCP_PORT: String(port),
+    MOTION_MASTER_API_KEY: 'mm-browser-fixture-key' },
 });
 const browser = spawn(chrome, [
   '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
@@ -107,6 +108,39 @@ try {
     throw new Error('Fresh browser did not default to English: ' + JSON.stringify(initial));
   }
 
+
+  // MM-08: a human can use the private editor without writing JSON or code.
+  // This uses the real authenticated local HTTP API, not a mocked fetch.
+  const editorInitiallyClosed = await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); return !!d && !d.open; })()');
+  if (!editorInitiallyClosed) throw new Error('Private editor must stay collapsed on the gallery-first page');
+  await evaluate('document.querySelector("[data-project-editor] summary").click()');
+  await evaluate('(() => { document.querySelector("[data-project-server]").value = location.origin; document.querySelector("[data-project-key]").value = "wrong-fixture-key"; document.querySelector("[data-project-connect]").requestSubmit(); return true; })()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorError"', 'wrong private key rejected');
+  if (await evaluate('!document.querySelector("[data-project-workspace]").hidden')) {
+    throw new Error('Private editor opened with an invalid key');
+  }
+  await evaluate('(() => { document.querySelector("[data-project-key]").value = "mm-browser-fixture-key"; document.querySelector("[data-project-connect]").requestSubmit(); return true; })()');
+  await until('!document.querySelector("[data-project-workspace]").hidden', 'authenticated editor connection');
+  await evaluate('(() => { document.querySelector("[data-project-new-title]").value = "Browser editor proof"; document.querySelector("[data-project-new-brief]").value = "A cinematic lower-third for Maya Chen"; document.querySelector("[data-project-new-text]").value = "Maya Chen"; document.querySelector("[data-project-create]").requestSubmit(); return true; })()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorCreated"', 'project created through browser');
+  const editorProjectId = await evaluate('document.querySelector("[data-project-list]").value');
+  if (!/^p_[a-zA-Z0-9_-]+$/.test(editorProjectId)) throw new Error('Editor created no valid project id');
+  await evaluate('(() => { const field = document.querySelector("[data-shot-variable]"); const duration = document.querySelector("[data-shot-duration]"); if (!field || !duration) return false; field.value = "Ana Ruiz"; duration.value = "3"; document.querySelector("[data-project-edit]").requestSubmit(); return true; })()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorSaved"', 'edited text saved through browser');
+  const savedResponse = await fetch(base + 'api/v1/projects/' + editorProjectId, {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  });
+  if (!savedResponse.ok) throw new Error('Cannot reopen saved browser project via private API');
+  const savedProject = await savedResponse.json();
+  if (savedProject.revision.number !== 2 ||
+      savedProject.revision.shots[0].duration !== 3 ||
+      !Object.values(savedProject.revision.shots[0].values ?? {}).includes('Ana Ruiz')) {
+    throw new Error('Browser edits did not persist as an immutable revision');
+  }
+  const secretStored = await evaluate('Object.values(localStorage).some((value) => value.includes("mm-browser-fixture-key"))');
+  const keyFieldEmpty = await evaluate('document.querySelector("[data-project-key]").value === ""');
+  if (secretStored || !keyFieldEmpty) throw new Error('Private key leaked into browser persistence or visible form');
+
   // MM-10: a decoded MP4 is not proof that a human can play it. Click every
   // actual gallery control in Chromium and verify advancing video time.
   const playback = [];
@@ -180,8 +214,10 @@ try {
     kind: 'locale-browser-interaction', passed: true, checkedAt: new Date().toISOString(),
     checks: ['fresh English default', 'Spanish selector click', 'late-mounted data-i18n',
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
-      '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'zero uncaught browser exceptions'],
+      '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
+      'browser create/edit/reopen immutable revision', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
+    editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
     viewport: mobile,
   };
   const proofDir = resolve(root, '.completion-proof');
