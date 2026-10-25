@@ -1,3 +1,4 @@
+import { transitionProjectJob } from '../dist/projects.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -74,4 +75,31 @@ test('MM-03 HTTP: refuse unauthenticated project storage on non-loopback host', 
   const { request } = await fixture(t, '0.0.0.0');
   const result = await request('/projects', 'POST', { title: 'Private', brief: 'Do not expose' });
   assert.equal(result.status, 403);
+});
+
+test('MM-05 HTTP: queue, inspect, reject fake completion, cancel and retry failed job', async (t) => {
+  const { request, root } = await fixture(t);
+  const created = await request('/projects', 'POST', { title: 'Launch', brief: 'A real launch video' });
+  const id = created.body.project.id;
+  const queued = await request('/projects/' + id + '/jobs', 'POST', { revision: 1 });
+  assert.equal(queued.status, 201);
+  assert.equal(queued.body.status, 'queued');
+  const jobId = queued.body.id;
+  assert.equal((await request('/projects/' + id + '/jobs')).body.length, 1);
+  assert.equal((await request('/projects/' + id + '/jobs/' + jobId)).body.status, 'queued');
+  assert.equal((await request('/projects/' + id + '/jobs/' + jobId + '/complete', 'POST')).status, 400);
+  assert.equal((await request('/projects/' + id + '/jobs/' + jobId + '/retry', 'POST')).status, 200);
+  const cancelled = await request('/projects/' + id + '/jobs/' + jobId + '/cancel', 'POST');
+  assert.equal(cancelled.status, 200);
+  assert.equal(cancelled.body.status, 'cancelled');
+  assert.equal((await request('/projects/' + id + '/jobs/' + jobId + '/cancel', 'POST')).body.status, 'cancelled');
+  assert.equal((await request('/projects/' + id + '/jobs/' + jobId + '/retry', 'POST')).status, 409);
+  const second = await request('/projects/' + id + '/jobs', 'POST', { revision: 1 });
+  transitionProjectJob(root, id, second.body.id, 'start');
+  transitionProjectJob(root, id, second.body.id, 'fail', { error: 'Render process stopped' });
+  const retried = await request('/projects/' + id + '/jobs/' + second.body.id + '/retry', 'POST');
+  assert.equal(retried.status, 200);
+  assert.equal(retried.body.status, 'queued');
+  assert.equal(retried.body.error, undefined);
+  assert.equal((await request('/projects/' + id + '/jobs', 'POST', { revision: 99 })).status, 404);
 });
