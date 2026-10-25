@@ -33,7 +33,6 @@ import { initLocale } from './modules/locale';
 import './styles/simplified.css';
 
 function boot(): void {
-  initLocale();
   initRail();
   initMotion();
   initScenes();
@@ -46,6 +45,7 @@ function boot(): void {
   initLibrary();
   initSound();
   initConsole();
+  initLocale();
 }
 
 if (document.readyState === 'loading') {
