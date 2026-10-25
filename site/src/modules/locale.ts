@@ -48,6 +48,8 @@ const strings: Record<string, [string, string]> = {
   editorDuration: ['Duration (seconds)', 'Duración (segundos)'],
   editorSave: ['Save changes', 'Guardar cambios'],
   editorRender: ['Render saved version', 'Generar versión guardada'],
+  editorCancel: ['Cancel render', 'Cancelar generación'],
+  editorColor: ['Color', 'Color'],
   editorDownload: ['Download MP4', 'Descargar MP4'],
   editorSource: ['Export editable source', 'Exportar proyecto editable'],
   editorReady: ['Connected to private workspace.', 'Conectado al espacio privado.'],
@@ -61,6 +63,7 @@ const strings: Record<string, [string, string]> = {
   editorWorking: ['Rendering your video…', 'Generando tu video…'],
   editorComplete: ['Video ready. Watch or download it.', 'Video listo. Reprodúcelo o descárgalo.'],
   editorFailed: ['The render failed. Reopen the project to retry.', 'No se pudo generar el video. Abre el proyecto de nuevo para intentarlo.'],
+  editorCancelled: ['Render cancelled. Your saved project is unchanged.', 'Generación cancelada. Tu proyecto guardado no cambió.'],
   editorNoShots: ['This project has no editable shots. Create a lower-third to begin.', 'Este proyecto no tiene tomas editables. Crea un video con rótulo inferior para empezar.'],
   editorError: ['The request failed. Check your connection and permissions.', 'Falló la solicitud. Revisa la conexión y los permisos.'],
 };
