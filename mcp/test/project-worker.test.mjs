@@ -9,7 +9,7 @@ import {
   createProject, createProjectJob, readProject, readProjectJob, saveRevision,
   transitionProjectJob, recoverInterruptedProjectJobs,
 } from "../dist/projects.js";
-import { processProjectQueue, runProjectJob } from "../dist/project-worker.js";
+import { cancelRunningProjectJob, processProjectQueue, runProjectJob } from "../dist/project-worker.js";
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "mm-worker-"));
@@ -137,4 +137,31 @@ test("MM-05: opt-in queue drain serially renders two queued jobs and keeps revis
   assert.equal(peak, 1);
   assert.equal(readProjectJob(root, projectId, first.id).status, "ready");
   assert.equal(readProjectJob(root, projectId, second.id).status, "ready");
+});
+
+test("MM-05: cancelling an active durable job aborts its renderer and never publishes video", async (t) => {
+  const { root, config, projectId } = fixture(t);
+  const job = createProjectJob(root, projectId, 1);
+  let entered;
+  const started = new Promise((resolve) => { entered = resolve; });
+  let observedAbort = false;
+  const work = runProjectJob(config, projectId, job.id, async (_config, _revision, _outputDir, signal) => {
+    assert.ok(signal, "renderer must receive a cancellation signal");
+    entered();
+    await new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => {
+        observedAbort = true;
+        reject(new Error("render interrupted"));
+      }, { once: true });
+    });
+    throw new Error("cancelled renderer should never complete");
+  });
+  await started;
+  transitionProjectJob(root, projectId, job.id, "cancel");
+  assert.equal(cancelRunningProjectJob(root, projectId, job.id), true);
+  await work;
+  assert.equal(observedAbort, true);
+  assert.equal(cancelRunningProjectJob(root, projectId, job.id), false);
+  assert.equal(readProjectJob(root, projectId, job.id).status, "cancelled");
+  assert.equal(readProjectJob(root, projectId, job.id).artifact, undefined);
 });
