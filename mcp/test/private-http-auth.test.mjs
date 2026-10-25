@@ -82,6 +82,32 @@ test("MM-06: uploaded files are flat and cannot follow symlinks outside workspac
   assert.equal((await fetch(base + "/files/sample.txt", { method: "DELETE" })).status, 405);
 });
 
+test("MM-09: real binary and multipart uploads round-trip exact bytes", async (t) => {
+  env(t, "MOTION_MASTER_API_KEY", undefined);
+  env(t, "MOTION_MASTER_ALLOWED_ORIGINS", undefined);
+  const { base } = await fixture(t);
+  const raw = Buffer.from([0, 255, 1, 0, 137, 80, 78, 71, 13, 10]);
+  let response = await fetch(base + "/files", {
+    method: "POST",
+    headers: { "content-type": "image/png", "x-file-name": "raw.png" },
+    body: raw,
+  });
+  assert.equal(response.status, 201);
+  const rawFile = (await response.json()).file;
+  response = await fetch(base + rawFile.url);
+  assert.equal(response.status, 200);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), raw);
+
+  const form = new FormData();
+  form.append("file", new Blob([raw], { type: "image/png" }), "frame.png");
+  response = await fetch(base + "/files", { method: "POST", body: form });
+  assert.equal(response.status, 201);
+  const multipartFile = (await response.json()).file;
+  response = await fetch(base + multipartFile.url);
+  assert.equal(response.status, 200);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), raw);
+});
+
 test("MM-06: cross-origin private browser access requires an explicit allowlist", async (t) => {
   env(t, "MOTION_MASTER_API_KEY", undefined);
   env(t, "MOTION_MASTER_ALLOWED_ORIGINS", undefined);
