@@ -65,3 +65,33 @@ test('MM-03: legacy migration is idempotent, non-destructive and skips malformed
   assert.equal(readFileSync(join(dir, 'film.json'), 'utf8'), original);
   assert.equal(existsSync(join(dir, 'job.json')), true);
 });
+
+test('MM-08: text and color overrides survive immutable revisions and reject unsafe payloads', (t) => {
+  const root = fixture(t);
+  const first = createProject(root, {
+    title: 'Editable title', brief: 'A title card',
+    shots: [{ id: 'lt-neon-border', title: 'Intro', duration: 3.5, values: { name: 'Maya Chen', accent: '#1A2B3C' } }],
+  });
+  assert.deepEqual(readProject(root, first.project.id)?.revision.shots[0].values,
+    { name: 'Maya Chen', accent: '#1A2B3C' });
+  const updated = saveRevision(root, first.project.id, 1, {
+    title: 'Edited title', brief: 'A title card',
+    shots: [{ id: 'lt-neon-border', title: 'Intro', duration: 3.5, values: { name: 'Ana Ruiz', accent: '#1A2B3C' } }],
+  });
+  assert.equal(updated.revision.number, 2);
+  assert.equal(readRevision(root, first.project.id, 1)?.shots[0].values.name, 'Maya Chen');
+  assert.equal(readProject(root, first.project.id)?.revision.shots[0].values.name, 'Ana Ruiz');
+  for (const values of [
+    { name: '<script>alert(1)</script>' },
+    { name: '' },
+    { name: 'x'.repeat(121) },
+    { name: 3 },
+    { __proto__: null, bad: null },
+    Object.fromEntries(Array.from({ length: 13 }, (_, i) => ['field' + i, 'x'])),
+  ]) {
+    assert.throws(() => saveRevision(root, first.project.id, 2, {
+      title: 'Unsafe', brief: 'Unsafe', shots: [{ id: 'lt-neon-border', title: 'Intro', duration: 3, values }],
+    }), /Invalid revision content/);
+  }
+  assert.equal(readProject(root, first.project.id)?.project.currentRevision, 2);
+});
