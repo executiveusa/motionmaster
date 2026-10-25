@@ -76,6 +76,24 @@ try {
   if (new Set(report.samples.map((s) => s.sha256)).size < 3) {
     throw new Error("Insufficient visual changes across four sampled frames");
   }
+  // Different PNG hashes can still represent visually identical title cards.
+  // Measure actual pixel deltas; require at least two meaningful scene changes.
+  report.visualDeltas = [];
+  for (let i = 1; i < report.samples.length; i += 1) {
+    const previous = join(proofDir, report.samples[i - 1].file);
+    const current = join(proofDir, report.samples[i].file);
+    const diff = run(`visual-diff-${i}`, "ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-i", previous, "-i", current,
+      "-filter_complex", "[0:v][1:v]blend=all_mode=difference,signalstats,metadata=print:file=-",
+      "-frames:v", "1", "-f", "null", "-",
+    ], 30_000);
+    const average = Number(/lavfi\\.signalstats\\.YAVG=([0-9.]+)/.exec(diff)?.[1]);
+    if (!Number.isFinite(average)) throw new Error("FFmpeg could not measure the visual difference");
+    report.visualDeltas.push({ from: report.samples[i - 1].second, to: report.samples[i].second, averageLumaDelta: average });
+  }
+  if (report.visualDeltas.filter((d) => d.averageLumaDelta >= 15).length < 2) {
+    throw new Error("Render is visually near-static despite distinct PNG hashes; requires two meaningful scene changes");
+  }
   report.status = "passed";
   console.log("PASS: HyperFrames check, real MP4, 15s/640x360, four sampled frames with distinct pixels.");
 } catch (error) {
