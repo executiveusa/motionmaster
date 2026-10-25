@@ -82,6 +82,30 @@ test("MM-06: uploaded files are flat and cannot follow symlinks outside workspac
   assert.equal((await fetch(base + "/files/sample.txt", { method: "DELETE" })).status, 405);
 });
 
+test("MM-13: authenticated private API JSON preserves the exact approved CORS origin", async (t) => {
+  env(t, "MOTION_MASTER_API_KEY", "test-secret-not-for-production");
+  env(t, "MOTION_MASTER_ALLOWED_ORIGINS", "https://owner-preview.example");
+  const { base } = await fixture(t);
+  const approved = await fetch(base + "/api/v1/projects", {
+    headers: {
+      origin: "https://owner-preview.example",
+      authorization: "Bearer test-secret-not-for-production",
+    },
+  });
+  assert.equal(approved.status, 200);
+  assert.equal(approved.headers.get("access-control-allow-origin"), "https://owner-preview.example");
+  assert.equal(approved.headers.get("vary"), "origin");
+
+  const forbidden = await fetch(base + "/api/v1/projects", {
+    headers: {
+      origin: "https://untrusted.example",
+      authorization: "Bearer test-secret-not-for-production",
+    },
+  });
+  assert.equal(forbidden.status, 403);
+  assert.notEqual(forbidden.headers.get("access-control-allow-origin"), "https://untrusted.example");
+});
+
 test("MM-09: real binary and multipart uploads round-trip exact bytes", async (t) => {
   env(t, "MOTION_MASTER_API_KEY", undefined);
   env(t, "MOTION_MASTER_ALLOWED_ORIGINS", undefined);
