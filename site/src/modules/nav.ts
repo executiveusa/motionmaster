@@ -80,9 +80,12 @@ export function initMobileBar(): void {
   const editor = qs<HTMLElement>('[data-project-editor]');
   const details = editor?.querySelector('details');
   let heroPassed = false;
-  let editorInView = false;
   const update = () => {
-    bar.hidden = !heroPassed || (editorInView && !!details?.open);
+    // Read current geometry, not a potentially stale IntersectionObserver
+    // callback: opening the editor can change its height while scrolling.
+    const rect = details?.open ? editor?.getBoundingClientRect() : null;
+    const editingInView = !!rect && rect.top < window.innerHeight && rect.bottom > 0;
+    bar.hidden = !heroPassed || editingInView;
   };
   const heroObserver = new IntersectionObserver(([entry]) => {
     if (!entry) return;
@@ -90,13 +93,7 @@ export function initMobileBar(): void {
     update();
   }, { threshold: 0 });
   heroObserver.observe(hero);
-
-  if (editor && details) {
-    const editorObserver = new IntersectionObserver(([entry]) => {
-      editorInView = !!entry?.isIntersecting;
-      update();
-    }, { threshold: 0 });
-    editorObserver.observe(editor);
-    details.addEventListener('toggle', update);
-  }
+  details?.addEventListener('toggle', update);
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
 }
