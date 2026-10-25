@@ -170,6 +170,30 @@ try {
   const keyFieldEmpty = await evaluate('document.querySelector("[data-project-key]").value === ""');
   if (secretStored || !keyFieldEmpty) throw new Error('Private key leaked into browser persistence or visible form');
 
+  // MM-09: real browser file-upload request reaches the authenticated import
+  // endpoint. A malformed archive must be rejected without creating a project.
+  await evaluate('document.querySelector("[data-project-import-toggle]").click()');
+  const importOpened = await evaluate('!document.querySelector("[data-project-import]").hidden && document.querySelector("[data-project-edit]").hidden');
+  if (!importOpened) throw new Error('Import control did not reveal the source-file form');
+  await evaluate(`(() => {
+    const file = new File([new Uint8Array([31, 139, 8, 0, 1, 2, 3])], 'invalid.json.gz', { type: 'application/gzip' });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    document.querySelector('[data-project-import-file]').files = transfer.files;
+    document.querySelector('[data-project-import]').requestSubmit();
+    return true;
+  })()`);
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorImportError"', 'malformed source rejected through browser');
+  const projectsAfterInvalidImport = await (await fetch(base + 'api/v1/projects', {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  })).json();
+  if (projectsAfterInvalidImport.filter((item) => item.id === editorProjectId).length !== 1 ||
+      projectsAfterInvalidImport.length !== 1) {
+    throw new Error('Rejected source import mutated the private project list');
+  }
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('!document.querySelector("[data-project-edit]").hidden && document.querySelector("[data-project-import]").hidden', 'return to saved project after rejected import');
+
   const compactEditor = await evaluate('({ connectionHidden: document.querySelector("[data-project-connect]").hidden, newHidden: document.querySelector("[data-project-create]").hidden, editVisible: !document.querySelector("[data-project-edit]").hidden })');
   if (!compactEditor.connectionHidden || !compactEditor.newHidden || !compactEditor.editVisible) {
     throw new Error('Editor left setup forms open over the saved edit task: ' + JSON.stringify(compactEditor));
@@ -220,9 +244,10 @@ try {
   const spanish = await state();
   const visibleHanSpanish = await evaluate('(/[\\u3400-\\u9fff]/u).test(document.body.innerText)');
   if (visibleHanSpanish) throw new Error('Visible untranslated Han content in Mexican Spanish browser');
-  const spanishEditor = await evaluate('({ summary: document.querySelector("[data-project-editor] summary")?.textContent, save: document.querySelector("[data-project-save]")?.textContent, cancel: document.querySelector("[data-project-cancel]")?.textContent })');
+  const spanishEditor = await evaluate('({ summary: document.querySelector("[data-project-editor] summary")?.textContent, save: document.querySelector("[data-project-save]")?.textContent, cancel: document.querySelector("[data-project-cancel]")?.textContent, import: document.querySelector("[data-project-import-toggle]")?.textContent })');
   if (!spanishEditor.summary?.includes('Editar un video guardado') ||
-      !spanishEditor.cancel?.includes('Cancelar generación')) {
+      !spanishEditor.cancel?.includes('Cancelar generación') ||
+      !spanishEditor.import?.includes('Importar proyecto')) {
     throw new Error('Private editor did not translate to Mexican Spanish: ' + JSON.stringify(spanishEditor));
   }
 
@@ -278,7 +303,7 @@ try {
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
       'browser create/edit/reopen immutable revision', 'browser queue/cancel', 'one-task-at-a-time editor controls',
-      'editor Mexican Spanish labels', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
+      'editor Mexican Spanish labels', 'authenticated malformed-source import rejected without mutation', 'editor desktop/mobile screenshots', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
     editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
     viewport: mobile,
