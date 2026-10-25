@@ -12,6 +12,16 @@ const strings: Record<string, [string, string]> = {
   fullFilm: ['Watch the full behind-the-scenes film (104 seconds)', 'Ver el video completo del proceso (104 segundos)'],
   footerLine: ['Make a video. Keep the source.', 'Crea un video. Conserva el proyecto.'],
   privateSale: ['Private preview · Not on sale.', 'Vista previa privada · No está a la venta.'],
+  consoleTitle: ['Describe your video.', 'Describe tu video.'],
+  libraryTitle: ['Find a starting point.', 'Encuentra por dónde empezar.'],
+  signInTitle: ['Connect your agent to create videos', 'Conecta tu agente para crear videos'],
+  signInButton: ['Connect OpenRouter', 'Conectar OpenRouter'],
+  useAgent: ['Connect', 'Conectar'],
+  starters: ['Try an example', 'Prueba un ejemplo'],
+  create: ['Create', 'Crear'],
+  stop: ['Stop', 'Detener'],
+  signOut: ['Sign out', 'Cerrar sesión'],
+  categories: ['Categories', 'Categorías'],
 };
 const protectedText = new WeakMap<Element, string>();
 export function locale(): Locale {
