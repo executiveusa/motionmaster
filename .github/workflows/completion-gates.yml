@@ -52,5 +52,6 @@ jobs:
         with:
           name: motion-master-completion-proof
           path: .completion-proof/
-          if-no-files-found: warn
+          if-no-files-found: error
+          include-hidden-files: true
           retention-days: 14
