@@ -384,3 +384,20 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `29cc76b`, `662bc39`, `6f1a7b9`, `87eda2b` on draft PR #2. These add two scripts, a CI gate and documentation only. `main` remains `adc9685`; no schema migration, production deploy, paid service, auto-merge, force-push, secret disclosure, Montage change or sale activation.
 
 **NEXT:** On an owner-selected private host, run the preflight with actual secret-store configuration, then prove the network perimeter, encrypted persistent volume, off-host backup/restore and rollback before any staging acceptance. Only after authorization run 10 hosted complete browser journeys and actual Codex/Claude MCP host invocations; obtain independent release approval.
+
+
+## 2026-10-25 23:15 UTC — MM-13 public health information disclosure repair
+
+**DECISION:** Continue private v1, release blocked. Keep the October 24 gallery-first UI, English/es-MX locale behavior, and rendering workflow unchanged. No staging host authorization or production deployment.
+
+**INSPECT:** Draft PR #2 remained open/unmerged at head `9b5707b` before this slice, with 207 commits and 52 changed files. Previous run [40239117099](https://github.com/executiveusa/motionmaster/actions/runs/40239117099) passed. The unauthenticated `GET /health` response exposed local directory paths, MCP endpoint, token source, Montage tenant/base URL, brand path, tool inventory and licence metadata via `statusDocument`. The live preview and benchmark could not be directly fetched; no live design verdict is claimed. Repository visibility remains public.
+
+**CHANGES:** `3de3bbe` adds a regression to `mcp/test/private-http-auth.test.mjs` requiring a public liveness-only JSON shape. `6939921` narrows `mcp/src/index.ts` `statusDocument()` to `name`, `version`, and `status: ok`, preserving the existing 200 status and basic health-monitor compatibility. Both `/health` and the non-site `/` fallback now use the minimal response. No authentication, API route, MCP protocol, user-facing UI or database changes.
+
+**PROOF / LIMIT:** Code and regression were committed on `agent/completion-loop-v1`; CI for `6939921` was not yet available when this entry was written. The previous passing CI does **not** verify this new change. Real browser/video proof for this slice is inherited from the preceding successful branch run, not newly claimed. No host security or live staging proof is implied.
+
+**RISKS:** Owner-controlled staging, encrypted persistent storage, host backup/restore, 10 consecutive hosted browser journeys, live Codex/Claude MCP host calls, independent taste/security/accessibility review, five uncoached users, asset rights, and public-repository visibility remain release blockers. Sale state remains false.
+
+**ROLLBACK:** Revert `6939921` and `3de3bbe` on the draft branch. Main, deployed preview, credentials and owner data remain untouched; no force-push, merge, paid service or Montage edit.
+
+**NEXT:** Verify CI on the code commit, then obtain explicit owner-controlled staging authorization before deploying. Continue only with evidence-backed, small slices.
