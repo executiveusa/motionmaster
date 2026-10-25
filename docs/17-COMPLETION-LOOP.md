@@ -282,3 +282,18 @@ PR on branch `agent/completion-loop-v1`:
 **COMMERCIAL / ROLLBACK:** Classification **USE — private development**. `licence.json.status.onSale=false` passed CI. PR #2 remains draft and unmerged; `main` remains `adc9685e6b4b995ab80db214ef237ac0f03d4486`. Revert the editor/site/i18n/browser/CI commits or close PR #2; no data migrations, original projects, licence/source records, existing hosting or Montage repository were changed. No force-push, production deploy, paid activation or credential disclosure.
 
 **NEXT:** Connect the browser's saved revision to a **running owner-controlled persistent worker** and prove one real authenticated browser journey: create → edit → save → render → watch/download MP4 → export source → import → reopen. Then owner-controlled preview staging and real Codex/Claude MCP calls, followed by independent gauntlet, security/accessibility and human release approval. No sale activation or automatic merge.
+
+
+## 19. Continuation — 2026-10-25 UTC (MM-08 save-before-render regression)
+
+**DECISION:** Repair a concrete human-facing P1: the Render button previously queued the last saved revision even when the user had changed visible text, colour, duration or brief without clicking Save. Preserve the collapsed gallery-first editor, October 24 hero, source/licence records, main and live deployment.
+
+**CHANGES:** Commits `8723e72` and `ade3e4f` update `site/src/modules/project-editor.ts` to compare the visible form with the open immutable revision, save changed fields before queueing, and fail closed on a revision conflict or validation error. Unchanged forms do not create redundant revisions. `scripts/locale-browser-smoke.mjs` now explicitly edits visible text to **Ana Ruiz Updated** and duration to **2.8s** after a prior Save, clicks Render without another Save, and checks that revision 3 and its queued/cancelled job reflect those changes. The existing browser proof still covers authentication, both languages, gallery playback, mobile layout and zero persisted bearer keys.
+
+**PROOF STATUS:** New GitHub Actions [run 40207998444](https://github.com/executiveusa/motionmaster/actions/runs/40207998444) was **in progress** at ledger write. Do not report this slice as passed until the new run completes and its Chromium and TypeScript gates are checked. Earlier run [40207343216](https://github.com/executiveusa/motionmaster/actions/runs/40207343216) passed on `f097702`, before this regression fix. The latest editor changes have not been deployed; Vercel still reports READY at older `33aee7d`.
+
+**RISKS:** This repairs unsaved-form loss but does not yet establish a single browser-to-running-worker-to-watch/export/re-import acceptance run. Render still requires an owner-controlled worker, manual source import UI is absent, hosted staging and live Claude/Codex MCP calls are unverified, and independent Landing Page Director/security/accessibility/user gauntlets remain outstanding. The repository is public. Sale remains off.
+
+**ROLLBACK:** Revert `ade3e4f` and `8723e72` on draft PR #2, or close the draft PR. No schema migration, main merge, production deploy, paid activation, force-push, credential disclosure or Montage edit.
+
+**NEXT:** Inspect CI for the auto-save regression and repair any failure. Then prove one uninterrupted authenticated browser create/edit/render/watch/download/export/import/reopen flow with the real default worker, followed by owner-controlled staging and independent release gates.
