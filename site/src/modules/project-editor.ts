@@ -38,6 +38,7 @@ function status(root: ParentNode, key: string): void {
     editorWorking: 'Rendering your video…',
     editorComplete: 'Video ready. Watch or download it.',
     editorFailed: 'The render failed. Reopen the project to retry.',
+    editorCancelled: 'Render cancelled. Your saved project is unchanged.',
     editorNoShots: 'This project has no editable shots. Create a lower-third to begin.',
     editorError: 'The request failed. Check your connection and permissions.',
   } as Record<string, string>)[key] ?? key;
@@ -82,6 +83,7 @@ export function initProjectEditor(): void {
     '<div class="project-editor__actions">',
     '<button type="submit" class="btn btn--primary" data-i18n="editorSave">Save changes</button>',
     '<button type="button" class="btn btn--ghost" data-project-render data-i18n="editorRender">Render saved version</button>',
+    '<button type="button" class="btn btn--ghost" data-project-cancel data-i18n="editorCancel" hidden>Cancel render</button>',
     '</div></form>',
     '<div data-project-result hidden>',
     '<video data-project-video controls playsinline preload="metadata" aria-label="Your rendered video"></video>',
@@ -105,6 +107,7 @@ export function initProjectEditor(): void {
   const result = q<HTMLElement>(root, '[data-project-result]')!;
   const video = q<HTMLVideoElement>(root, '[data-project-video]')!;
   const shotRoot = q<HTMLElement>(root, '[data-project-shots]')!;
+  const cancelButton = q<HTMLButtonElement>(root, '[data-project-cancel]')!;
   const server = q<HTMLInputElement>(root, '[data-project-server]')!;
   if (localHost(location.hostname)) server.value = location.origin;
 
@@ -159,6 +162,7 @@ export function initProjectEditor(): void {
     const opened = await request<OpenProject>('/projects/' + encodeURIComponent(id));
     current = opened;
     job = null;
+    cancelButton.hidden = true;
     clearVideo();
     q<HTMLInputElement>(root, '[data-project-title]')!.value = opened.revision.title;
     q<HTMLTextAreaElement>(root, '[data-project-brief]')!.value = opened.revision.brief;
@@ -187,7 +191,11 @@ export function initProjectEditor(): void {
       for (const variable of block.variables.filter((v) => v.type === 'string' || v.type === 'color')) {
         const label = document.createElement('label');
         const caption = document.createElement('span');
-        caption.textContent = variable.label || variable.id;
+        caption.dataset.i18n = variable.type === 'color' ? 'editorColor' : 'editorText';
+        caption.textContent = variable.type === 'color' ? 'Color' : 'On-screen text';
+        const variableId = document.createElement('small');
+        variableId.textContent = ' · ' + variable.id;
+        caption.append(variableId);
         const input = document.createElement('input');
         input.dataset.shotVariable = variable.id;
         input.type = variable.type === 'color' ? 'color' : 'text';
@@ -231,40 +239,61 @@ export function initProjectEditor(): void {
     });
     current = saved;
     job = null;
+    cancelButton.hidden = true;
     clearVideo();
     status(root, 'editorSaved');
     await refresh();
   }
   async function render(): Promise<void> {
-    if (!current) return;
+    if (!current || (job && ['queued', 'rendering'].includes(job.status))) return;
     clearVideo();
     const projectId = current.project.id;
     const queued = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs', {
       method: 'POST', body: JSON.stringify({ revision: current.revision.number }),
     });
     job = queued;
+    cancelButton.hidden = false;
     status(root, 'editorQueued');
-    // Polling is bounded. A queued job never implies that a worker is active.
-    for (let attempt = 0; attempt < 80; attempt++) {
-      if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
-      const next = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(queued.id));
-      if (next.status === 'ready') {
+    // Do not lock the editor while a render is running. Users can cancel.
+    void watch(projectId, queued.id);
+  }
+  async function watch(projectId: string, jobId: string): Promise<void> {
+    try {
+      for (let attempt = 0; attempt < 80; attempt++) {
+        if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
+        if (!job || job.id !== jobId || current?.project.id !== projectId) return;
+        const next = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(jobId));
+        if (!job || job.id !== jobId) return;
         job = next;
-        const response = await authenticatedFile('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(next.id) + '/artifact');
-        videoUrl = URL.createObjectURL(await response.blob());
-        video.src = videoUrl;
-        result.hidden = false;
-        status(root, 'editorComplete');
-        return;
+        if (next.status === 'ready') {
+          cancelButton.hidden = true;
+          const response = await authenticatedFile('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(jobId) + '/artifact');
+          if (job?.id !== jobId) return;
+          videoUrl = URL.createObjectURL(await response.blob());
+          video.src = videoUrl;
+          result.hidden = false;
+          status(root, 'editorComplete');
+          return;
+        }
+        if (next.status === 'failed' || next.status === 'cancelled') {
+          cancelButton.hidden = true;
+          status(root, next.status === 'cancelled' ? 'editorCancelled' : 'editorFailed');
+          return;
+        }
+        if (next.status === 'rendering') status(root, 'editorWorking');
       }
-      if (next.status === 'failed' || next.status === 'cancelled') {
-        job = next;
-        status(root, 'editorFailed');
-        return;
-      }
-      if (next.status === 'rendering') status(root, 'editorWorking');
+      status(root, 'editorQueued');
+    } catch (error) {
+      failed(error);
     }
-    status(root, 'editorQueued');
+  }
+  async function cancel(): Promise<void> {
+    if (!current || !job || !['queued', 'rendering'].includes(job.status)) return;
+    const projectId = current.project.id;
+    const cancelled = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(job.id) + '/cancel', { method: 'POST' });
+    job = cancelled;
+    cancelButton.hidden = true;
+    status(root, 'editorCancelled');
   }
   async function authenticatedFile(path: string): Promise<Response> {
     const headers = new Headers();
@@ -296,6 +325,12 @@ export function initProjectEditor(): void {
     void action(async () => {
       const proposed = safeEndpoint(server.value.trim());
       const entered = q<HTMLInputElement>(root, '[data-project-key]')!;
+      workspace.hidden = true;
+      current = null;
+      job = null;
+      cancelButton.hidden = true;
+      editForm.hidden = true;
+      clearVideo();
       base = proposed;
       key = entered.value;
       entered.value = '';
@@ -333,6 +368,7 @@ export function initProjectEditor(): void {
     void action(save);
   });
   q<HTMLButtonElement>(root, '[data-project-render]')!.addEventListener('click', () => void action(render));
+  cancelButton.addEventListener('click', () => void action(cancel));
   q<HTMLButtonElement>(root, '[data-project-download]')!.addEventListener('click', () => void action(() => download(false)));
   q<HTMLButtonElement>(root, '[data-project-source]')!.addEventListener('click', () => void action(() => download(true)));
 }
