@@ -24,3 +24,33 @@
  .locale-picker select { max-width: 115px; }
  .topbar__inner { gap: 9px; }
 }
+
+/* The reel is the product demonstration; make it visible above the fold. */
+@media (min-width: 768px) {
+  .hero { padding-top: clamp(24px, 3vw, 48px); }
+  .hero__body {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    grid-template-areas: 'title aside';
+    align-items: end;
+    column-gap: clamp(36px, 5vw, 90px);
+    row-gap: 0;
+    padding-bottom: clamp(24px, 3vw, 42px);
+  }
+  .hero .display {
+    font-size: clamp(56px, 5.6vw, 86px);
+    line-height: .98;
+    max-width: 15ch;
+  }
+  .hero__aside { align-self: end; padding-bottom: 6px; }
+  .section--proof { padding-top: clamp(25px, 3vw, 42px); }
+  .section--proof .h2 { font-size: clamp(32px, 3vw, 46px); }
+}
+@media (max-width: 767px) {
+  .hero__body {
+    grid-template-areas: 'title' 'aside';
+    grid-template-columns: minmax(0,1fr);
+    row-gap: 18px;
+  }
+  .hero .display { font-size: clamp(45px, 10vw, 68px); max-width: 15ch; }
+  .hero { padding-top: 22px; }
+}
