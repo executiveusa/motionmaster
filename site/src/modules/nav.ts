@@ -71,20 +71,32 @@ export function initMenu(): void {
   });
 }
 
-/** Sticky mobile bar: appears once the hero has passed. */
+/** Sticky mobile CTA stays out of the way of the private video editor. */
 export function initMobileBar(): void {
   const bar = qs<HTMLElement>('[data-mobile-bar]');
   const hero = qs<HTMLElement>('.hero');
   if (!bar || !hero) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const passed = entry.boundingClientRect.top < 0;
-      bar.hidden = !passed;
-    },
-    { threshold: 0 },
-  );
-  observer.observe(hero);
+  const editor = qs<HTMLElement>('[data-project-editor]');
+  const details = editor?.querySelector('details');
+  let heroPassed = false;
+  let editorInView = false;
+  const update = () => {
+    bar.hidden = !heroPassed || (editorInView && !!details?.open);
+  };
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    if (!entry) return;
+    heroPassed = entry.boundingClientRect.top < 0;
+    update();
+  }, { threshold: 0 });
+  heroObserver.observe(hero);
+
+  if (editor && details) {
+    const editorObserver = new IntersectionObserver(([entry]) => {
+      editorInView = !!entry?.isIntersecting;
+      update();
+    }, { threshold: 0 });
+    editorObserver.observe(editor);
+    details.addEventListener('toggle', update);
+  }
 }
