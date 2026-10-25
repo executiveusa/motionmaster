@@ -103,6 +103,28 @@ function readBody(req: IncomingMessage, limitBytes = 1_000_000): Promise<unknown
   });
 }
 
+/**
+ * Uploads are binary. Do not pass them through the JSON chat-body decoder:
+ * MP4s and multipart bodies are not JSON, and that silently broke intake.
+ */
+function readBinaryBody(req: IncomingMessage, limitBytes: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limitBytes) {
+        reject(new Error("Upload exceeds the request limit."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
 /** Guess a content type from a filename. */
 function guessType(name: string): string {
   const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
@@ -396,7 +418,7 @@ export function createHttpHandler(config: Config) {
           writeJson(res, 400, { error: "The upload had no boundary." });
           return;
         }
-        const raw = await readBody(req, 600 * 1024 * 1024);
+        const raw = await readBinaryBody(req, 600 * 1024 * 1024);
         const parsed = parseMultipart(raw as Buffer, boundary);
         if (!parsed) {
           writeJson(res, 400, { error: "The upload could not be read." });
@@ -411,7 +433,7 @@ export function createHttpHandler(config: Config) {
         return;
       }
       const name = String(req.headers["x-file-name"] ?? "upload.bin");
-      const bytes = (await readBody(req, 600 * 1024 * 1024)) as Buffer;
+      const bytes = await readBinaryBody(req, 600 * 1024 * 1024);
       const stored = storeFile(config, name, bytes, contentType || "application/octet-stream");
       if (!stored.ok) {
         writeJson(res, stored.status, { error: stored.error });
