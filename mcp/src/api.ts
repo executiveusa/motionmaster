@@ -139,7 +139,9 @@ export function openApiDocument(config: Config): Record<string, unknown> {
         licenceSentence(),
       license: { name: LICENCE.type },
     },
-    servers: [{ url: `http://${config.host}:${config.port}${API_PREFIX}` }],
+    // Relative root keeps the declared /api/v1 paths from acquiring a second
+    // /api/v1 prefix, and works when the API is behind a same-origin proxy.
+    servers: [{ url: "/" }],
     security: process.env.MOTION_MASTER_API_KEY
       ? [{ bearerAuth: [] }]
       : [],
