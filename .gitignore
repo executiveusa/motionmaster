@@ -56,3 +56,6 @@ site/public/sfx/
 # Python bytecode from the vendored earshot package.
 __pycache__/
 *.pyc
+
+# Transient completion-loop validation evidence
+.completion-proof/
