@@ -148,3 +148,20 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert the three MM-09 commits on draft PR #2, or close the PR. Main, existing videos and the original source/licence records remain unchanged. No merge, force push, paid service or production deployment.
 
 **NEXT:** Inspect new CI and repair failures. Then implement portable source bundle with licence manifest and verified re-import, followed by actual editable shot overrides and end-to-end rendering. Obtain independent security/taste review and founder release approval before any production action.
+
+
+## 10. Continuation — 2026-10-25 UTC (MM-09 portable source export)
+
+**DECISION:** Keep private v1 on the existing draft PR; implement a bounded, owner-private source export rather than deploy an unverified renderer or invent source ownership. No main merge, paid service, production deploy, or sale activation.
+
+**CHANGES:** Commits `0b736a9`, `7c27584`, `794b993`, `52db67e` add `mcp/src/project-source-bundle.ts`, an authenticated `GET /api/v1/projects/:id/jobs/:jobId/source` route, OpenAPI discovery, and a regression suite. Completed jobs with an actual generated source directory can export a gzip-compressed JSON archive containing immutable revisions, project brief, job provenance, generated HTML/HyperFrames files and source assets, SHA-256 checksums, the recorded product licence if present, and an explicit warning that upstream asset rights require separate review. MP4 and render caches are deliberately excluded; MP4 remains available at the existing artifact endpoint. The archive is bounded (512 files, 16 MiB/file, 48 MiB source) and refuses symlinks, missing source or non-ready jobs. `inspectProjectSource` verifies archive structure, sizes, paths and every embedded file checksum without executing imported code.
+
+**PROOF STATUS:** The previous baseline CI [40172553152](https://github.com/executiveusa/motionmaster/actions/runs/40172553152) passed before this slice. New run [40175866930](https://github.com/executiveusa/motionmaster/actions/runs/40175866930) was pending/in progress at ledger time; do **not** claim this slice passed until it completes. New test generates a real FFmpeg MP4, verifies authorization, pending-job denial, exact source bytes, revision history, checksum-tamper rejection, symlink refusal and unsupported methods. Browser/video checks are part of the existing workflow, not evidence of a deployed backend.
+
+**LIVE/BENCHMARK:** Fresh external HTML fetch on 2026-10-25 returned HTTP 200 for the existing Vercel preview, with English-default page, four prompt-backed gallery examples and an agent connection message. Vercel reports READY at **old** commit `33aee7d`; no new backend has been deployed. The benchmark `motionvideo.xyz` also returned HTTP 200 and confirms a prompt-first, browsable video gallery pattern. These fetches do not verify current PR branch browser interactions or live rendering. Scraped fallback text is not proof of playback failure. Independent Landing Page Director / accessibility / security gauntlet remains outstanding.
+
+**RISKS:** This is a portable **gzip JSON source archive**, not ZIP, not an automatic project re-import, not a live shot editor, and not a verified licence grant for third-party assets. The single-writer JSON store, worker cancellation, hosted persistent render process, model-to-edit/reopen, Claude/Codex live MCP smoke, independent review and user trials remain release blockers. `onSale=false` was checked in `licence.json`.
+
+**ROLLBACK:** Revert the four MM-09 source-export commits on draft PR #2; generated project records and MP4s are untouched. Main stays at `adc9685`.
+
+**NEXT:** Resolve any CI failures first. Then add verified source re-import/shot editing and complete the actual render→restart→edit→rerender→export acceptance test. No owner-controlled hosting changes without explicit approval.
