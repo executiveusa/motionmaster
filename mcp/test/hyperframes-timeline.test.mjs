@@ -89,3 +89,14 @@ test("explicit tagline is preserved while missing tagline is omitted", () => {
   const html = buildHyperFramesProject(board, tokens).files.find((file) => file.path.endsWith("/index.html")).contents;
   assert.match(html, />Built to last<\/span>/);
 });
+
+test("scene roles have distinct backgrounds so a film is not one static title card", () => {
+  const board = planVideo({ brief: "Make a 15-second launch title for ACME", durationSeconds: 15 }, tokens);
+  const html = buildHyperFramesProject(board, tokens).files.find((file) => file.path.endsWith("/index.html")).contents;
+  for (const role of ["setup", "reveal", "hold", "exit"]) {
+    assert.ok(html.includes(`data-role="${role}"`), `missing ${role} scene`);
+  }
+  assert.match(html, /\.beat\[data-role="reveal"\], \.beat\[data-role="exit"\]/,
+    "reveal and exit must have their own contrasting background");
+  assert.match(html, /background: var\(--ink\)/, "dark scene must use the canonical ink token");
+});
