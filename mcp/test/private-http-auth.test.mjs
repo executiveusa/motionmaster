@@ -40,6 +40,16 @@ test("MM-06: private files, films, API and MCP refuse a network listener without
   }
   const health = await fetch(base + "/health");
   assert.equal(health.status, 200);
+  const document = await health.json();
+  assert.equal(document.status, "ok");
+  assert.equal(typeof document.name, "string");
+  assert.equal(typeof document.version, "string");
+  assert.deepEqual(Object.keys(document).sort(), ["name", "status", "version"]);
+  // The unauthenticated probe must not disclose host configuration, local
+  // paths, tenant names, tool inventory, token sources or licence records.
+  for (const privateKey of ["mcpEndpoint", "tools", "skills", "clips", "tokens", "montage", "licence", "domain", "rendering"]) {
+    assert.equal(Object.hasOwn(document, privateKey), false, privateKey);
+  }
 });
 
 test("MM-06: bearer token protects local files, films, chat and MCP", async (t) => {
