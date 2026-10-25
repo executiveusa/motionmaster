@@ -1,0 +1,52 @@
+name: Motion Master completion gates
+
+on:
+  pull_request:
+    paths:
+      - "site/**"
+      - "mcp/**"
+      - "bridge/**"
+      - "generator/**"
+      - "library/**"
+      - "plugins/**"
+      - "scripts/completion-gates.mjs"
+      - "licence.json"
+      - ".github/workflows/completion-gates.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: completion-gates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            mcp/package-lock.json
+            site/package-lock.json
+            bridge/package-lock.json
+      - name: Install frozen dependencies
+        run: |
+          npm ci --prefix mcp --no-audit --no-fund
+          npm ci --prefix site --no-audit --no-fund
+          npm ci --prefix bridge --no-audit --no-fund
+      - name: Run completion quality gates
+        run: node scripts/completion-gates.mjs
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-master-completion-proof
+          path: .completion-proof/
+          if-no-files-found: warn
+          retention-days: 14
