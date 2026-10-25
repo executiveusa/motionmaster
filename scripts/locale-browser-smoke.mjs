@@ -142,8 +142,20 @@ try {
       !Object.values(savedProject.revision.shots[0].values ?? {}).includes('Ana Ruiz')) {
     throw new Error('Browser edits did not persist as an immutable revision');
   }
-  await evaluate('document.querySelector("[data-project-render]").click()');
+  // Regression: rendering directly after editing must save the visible
+  // changes first, not silently render the previously saved revision.
+  await evaluate('(() => { document.querySelector("[data-shot-variable]").value = "Ana Ruiz Updated"; document.querySelector("[data-shot-duration]").value = "2.8"; document.querySelector("[data-project-render]").click(); return true; })()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued"', 'render queued through browser');
+  const autoSavedResponse = await fetch(base + 'api/v1/projects/' + editorProjectId, {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  });
+  if (!autoSavedResponse.ok) throw new Error('Cannot reopen auto-saved render revision');
+  const autoSaved = await autoSavedResponse.json();
+  if (autoSaved.revision.number !== 3 ||
+      autoSaved.revision.shots[0].duration !== 2.8 ||
+      !Object.values(autoSaved.revision.shots[0].values ?? {}).includes('Ana Ruiz Updated')) {
+    throw new Error('Render discarded unsaved browser edits: ' + JSON.stringify(autoSaved.revision));
+  }
   await until('!document.querySelector("[data-project-cancel]").disabled && !document.querySelector("[data-project-cancel]").hidden', 'cancel action enabled');
   await evaluate('document.querySelector("[data-project-cancel]").click()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorCancelled"', 'render cancelled through browser');
@@ -151,7 +163,7 @@ try {
     headers: { Authorization: 'Bearer mm-browser-fixture-key' },
   });
   const jobs = await jobsResponse.json();
-  if (!jobsResponse.ok || jobs.length !== 1 || jobs[0].status !== 'cancelled') {
+  if (!jobsResponse.ok || jobs.length !== 1 || jobs[0].status !== 'cancelled' || jobs[0].revision !== 3) {
     throw new Error('Browser cancel did not persist in private backend');
   }
   const secretStored = await evaluate('Object.values(localStorage).some((value) => value.includes("mm-browser-fixture-key"))');
