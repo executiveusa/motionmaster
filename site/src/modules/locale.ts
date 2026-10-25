@@ -109,7 +109,6 @@ const chromeText: Record<string, string> = {
   'Source': 'Fuente',
   'Show more': 'Mostrar más',
   'Copy prompt': 'Copiar prompt',
-  'Copy failed': 'No se pudo copiar',
   'ready': 'listo',
   'rendering': 'generando',
   'failed': 'falló',
