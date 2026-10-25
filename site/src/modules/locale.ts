@@ -236,13 +236,16 @@ function translateChrome(lang: Locale): void {
   }
 }
 
-const protectedText = new WeakMap<Element, string>();
+const protectedText = new WeakMap<Element, { key: string; en: string }>();
 /** Also apply to components inserted after initial page load. */
 function translateDataNodes(lang: Locale): void {
   for (const [key, pair] of Object.entries(strings)) {
     for (const node of document.querySelectorAll<HTMLElement>(`[data-i18n="${key}"]`)) {
-      if (!protectedText.has(node)) protectedText.set(node, node.innerHTML);
-      const next = lang === 'en' ? protectedText.get(node)! : pair[1];
+      // Dynamic status nodes can reuse the same element with a NEW i18n key.
+      // An English snapshot from the previous key must never overwrite it.
+      const previous = protectedText.get(node);
+      if (!previous || previous.key !== key) protectedText.set(node, { key, en: node.innerHTML });
+      const next = lang === 'en' ? protectedText.get(node)!.en : pair[1];
       if (node.innerHTML !== next) node.innerHTML = next;
     }
   }
@@ -277,7 +280,7 @@ export function initLocale(): void {
     }
   });
   observer.observe(document.body, { subtree: true, childList: true, characterData: true,
-    attributes: true, attributeFilter: ['aria-label', 'placeholder', 'title', 'alt'] });
+    attributes: true, attributeFilter: ['aria-label', 'placeholder', 'title', 'alt', 'data-i18n'] });
   selector?.addEventListener('change', () => {
     const value: Locale = selector.value === 'es-MX' ? 'es-MX' : 'en';
     localStorage.setItem('motion-master:locale', value);
