@@ -674,7 +674,7 @@ export async function handleApi(
 
     // A client can queue, inspect, cancel or retry a job. Only the trusted
     // worker may transition it to rendering/ready/failed.
-    const jobMatch = /^\\/projects\\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\\/jobs(?:\\/(j_[a-zA-Z0-9_-]+)(?:\\/(cancel|retry))?)?$/.exec(route);
+    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry))?)?$/.exec(route);
     if (jobMatch) {
       const [, projectId, jobId, action] = jobMatch;
       if (!readProject(config.repoRoot, projectId)) {
