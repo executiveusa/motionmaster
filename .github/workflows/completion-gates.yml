@@ -12,6 +12,7 @@ on:
       - "scripts/completion-gates.mjs"
       - "scripts/hyperframes-smoke.mjs"
       - "scripts/default-worker-edit-smoke.mjs"
+      - "scripts/browser-real-worker-smoke.mjs"
       - "scripts/gallery-media-smoke.mjs"
       - "scripts/capture-site.mjs"
       - "scripts/locale-browser-smoke.mjs"
@@ -67,6 +68,9 @@ jobs:
       - name: Render and rerender edited project using default HyperFrames worker
         timeout-minutes: 20
         run: node scripts/default-worker-edit-smoke.mjs
+      - name: Prove uninterrupted Chromium to default worker and source re-import
+        timeout-minutes: 12
+        run: node scripts/browser-real-worker-smoke.mjs
       - name: Preserve verification evidence
         if: always()
         uses: actions/upload-artifact@v4
