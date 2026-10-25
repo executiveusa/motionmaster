@@ -89,6 +89,12 @@ export function planFilm(
   const count = options.count ?? 3;
   const query = `${brief} ${(options.tags ?? []).join(" ")}`.trim();
   const excluded = new Set(options.exclude ?? []);
+  // These mountable upstream blocks failed the REAL default-worker HyperFrames
+  // readability gate. Keep them out of automatic plans and explicit edits
+  // until requalified by an actual MP4 + craft-check run; do not weaken the
+  // gate or pretend catalogue metadata is a quality verdict.
+  // caret-swap: CI 40193087103; split-flap-board: CI 40193303487.
+  const craftQuarantine = new Set(["caret-swap", "split-flap-board"]);
   // HTML snippets are not mountable HyperFrames compositions, even when they
   // expose editable variables or have a .html source file.
   const mountable = (block: MotionBlock): boolean =>
@@ -98,7 +104,7 @@ export function planFilm(
     limit: count * 8,
     requireVariables: true,
   })
-    .filter((candidate) => !excluded.has(candidate.block.id))
+    .filter((candidate) => !excluded.has(candidate.block.id) && !craftQuarantine.has(candidate.block.id))
     // The registry marks a handful of entries as ports: markup to paste into
     // a composition, not a composition to mount. Every one of them is a
     // fragment, and mounting a fragment produces a shot with no identity.
@@ -113,7 +119,7 @@ export function planFilm(
     }
     for (const id of selected) {
       const block = options.blocks.blocks.find((entry) => entry.id === id);
-      if (!block || excluded.has(id) || block.variables.length === 0 ||
+      if (!block || excluded.has(id) || craftQuarantine.has(id) || block.variables.length === 0 ||
           block.tags.includes("transitions-dev-port") ||
           !mountable(block)) {
         throw new Error(`Edited shot block is unavailable or ineligible: ${id}`);
