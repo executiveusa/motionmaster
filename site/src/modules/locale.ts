@@ -108,10 +108,21 @@ const chromeText: Record<string, string> = {
   'partial': 'parcial',
   'Source': 'Fuente',
   'Show more': 'Mostrar más',
+  'Download the MP4': 'Descargar MP4',
+  'The render did not finish.': 'No se pudo terminar de generar el video.',
+  'Rendering on the machine. This takes a minute or two.': 'Generando el video en tu equipo. Puede tardar uno o dos minutos.',
+  'Still rendering. Ask for the film again in a minute.': 'El video sigue generándose. Vuelve a consultarlo en un minuto.',
+  'no agent here · start it with: cd mcp && npm start': 'No hay agente conectado · inícialo con: cd mcp && npm start',
+  ' · a deployed page also needs the browser’s local-network permission': ' · una página publicada también necesita permiso del navegador para acceder a la red local',
+  'copy': 'copiar',
+  'copied': 'copiado',
+  'film': 'video',
+  'weak': 'débil',
+  'strong': 'fuerte',
 };
 const originalNodes = new WeakMap<Text, { en: string; es: string }>();
 const originalAttrs = new WeakMap<Element, Map<string, { en: string; es: string }>>();
-const protectedSelectors = 'pre,code,script,style,noscript,textarea,svg,[data-i18n-ignore],.console__text,.library__item-title,.library__item-summary,.library__licence,.sfx__title,.sfx__note';
+const protectedSelectors = 'pre,code,script,style,noscript,textarea,svg,[data-i18n-ignore],.console__text,.library__item-title,.library__item-summary,.library__licence,.sfx__title,.sfx__note,.film__title,.film__shot-title,.artifact__headline,.artifact__notes,.artifact__title';
 function translateLabel(value: string): string | undefined {
   const normalized = value.replace(/\s+/g, ' ').trim();
   if (chromeText[normalized]) return chromeText[normalized];
@@ -121,6 +132,22 @@ function translateLabel(value: string): string | undefined {
   if (m) return 'Mostrar ' + m[1] + ' más';
   m = /^(\d+) of (\d+) sounds$/.exec(normalized);
   if (m) return m[1] + ' de ' + m[2] + ' sonidos';
+  m = /^agent connected · (\\d+) tools$/.exec(normalized);
+  if (m) return 'agente conectado · ' + m[1] + ' herramientas';
+  m = /^weak (\\d+) → strong (\\d+)$/.exec(normalized);
+  if (m) return 'débil ' + m[1] + ' → fuerte ' + m[2];
+  m = /^everything · (\\d+)$/.exec(normalized);
+  if (m) return 'todo · ' + m[1];
+  m = /^The gate dropped (.+)\\. They are recorded so they are not used again\\.$/.exec(normalized);
+  if (m) return 'La revisión descartó ' + m[1] + '. Se registraron para evitar volver a usarlos.';
+  m = /^The sound library could not be loaded: (.+)$/.exec(normalized);
+  if (m) return 'No se pudo cargar la biblioteca de sonidos: ' + m[1];
+  m = /^Copy the id of (.+)$/.exec(normalized);
+  if (m) return 'Copiar el identificador de ' + m[1];
+  m = /^Play (.+)$/.exec(normalized);
+  if (m) return 'Reproducir ' + m[1];
+  m = /^(.+) failed$/.exec(normalized);
+  if (m) return m[1] + ': error al subir el archivo';
   return undefined;
 }
 function translateChrome(lang: Locale): void {
@@ -166,6 +193,16 @@ function translateChrome(lang: Locale): void {
 }
 
 const protectedText = new WeakMap<Element, string>();
+/** Also apply to components inserted after initial page load. */
+function translateDataNodes(lang: Locale): void {
+  for (const [key, pair] of Object.entries(strings)) {
+    for (const node of document.querySelectorAll<HTMLElement>(`[data-i18n="${key}"]`)) {
+      if (!protectedText.has(node)) protectedText.set(node, node.innerHTML);
+      const next = lang === 'en' ? protectedText.get(node)! : pair[1];
+      if (node.innerHTML !== next) node.innerHTML = next;
+    }
+  }
+}
 export function locale(): Locale {
   return document.documentElement.lang === 'es-MX' ? 'es-MX' : 'en';
 }
@@ -177,12 +214,7 @@ export function initLocale(): void {
   const apply = (lang: Locale): void => {
     document.documentElement.lang = lang;
     if (selector) selector.value = lang;
-    for (const [key, pair] of Object.entries(strings)) {
-      for (const node of document.querySelectorAll<HTMLElement>(`[data-i18n="${key}"]`)) {
-        if (!protectedText.has(node)) protectedText.set(node, node.innerHTML);
-        node.innerHTML = lang === 'en' ? protectedText.get(node)! : pair[1];
-      }
-    }
+    translateDataNodes(lang);
     translateChrome(lang);
     document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', lang === 'en'
       ? 'Motion Master makes videos with an AI agent. Watch real examples, use their prompts and keep the editable source.'
@@ -195,7 +227,10 @@ export function initLocale(): void {
   // The library and agent console build their UI asynchronously. Translate
   // new controls without altering the original catalogue or user messages.
   const observer = new MutationObserver(() => {
-    if (locale() === 'es-MX') translateChrome('es-MX');
+    if (locale() === 'es-MX') {
+      translateDataNodes('es-MX');
+      translateChrome('es-MX');
+    }
   });
   observer.observe(document.body, { subtree: true, childList: true, characterData: true,
     attributes: true, attributeFilter: ['aria-label', 'placeholder', 'title', 'alt'] });
