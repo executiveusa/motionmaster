@@ -111,3 +111,21 @@ test("MM-05: empty queue drains without writing anything", async (t) => {
   const { config } = fixture(t);
   await processProjectQueue(config);
 });
+
+test("MM-05: opt-in queue drain serially renders two queued jobs and keeps revisions distinct", async (t) => {
+  const { root, config, projectId } = fixture(t);
+  const first = createProjectJob(root, projectId, 1);
+  const second = createProjectJob(root, projectId, 1);
+  let concurrent = 0;
+  let peak = 0;
+  const renderer = async (...args) => {
+    concurrent++;
+    peak = Math.max(peak, concurrent);
+    try { return await ffmpegRenderer(...args); }
+    finally { concurrent--; }
+  };
+  await processProjectQueue(config, renderer);
+  assert.equal(peak, 1);
+  assert.equal(readProjectJob(root, projectId, first.id).status, "ready");
+  assert.equal(readProjectJob(root, projectId, second.id).status, "ready");
+});
