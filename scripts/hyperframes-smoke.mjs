@@ -5,7 +5,7 @@
  * Exit nonzero on any gate, encode, duration, frame or motion proof failure.
  */
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,6 +52,24 @@ function run(name, command, args, timeoutMs = 600_000) {
 }
 try {
   run("check", "bash", ["generator/hf.sh", "check", projectDir], 240_000);
+  // HyperFrames may exit 0 with craft warnings in non-strict mode. Treat those
+  // as failures instead of confusing "CLI success" with release-quality proof.
+  const checksDir = join(projectDir, ".hyperframes", "artifacts", "checks");
+  const reports = readdirSync(checksDir).filter((name) => name.endsWith(".json"))
+    .map((name) => join(checksDir, name))
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+  if (!reports.length) throw new Error("HyperFrames produced no structured check report");
+  const check = JSON.parse(readFileSync(reports[0], "utf8"));
+  const findings = Object.values(check).flatMap((section) =>
+    Array.isArray(section?.findings) ? section.findings : []);
+  report.gate = {
+    browserSkipped: check.browserSkipped, findings,
+    warningCount: findings.filter((item) => item.severity === "warning").length,
+    errorCount: findings.filter((item) => item.severity === "error").length,
+  };
+  if (report.gate.browserSkipped || report.gate.warningCount || report.gate.errorCount) {
+    throw new Error(`HyperFrames craft gate has ${report.gate.errorCount} errors and ${report.gate.warningCount} warnings`);
+  }
   run("render", "bash", [
     "generator/hf.sh", "render", projectDir, "--output", video, "-f", "12", "-q", "delivery",
   ], 600_000);
