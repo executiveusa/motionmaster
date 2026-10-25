@@ -248,7 +248,7 @@ export function listProjectJobs(repoRoot: string, projectId: string): ProjectJob
   const dir = join(projectDir(repoRoot, projectId), 'jobs');
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /^j_[a-zA-Z0-9_-]+\\.json$/.test(entry.name))
+    .filter((entry) => entry.isFile() && /^j_[a-zA-Z0-9_-]+\.json$/.test(entry.name))
     .map((entry) => readProjectJob(repoRoot, projectId, entry.name.slice(0, -5))!)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
@@ -281,7 +281,7 @@ export function transitionProjectJob(
     artifact = options.artifact;
     // Only a local, regular, nonempty MP4 under this project's artifact
     // directory can be recorded as complete. No URL or path traversal.
-    if (!artifact || !/^artifacts\\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\\.mp4$/.test(artifact)) {
+    if (!artifact || !/^artifacts\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\.mp4$/.test(artifact)) {
       throw new Error('A project-local MP4 artifact is required.');
     }
     const path = join(projectDir(repoRoot, projectId), artifact);
