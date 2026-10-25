@@ -108,6 +108,13 @@ const chromeText: Record<string, string> = {
   'partial': 'parcial',
   'Source': 'Fuente',
   'Show more': 'Mostrar más',
+  'Copy prompt': 'Copiar prompt',
+  'Copy failed': 'No se pudo copiar',
+  'ready': 'listo',
+  'rendering': 'generando',
+  'failed': 'falló',
+  'queued': 'en espera',
+  'agent': 'agente',
   'Download the MP4': 'Descargar MP4',
   'The render did not finish.': 'No se pudo terminar de generar el video.',
   'Rendering on the machine. This takes a minute or two.': 'Generando el video en tu equipo. Puede tardar uno o dos minutos.',
@@ -132,6 +139,9 @@ function translateLabel(value: string): string | undefined {
   if (m) return 'Mostrar ' + m[1] + ' más';
   m = /^(\d+) of (\d+) sounds$/.exec(normalized);
   if (m) return m[1] + ' de ' + m[2] + ' sonidos';
+  m = /^no agent here · start it with: cd mcp && npm start(?: · a deployed page also needs the browser’s local-network permission)?$/.exec(normalized);
+  if (m) return 'No hay agente conectado · inícialo con: cd mcp && npm start' +
+    (normalized.includes('local-network permission') ? ' · una página publicada también necesita permiso del navegador para acceder a la red local' : '');
   m = /^agent connected · (\d+) tools$/.exec(normalized);
   if (m) return 'agente conectado · ' + m[1] + ' herramientas';
   m = /^weak (\d+) → strong (\d+)$/.exec(normalized);
