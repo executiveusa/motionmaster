@@ -71,6 +71,7 @@ import {
 } from "./render.js";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
+import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -693,7 +694,9 @@ export async function handleApi(
           return true;
         }
         try {
-          writeJson(res, 201, createProjectJob(config.repoRoot, projectId, body.revision as number));
+          const job = createProjectJob(config.repoRoot, projectId, body.revision as number);
+          writeJson(res, 201, job);
+          if (projectWorkerEnabled()) void processProjectQueue(config);
         } catch (error) {
           fail(res, 404, error instanceof Error ? error.message : "Revision not found.");
         }
@@ -707,7 +710,9 @@ export async function handleApi(
       }
       if (jobId && action && method === "POST") {
         try {
-          writeJson(res, 200, transitionProjectJob(config.repoRoot, projectId, jobId, action as "cancel" | "retry"));
+          const job = transitionProjectJob(config.repoRoot, projectId, jobId, action as "cancel" | "retry");
+          writeJson(res, 200, job);
+          if (action === "retry" && projectWorkerEnabled()) void processProjectQueue(config);
         } catch (error) {
           const message = error instanceof Error ? error.message : "Job transition failed.";
           fail(res, message.includes("not found") ? 404 : 409, message);
