@@ -5,7 +5,7 @@
  * profile and the browser's DevTools protocol (no third-party browser service).
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -137,7 +137,7 @@ try {
 
   await change('es-MX');
   await command('Page.reload', { ignoreCache: true });
-  await until(`document.readyState === 'complete' && document.documentElement.lang === 'es-MX'`, 'persisted Spanish after reload');
+  await until(`document.readyState === 'complete' && document.documentElement.lang === 'es-MX' && !document.querySelector('#__mm_locale_dynamic')`, 'persisted Spanish after actual reload');
   const reloaded = await state();
   if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea un video')) {
     throw new Error('Spanish preference did not persist across reload: ' + JSON.stringify(reloaded));
@@ -149,6 +149,16 @@ try {
     throw new Error('Mobile page has horizontal overflow: ' + JSON.stringify(mobile));
   }
   if (exceptions.length) throw new Error('Uncaught browser exceptions: ' + exceptions.slice(0, 3).join('; '));
+  const proof = {
+    kind: 'locale-browser-interaction', passed: true, checkedAt: new Date().toISOString(),
+    checks: ['fresh English default', 'Spanish selector click', 'late-mounted data-i18n',
+      'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
+      '390px no horizontal overflow', 'zero uncaught browser exceptions'],
+    viewport: mobile,
+  };
+  const proofDir = resolve(root, '.completion-proof');
+  mkdirSync(proofDir, { recursive: true });
+  writeFileSync(resolve(proofDir, 'locale-browser.json'), JSON.stringify(proof, null, 2) + '\n');
   console.log('PASS: Chromium English default -> Spanish click -> dynamic i18n -> English click -> Spanish reload; mobile 390px; no exceptions');
 } finally {
   ws?.close();
