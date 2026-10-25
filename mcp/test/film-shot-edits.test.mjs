@@ -85,3 +85,21 @@ test("MM-08: reordered and trimmed shot timeline is written into editable HyperF
   assert.match(html, /data-composition-id="main" data-start="0" data-duration="3"/);
   assert.deepEqual(source.shots.map((shot) => shot.id), ids);
 });
+
+test("MM-04: known craft-gate failures cannot be selected or auto-planned", { skip }, () => {
+  // These were rejected by actual HyperFrames checks, not by catalogue metadata.
+  // Do not silently re-enable them until a verified edited MP4 requalifies them.
+  for (const id of ["caret-swap", "split-flap-board"]) {
+    assert.ok(blocks.blocks.some((block) => block.id === id), id + " missing from pinned catalogue");
+    assert.throws(
+      () => planFilm("A kinetic type title", { blocks, tokens, selectedIds: [id] }),
+      /ineligible/,
+      id + " must be unavailable to manual editing"
+    );
+  }
+  const plan = planFilm("A kinetic split-flap text title", { blocks, tokens, count: 20 });
+  assert.ok(
+    plan.shots.every((shot) => !["caret-swap", "split-flap-board"].includes(shot.id)),
+    "automatic matching must not publish blocks with known craft failures"
+  );
+});
