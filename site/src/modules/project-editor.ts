@@ -40,6 +40,9 @@ function status(root: ParentNode, key: string): void {
     editorFailed: 'The render failed. Reopen the project to retry.',
     editorCancelled: 'Render cancelled. Your saved project is unchanged.',
     editorNoShots: 'This project has no editable shots. Create a lower-third to begin.',
+    editorImported: 'Source imported as a new private project. Review its assets before rendering.',
+    editorImportError: 'The source archive was rejected. Choose a valid Motion Master .json.gz export.',
+    editorImportSize: 'Source archive exceeds the 64 MB upload limit.',
     editorError: 'The request failed. Check your connection and permissions.',
   } as Record<string, string>)[key] ?? key;
 }
@@ -68,8 +71,15 @@ export function initProjectEditor(): void {
     '<button type="button" class="btn btn--ghost" data-project-open data-i18n="editorOpen">Open project</button>',
     '<button type="button" class="btn btn--ghost" data-project-refresh data-i18n="editorRefresh">Refresh</button>',
     '<button type="button" class="btn btn--ghost" data-project-new-toggle data-i18n="editorNewButton">New video</button>',
+    '<button type="button" class="btn btn--ghost" data-project-import-toggle data-i18n="editorImportButton">Import source</button>',
     '<button type="button" class="btn btn--ghost" data-project-change data-i18n="editorChange">Change connection</button>',
     '</div>',
+    '<form data-project-import class="project-editor__form" hidden>',
+    '<h3 data-i18n="editorImportTitle">Import an editable project</h3>',
+    '<p data-i18n="editorImportIntro">Choose a Motion Master .json.gz export. Import creates a new private project; source assets require review before reuse.</p>',
+    '<label><span data-i18n="editorImportFile">Source archive (.json.gz)</span><input data-project-import-file type="file" accept=".json.gz,.gz,application/gzip" required></label>',
+    '<button type="submit" class="btn btn--ghost" data-i18n="editorImportSubmit">Import and open</button>',
+    '</form>',
     '<form data-project-create class="project-editor__form">',
     '<h3 data-i18n="editorNew">New lower-third video</h3>',
     '<label><span data-i18n="editorTitle">Project title</span><input data-project-new-title maxlength="120" required value="My lower-third"></label>',
@@ -107,6 +117,7 @@ export function initProjectEditor(): void {
   const workspace = q<HTMLElement>(root, '[data-project-workspace]')!;
   const connectForm = q<HTMLFormElement>(root, '[data-project-connect]')!;
   const createForm = q<HTMLFormElement>(root, '[data-project-create]')!;
+  const importForm = q<HTMLFormElement>(root, '[data-project-import]')!;
   const editForm = q<HTMLFormElement>(root, '[data-project-edit]')!;
   const result = q<HTMLElement>(root, '[data-project-result]')!;
   const video = q<HTMLVideoElement>(root, '[data-project-video]')!;
@@ -229,6 +240,7 @@ export function initProjectEditor(): void {
       shotRoot.append(group);
     }
     createForm.hidden = true;
+    importForm.hidden = true;
     editForm.hidden = opened.revision.shots.length === 0;
     if (!opened.revision.shots.length) status(root, 'editorNoShots');
     else status(root, 'editorLoaded');
@@ -359,6 +371,29 @@ export function initProjectEditor(): void {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
+  async function importArchive(): Promise<void> {
+    const input = q<HTMLInputElement>(root, '[data-project-import-file]')!;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 64 * 1024 * 1024) {
+      status(root, 'editorImportSize');
+      return;
+    }
+    const headers = new Headers({ 'Content-Type': 'application/gzip' });
+    if (key) headers.set('Authorization', 'Bearer ' + key);
+    const response = await fetch(base + '/api/v1/projects/import', {
+      method: 'POST', headers, body: file, cache: 'no-store',
+    });
+    if (!response.ok) {
+      status(root, response.status === 413 ? 'editorImportSize' : 'editorImportError');
+      return;
+    }
+    const imported = await response.json() as OpenProject;
+    await refresh();
+    await openProject(imported.project.id);
+    importForm.reset();
+    status(root, 'editorImported');
+  }
   async function action(run: () => Promise<void>): Promise<void> {
     if (busy) return;
     setBusy(true);
@@ -375,6 +410,7 @@ export function initProjectEditor(): void {
       job = null;
       cancelButton.hidden = true;
       editForm.hidden = true;
+      importForm.hidden = true;
       clearVideo();
       base = proposed;
       key = entered.value;
@@ -412,8 +448,19 @@ export function initProjectEditor(): void {
   });
   q<HTMLButtonElement>(root, '[data-project-new-toggle]')!.addEventListener('click', () => {
     createForm.hidden = false;
+    importForm.hidden = true;
     editForm.hidden = true;
     q<HTMLInputElement>(root, '[data-project-new-title]')!.focus();
+  });
+  q<HTMLButtonElement>(root, '[data-project-import-toggle]')!.addEventListener('click', () => {
+    importForm.hidden = false;
+    createForm.hidden = true;
+    editForm.hidden = true;
+    q<HTMLInputElement>(root, '[data-project-import-file]')!.focus();
+  });
+  importForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void action(importArchive);
   });
   q<HTMLButtonElement>(root, '[data-project-change]')!.addEventListener('click', () => {
     connectForm.hidden = false;
