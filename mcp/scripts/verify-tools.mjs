@@ -356,20 +356,24 @@ const main = async () => {
       new Set(kitPayload.takes.map((take) => take.id)).size === kitPayload.takes.length,
     );
 
-    section("health document");
+    section("public liveness and recorded licence");
     const health = await (await fetch(`${baseUrl}/health`)).json();
     console.log(JSON.stringify(health, null, 2));
-    // The offer is recorded but not on sale. Both facts are checked: the
-    // recorded terms must not drift, and the sale state must be false.
-    check("the recorded licence is a paid one-time licence", health.licence.type === "paid-one-time");
-    check("the offer is not on sale", health.licence.status?.onSale === false);
-    check("Solo is $99", health.licence.tiers[0].price === 99);
-    check("Studio is $399", health.licence.tiers[1].price === 399);
-    check("local rendering is available", health.rendering.local.available === true);
-    check("hosted rendering is a studio feature", health.rendering.hosted.tier === "studio");
-    check("no hosted render allowance number is published", health.rendering.hosted.allowance === null);
-    check("nothing is billed automatically", /nothing is ever charged automatically|never .*automatic|no automatic/i.test(health.rendering.hosted.billingNote));
-    check("no URL is published", health.domain.url === null);
+    check("public health is liveness-only",
+      health.status === "ok" && Object.keys(health).sort().join(",") === "name,status,version");
+    const licenceResponse = await fetch(`${baseUrl}/api/v1/licence`);
+    check("recorded licence API responds", licenceResponse.status === 200);
+    const licence = await licenceResponse.json();
+    // Verify terms at the existing API, not by leaking them through /health.
+    check("the recorded licence is a paid one-time licence", licence.type === "paid-one-time");
+    check("the offer is not on sale", licence.status?.onSale === false);
+    check("Solo is $99", licence.tiers[0].price === 99);
+    check("Studio is $399", licence.tiers[1].price === 399);
+    check("local rendering is available", licence.rendering.local.available === true);
+    check("hosted rendering is a studio feature", licence.rendering.hosted.tier === "studio");
+    check("no hosted render allowance number is published", licence.rendering.hosted.allowance === null);
+    check("nothing is billed automatically", /nothing is ever charged automatically|never .*automatic|no automatic/i.test(licence.rendering.hosted.billingNote));
+    check("no URL is published", licence.domain.url === null);
   } finally {
     await client.close();
     server.child.kill("SIGTERM");
