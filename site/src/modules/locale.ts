@@ -132,13 +132,13 @@ function translateLabel(value: string): string | undefined {
   if (m) return 'Mostrar ' + m[1] + ' más';
   m = /^(\d+) of (\d+) sounds$/.exec(normalized);
   if (m) return m[1] + ' de ' + m[2] + ' sonidos';
-  m = /^agent connected · (\\d+) tools$/.exec(normalized);
+  m = /^agent connected · (\d+) tools$/.exec(normalized);
   if (m) return 'agente conectado · ' + m[1] + ' herramientas';
-  m = /^weak (\\d+) → strong (\\d+)$/.exec(normalized);
+  m = /^weak (\d+) → strong (\d+)$/.exec(normalized);
   if (m) return 'débil ' + m[1] + ' → fuerte ' + m[2];
-  m = /^everything · (\\d+)$/.exec(normalized);
+  m = /^everything · (\d+)$/.exec(normalized);
   if (m) return 'todo · ' + m[1];
-  m = /^The gate dropped (.+)\\. They are recorded so they are not used again\\.$/.exec(normalized);
+  m = /^The gate dropped (.+)\. They are recorded so they are not used again\.$/.exec(normalized);
   if (m) return 'La revisión descartó ' + m[1] + '. Se registraron para evitar volver a usarlos.';
   m = /^The sound library could not be loaded: (.+)$/.exec(normalized);
   if (m) return 'No se pudo cargar la biblioteca de sonidos: ' + m[1];
