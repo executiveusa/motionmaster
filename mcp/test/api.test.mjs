@@ -189,9 +189,11 @@ test("an unknown API route is a 404 that points at the index", async () => {
   assert.ok(body.index, "the 404 does not point at the index");
 });
 
-test("the MCP route is untouched by the API", async () => {
-  const res = await fetch(`${base}/health`);
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.ok(body.tools !== undefined || body.endpoints !== undefined);
+test("the public liveness endpoint is minimal and the MCP route remains separate", async () => {
+  const { status, body } = await get("/health");
+  assert.equal(status, 200);
+  assert.equal(body.status, "ok");
+  assert.deepEqual(Object.keys(body).sort(), ["name", "status", "version"]);
+  const mcp = await get("/mcp");
+  assert.notEqual(mcp.status, 404, "MCP route must not fall through to the API 404");
 });
