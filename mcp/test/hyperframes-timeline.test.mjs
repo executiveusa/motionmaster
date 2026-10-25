@@ -72,3 +72,20 @@ test("GSAP runtime is never emitted as a zero-byte placeholder", () => {
   const gsap = supplied.files.find((file) => file.path.endsWith("/gsap-3.14.2.min.js"));
   assert.equal(gsap?.contents, "/* local pinned GSAP */");
 });
+
+test("brief headline appears in the rendered markup, not internal slot names", () => {
+  const board = planVideo({ brief: "Make a 15-second launch title for ACME", durationSeconds: 15 }, tokens);
+  const html = buildHyperFramesProject(board, tokens).files.find((file) => file.path.endsWith("/index.html")).contents;
+  assert.match(html, />ACME<\/span>/, "actual customer brand must appear on screen");
+  assert.doesNotMatch(html, />wordmark<\/span>|>tagline<\/span>|>backdrop<\/span>/,
+    "internal element names must never be shown as film copy");
+  assert.match(html, /tl\.fromTo\("\.beat\[data-track-index=\\\"0\\\"\] \.beat__label", \{ opacity: 1, y: 0 \}/,
+    "first frame must have a visible title for the HyperFrames thumbnail gate");
+  assert.match(html, /duration: 0\.18, ease:/, "closing line must enter promptly enough to be readable");
+});
+
+test("explicit tagline is preserved while missing tagline is omitted", () => {
+  const board = planVideo({ brief: "Launch ACME, tagline: Built to last", durationSeconds: 15 }, tokens);
+  const html = buildHyperFramesProject(board, tokens).files.find((file) => file.path.endsWith("/index.html")).contents;
+  assert.match(html, />Built to last<\/span>/);
+});
