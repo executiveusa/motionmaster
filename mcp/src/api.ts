@@ -72,7 +72,7 @@ import {
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
-import { exportProjectSource } from "./project-source-bundle.js";
+import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -107,6 +107,20 @@ async function readJson(req: IncomingMessage, limit = 4_000_000): Promise<unknow
   }
   if (!chunks.length) return {};
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+/** Read an uploaded gzip source archive as bytes; never decode it as JSON. */
+async function readSourceArchive(req: IncomingMessage): Promise<Buffer> {
+  const limit = 64 * 1024 * 1024;
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const bytes = chunk as Buffer;
+    size += bytes.length;
+    if (size > limit) throw new Error("Source archive exceeds upload limit.");
+    chunks.push(bytes);
+  }
+  return Buffer.concat(chunks);
 }
 
 /**
@@ -293,6 +307,11 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           responses: { 201: { description: "created", content: json(obj) }, 400: { description: "invalid input", content: json(obj) } },
         },
       },
+      [`${API_PREFIX}/projects/import`]: {
+        post: { summary: "Import a validated source archive as a new private project; imported code is never executed.",
+          requestBody: { required: true, content: { "application/gzip": { schema: { type: "string", format: "binary" } } } },
+          responses: { 201: { description: "new project", content: json(obj) }, 400: { description: "invalid archive", content: json(obj) }, 401: { description: "unauthorized" } } },
+      },
       [`${API_PREFIX}/projects/{id}`]: {
         get: { summary: "Reopen the current project revision.", responses: {
           200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
@@ -408,6 +427,7 @@ export async function handleApi(
         "POST /sound/plan",
         "GET  /projects",
         "POST /projects",
+        "POST /projects/import",
         "GET  /projects/{id}",
         "POST /projects/{id}/revisions",
         "GET  /projects/{id}/revisions/{number}",
@@ -658,6 +678,23 @@ export async function handleApi(
     if (!process.env.MOTION_MASTER_API_KEY?.trim() &&
         !["127.0.0.1", "::1", "localhost"].includes(config.host)) {
       fail(res, 403, "Private project storage requires a configured API key outside loopback.");
+      return true;
+    }
+
+    if (route === "/projects/import" && method === "POST") {
+      const mediaType = (req.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
+      if (mediaType !== "application/gzip" && mediaType !== "application/octet-stream") {
+        fail(res, 415, "Upload a gzip JSON source archive.");
+        return true;
+      }
+      try {
+        const archive = await readSourceArchive(req);
+        const imported = importProjectSource(config.repoRoot, archive);
+        writeJson(res, 201, imported);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Source import failed.";
+        fail(res, message.includes("upload limit") ? 413 : 400, message);
+      }
       return true;
     }
 
