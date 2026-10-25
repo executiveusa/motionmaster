@@ -109,6 +109,11 @@ try {
   }
 
 
+  // Source-language records stay in the repository; user-visible chrome must
+  // not surface untranslated Han characters in either supported locale.
+  const visibleHanEnglish = await evaluate('(/[\\u3400-\\u9fff]/u).test(document.body.innerText)');
+  if (visibleHanEnglish) throw new Error('Visible untranslated Han content in English browser');
+
   // MM-08: a human can use the private editor without writing JSON or code.
   // This uses the real authenticated local HTTP API, not a mocked fetch.
   const editorInitiallyClosed = await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); return !!d && !d.open; })()');
@@ -182,6 +187,8 @@ try {
 
   await change('es-MX');
   const spanish = await state();
+  const visibleHanSpanish = await evaluate('(/[\\u3400-\\u9fff]/u).test(document.body.innerText)');
+  if (visibleHanSpanish) throw new Error('Visible untranslated Han content in Mexican Spanish browser');
   const spanishEditor = await evaluate('({ summary: document.querySelector("[data-project-editor] summary")?.textContent, save: document.querySelector("[data-project-save]")?.textContent, cancel: document.querySelector("[data-project-cancel]")?.textContent })');
   if (!spanishEditor.summary?.includes('Editar un video guardado') ||
       !spanishEditor.cancel?.includes('Cancelar generación')) {
@@ -234,7 +241,7 @@ try {
       'dynamic Copy prompt', 'English selector round trip', 'Spanish survives actual reload',
       '390px no horizontal overflow', 'four gallery videos play with advancing timestamps', 'private editor rejects bad key',
       'browser create/edit/reopen immutable revision', 'browser queue/cancel',
-      'editor Mexican Spanish labels', 'private key never persisted', 'zero uncaught browser exceptions'],
+      'editor Mexican Spanish labels', 'no visible untranslated Han text', 'private key never persisted', 'zero uncaught browser exceptions'],
     playback,
     editor: { projectId: editorProjectId, savedRevision: savedProject.revision.number, authenticated: true },
     viewport: mobile,
