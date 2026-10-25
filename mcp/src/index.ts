@@ -19,7 +19,7 @@ import { LICENCE } from "./licence.js";
 import { handleChat, type ChatRequestBody } from "./chat.js";
 import { listFiles, storeFile, workspaceDir } from "./files.js";
 import { filmsDir, listFilms, readJob } from "./render.js";
-import { handleApi } from "./api.js";
+import { authorised, handleApi } from "./api.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -274,6 +274,26 @@ function statusDocument(config: Config): Record<string, unknown> {
  * which keeps it on the local machine; the allowlist is here so it can be
  * narrowed to the exact site that talks to it.
  */
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+/**
+ * Browser access to private local files and tools is opt-in. Without an
+ * allowlist, an arbitrary website must not be able to drive the local agent.
+ * The local combined site is the only implicit browser origin.
+ */
+function privateOriginAllowed(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (!origin) return true; // Non-browser clients still require the bearer key.
+  const allowed = (process.env.MOTION_MASTER_ALLOWED_ORIGINS ?? "")
+    .split(",").map((item) => item.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  const host = req.headers.host ?? "";
+  const name = host.startsWith("[") ? host.slice(1, host.indexOf("]")) : host.split(":")[0];
+  return isLoopbackHost(name) && origin === `http://${host}`;
+}
+
 function corsOrigin(config: Config, requestOrigin: string | undefined): string {
   const allowed = (process.env.MOTION_MASTER_ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -307,15 +327,37 @@ export function createHttpHandler(config: Config) {
      * agent here" rather than like a policy.
      */
     res.setHeader("access-control-allow-private-network", "true");
+    const privateRoute = url.pathname.startsWith("/api/") ||
+      url.pathname === "/files" || url.pathname.startsWith("/files/") ||
+      url.pathname === "/films" || url.pathname.startsWith("/films/") ||
+      url.pathname === "/chat" || url.pathname === "/mcp";
+    if (privateRoute && !privateOriginAllowed(req)) {
+      writeJson(res, 403, { error: "Browser origin is not approved for private tools." });
+      return;
+    }
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "access-control-allow-methods": "GET, POST, OPTIONS",
         "access-control-allow-headers":
-          "content-type, x-file-name, x-motion-master, access-control-request-private-network",
+          "content-type, authorization, x-file-name, x-motion-master, access-control-request-private-network",
         "access-control-max-age": "600",
       });
       res.end();
       return;
+    }
+
+    // Never expose private projects, uploads, rendered films, chat or MCP
+    // tools on a network interface without a configured server-side key.
+    // A loopback-only instance remains convenient for local development.
+    if (privateRoute) {
+      if (!isLoopbackHost(config.host) && !process.env.MOTION_MASTER_API_KEY?.trim()) {
+        writeJson(res, 403, { error: "Private endpoints require MOTION_MASTER_API_KEY on a network listener." });
+        return;
+      }
+      if (!authorised(req)) {
+        writeJson(res, 401, { error: "Private endpoint requires a bearer token." });
+        return;
+      }
     }
 
     // The HTTP API. It answers before the MCP route, so /api/v1 is the
@@ -380,16 +422,45 @@ export function createHttpHandler(config: Config) {
     }
 
     if (url.pathname.startsWith("/files/")) {
-      const name = decodeURIComponent(url.pathname.slice("/files/".length));
-      const path = join(workspaceDir(config), name);
-      if (!path.startsWith(workspaceDir(config)) || !existsSync(path)) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        writeJson(res, 405, { error: "Method not allowed." });
+        return;
+      }
+      let name: string;
+      try {
+        name = decodeURIComponent(url.pathname.slice("/files/".length));
+      } catch {
+        writeJson(res, 400, { error: "Invalid file name." });
+        return;
+      }
+      // Flat hash-named uploads only. Reject encoded slashes, dot segments,
+      // backslashes, and symlink targets outside the private workspace.
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,255}$/.test(name) || name === "." || name === "..") {
+        writeJson(res, 400, { error: "Invalid file name." });
+        return;
+      }
+      const root = workspaceDir(config);
+      const path = join(root, name);
+      if (!existsSync(path)) {
         writeJson(res, 404, { error: "No such file." });
         return;
       }
-      const body = readFileSync(path);
+      try {
+        const realRoot = realpathSync(root);
+        const realFile = realpathSync(path);
+        if (!realFile.startsWith(realRoot + sep) || !statSync(realFile).isFile()) {
+          writeJson(res, 403, { error: "File access denied." });
+          return;
+        }
+      } catch {
+        writeJson(res, 404, { error: "No such file." });
+        return;
+      }
+      const body = req.method === "HEAD" ? Buffer.alloc(0) : readFileSync(path);
       res.writeHead(200, {
         "content-type": guessType(name),
-        "content-length": body.length,
+        "content-length": statSync(path).size,
+        "cache-control": "no-store",
       });
       res.end(body);
       return;
@@ -418,6 +489,10 @@ export function createHttpHandler(config: Config) {
     }
 
     if (url.pathname.startsWith("/films/")) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        writeJson(res, 405, { error: "Method not allowed." });
+        return;
+      }
       const rest = url.pathname.slice("/films/".length);
       const slash = rest.indexOf("/");
       const id = decodeURIComponent(slash === -1 ? rest : rest.slice(0, slash));
