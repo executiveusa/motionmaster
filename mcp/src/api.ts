@@ -706,7 +706,7 @@ export async function handleApi(
       }
       if (jobId && action && method === "POST") {
         try {
-          writeJson(res, 200, transitionProjectJob(config.repoRoot, projectId, jobId, action));
+          writeJson(res, 200, transitionProjectJob(config.repoRoot, projectId, jobId, action as "cancel" | "retry"));
         } catch (error) {
           const message = error instanceof Error ? error.message : "Job transition failed.";
           fail(res, message.includes("not found") ? 404 : 409, message);
