@@ -7,7 +7,8 @@ the final home. The full history is pushed there: 29 commits, 2,874 files.
 
 > **Updated 2026-10-24 — it is live.** The repository was pushed to
 > `executiveusa/motionmaster` on 2026-10-24, replacing the single README commit that
-> was there. The push was a force push with a lease pinned to the commit it replaced,
+> was there. The site was rebuilt the same day — see
+> [`docs/16-THE-TASTE-REVIEW.md`](16-THE-TASTE-REVIEW.md). The push was a force push with a lease pinned to the commit it replaced,
 > so it refused to run if anybody had pushed in the meantime. The old repository,
 > `executiveusa/motion-master-`, is untouched and was not written to.
 > See [`HANDOFF.md`](../HANDOFF.md) for the procedure and the recovery bundle.
@@ -28,7 +29,7 @@ the final home. The full history is pushed there: 29 commits, 2,874 files.
 | **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, 3 demo films, a browsable catalogue of 3,988 library items, mechanism, contents, objections, pricing, FAQ. 0 external requests, 36.9 kB of JavaScript. |
 | **Hero film** | `hero/` | 104 seconds, 1920×1080, rendered frame by frame. The brief, the shot list, the code beside the footage it produced, the renders, the file. |
 | **Agent plugin** | `plugins/motion-master/` | 38 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
-| **MCP server** | `mcp/` | **24 tools**: the skill and clip tools (`list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`), the library tools (`list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks`, `enhance_prompt`), the **sound tools** (`list_sfx_kinds`, `browse_sfx`, `search_sfx`, `get_sfx`, `plan_sound`) and the **render tools** (`render_film`, `film_status`, `list_films`). 65/65 tests, 44/44 tool-policy checks. |
+ the skill and clip tools (`list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`), the library tools (`list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks`, `enhance_prompt`), the **sound tools** (`list_sfx_kinds`, `browse_sfx`, `search_sfx`, `get_sfx`, `plan_sound`) and the **render tools** (`render_film`, `film_status`, `list_films`). 65/65 tests, 44/44 tool-policy checks. |
 | **Console** | `site/src/modules/chat.ts` | A chat on the front page that talks to our own MCP server. The agent's artifacts are built by the **server from the real tool result**, so the console can never show a description of something that did not happen. Model by OpenRouter, BYO via PKCE — the key never sits on our server. 12/12 browser checks against the deployed page. |
 | **Sound library** | `library/sfx*` | **1,470 sounds, 35 canonical kinds** from three sources — earshot (MIT recipes), uisfx (MIT code, CC0 audio) and Openverse (282 real recordings, each with its own licence). The same 35 kinds are the site's buttons and the agent's search words, so a sound found by clicking and by asking land in the same place. |
 | **Prompt library** | `library/` | 9 open-source collections normalised into one index: **3,988 items, 756 categories**, plus **448 HyperFrames motion blocks**. Every item carries its licence. |
@@ -234,8 +235,8 @@ media path, and `MONTAGE_TOKEN` was not being sent as a bearer token on the SSE 
 
 ## 8. The deployments
 
-The site is live at **https://psa4q095vyamo.space.minimax.io** — the current build, with
-the console and the sound library. Earlier deployments were superseded by the hero film,
+The site is live at **https://20vyen0s3mpc9.space.minimax.io** — the current build: the
+rebuilt hero, the two scroll scenes, the console and the sound library. Earlier deployments were superseded by the hero film,
 the re-rendered clips, the library browser, the console and the sound section.
 
 What changed in that pass:
