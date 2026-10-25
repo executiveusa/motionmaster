@@ -250,44 +250,13 @@ function writeJson(res: ServerResponse, status: number, payload: unknown): void 
   res.end(body);
 }
 
-function statusDocument(config: Config): Record<string, unknown> {
-  const skills = listSkills(config.skillsDir);
-  const gallery = readGallery(config.clipsPath);
-  return {
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-    status: "ok",
-    mcpEndpoint: config.publicUrl,
-    tools: [...TOOL_NAMES],
-    skills: {
-      count: skills.length,
-      directory: config.skillsDir,
-      router: "skills/motion-master/SKILL.md",
-    },
-    clips: {
-      available: gallery.available,
-      source: gallery.source,
-      count: gallery.clips.length,
-    },
-    tokens: {
-      source: tokenSource(config.tokensPath),
-      canonicalPath: config.tokensPath,
-    },
-    montage: {
-      configured: config.montage.baseUrl.length > 0,
-      baseUrl: config.montage.baseUrl.length > 0 ? config.montage.baseUrl : null,
-      tenant: config.montage.tenant,
-      tokenConfigured: Boolean(config.montage.token),
-    },
-    licence: LICENCE,
-    domain: {
-      recordedIn: config.brandPath,
-      tld: null,
-      url: null,
-      note: "The TLD has not been chosen. No URL is published by this server.",
-    },
-    rendering: LICENCE.rendering,
-  };
+/**
+ * Public liveness is intentionally non-diagnostic. This endpoint can be
+ * reached without a bearer token, including through a reverse proxy; never
+ * expose local paths, upstream URLs, tenant configuration or tool inventory.
+ */
+function statusDocument(): Record<string, string> {
+  return { name: SERVER_NAME, version: SERVER_VERSION, status: "ok" };
 }
 
 /**
@@ -399,7 +368,7 @@ export function createHttpHandler(config: Config) {
         writeJson(res, 405, { error: "Method not allowed" });
         return;
       }
-      writeJson(res, 200, statusDocument(config));
+      writeJson(res, 200, statusDocument());
       return;
     }
 
