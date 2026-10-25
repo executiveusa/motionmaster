@@ -12,7 +12,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { loadConfig } from "../mcp/dist/config.js";
 import { loadBlocks } from "../mcp/dist/library.js";
-import { createProject, createProjectJob, readProjectJob, saveRevision } from "../mcp/dist/projects.js";
+import { createProject, createProjectJob, readProject, readProjectJob, saveRevision } from "../mcp/dist/projects.js";
+import { exportProjectSource, importProjectSource, inspectProjectSource } from "../mcp/dist/project-source-bundle.js";
 import { runProjectJob } from "../mcp/dist/project-worker.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -104,8 +105,49 @@ try {
     "Text edit did not change the actual rendered late frame");
   assert.notEqual(report.renders[0].sha256, report.renders[1].sha256);
   report.textOverrideVerifiedInSource = true;
+
+  // MM-09: exercise the actual edited worker output through the portable
+  // source exporter and importer. Earlier browser import checks used a
+  // synthetic archive; this one must originate from the real MP4 job.
+  const archive = exportProjectSource(temp, project.id, second.id);
+  const archivePath = join(proof, "edited-source.json.gz");
+  writeFileSync(archivePath, archive);
+  const bundle = inspectProjectSource(archive);
+  assert.equal(bundle.project.sourceId, project.id);
+  assert.equal(bundle.render.jobId, second.id);
+  assert.equal(bundle.render.revision, 2);
+  assert.equal(bundle.revisions.length, 2);
+  assert.equal(bundle.revisions[1].shots[0].values[editableText.id], "Ana Ruiz");
+  assert.ok(bundle.files.some((file) => file.path === "index.html"));
+  assert.ok(bundle.files.some((file) => file.path === "hyperframes.json"));
+
+  const imported = importProjectSource(temp, archive);
+  assert.notEqual(imported.project.id, project.id, "Import overwrote the original project");
+  assert.equal(imported.sourceId, project.id);
+  assert.equal(imported.revision.number, 2);
+  assert.deepEqual(imported.revision.shots, revision.revision.shots);
+  assert.equal(readProject(temp, project.id)?.project.currentRevision, 2,
+    "Import modified the source project");
+  assert.deepEqual(readProject(temp, imported.project.id)?.revision.shots,
+    revision.revision.shots, "Imported project lost the editable shot values");
+  assert.equal(readProjectJob(temp, imported.project.id, second.id), undefined,
+    "Import fabricated a completed render job");
+
+  const restoredSource = join(temp, "workspace", "projects", imported.project.id,
+    "imports", second.id, "index.html");
+  const sourceEntry = bundle.files.find((file) => file.path === "index.html");
+  assert.ok(existsSync(restoredSource), "Imported editable HTML was not preserved");
+  assert.equal(hash(restoredSource), sourceEntry.sha256,
+    "Imported source bytes do not match the original rendered source");
+  report.sourceRoundTrip = {
+    status: "passed", archive: "edited-source.json.gz",
+    sha256: hash(archivePath), sourceProjectId: project.id,
+    importedProjectId: imported.project.id, restoredRevision: imported.revision.number,
+    importedFiles: imported.importedFiles, sourceSha256: sourceEntry.sha256,
+    fabricatedRenderJob: false,
+  };
   report.status = "passed";
-  console.log("PASS: default HyperFrames worker rendered, reopened, edited, rerendered and decoded real MP4s.");
+  console.log("PASS: real HyperFrames MP4 edit/rerender and portable source export/import/reopen.");
 } catch (error) {
   report.status = "failed";
   report.error = String(error);
