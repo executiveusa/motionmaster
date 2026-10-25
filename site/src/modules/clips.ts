@@ -159,7 +159,18 @@ export function initClips(): void {
 
     if (entry && entry.video && video) {
       video.src = entry.videoSrc;
-      if (entry.poster) {
+      if (id === 'kinetic-type') {
+        // The historic JPEG still contains the explicitly rejected slogan.
+        // Display an actual frame from the current, corrected MP4 instead.
+        video.removeAttribute('poster');
+        video.preload = 'metadata';
+        video.addEventListener('loadedmetadata', () => {
+          if (video.paused && Number.isFinite(video.duration) && video.duration > 3.4) {
+            video.currentTime = 3.4;
+          }
+        }, { once: true });
+        video.load();
+      } else if (entry.poster) {
         video.poster = entry.posterSrc;
       } else if (state) {
         state.style.backgroundImage = '';
