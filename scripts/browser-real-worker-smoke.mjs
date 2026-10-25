@@ -183,6 +183,8 @@ try {
     'rendered private MP4 advances in Chromium', 15000);
   report.checks.push('real default worker ready + private MP4 decoded and played in Chromium');
   await evaluate('document.querySelector("[data-project-download]").click()');
+  await until('!document.querySelector("[data-project-source]").disabled',
+    'MP4 download action finished', 30000);
   await evaluate('document.querySelector("[data-project-source]").click()');
   const mp4Path = join(downloads, 'motion-master-' + projectId + '.mp4');
   const archivePath = join(downloads, 'motion-master-' + projectId + '.json.gz');
