@@ -44,18 +44,18 @@ jobs:
           npm ci --prefix mcp --no-audit --no-fund
           npm ci --prefix site --no-audit --no-fund
           npm ci --prefix bridge --no-audit --no-fund
-      - name: Run completion quality gates
-        run: node scripts/completion-gates.mjs
-      - name: Capture gallery-first homepage (desktop and mobile)
-        run: node scripts/capture-site.mjs
-      - name: Verify live English/Spanish selector and dynamic i18n in Chromium
-        run: node scripts/locale-browser-smoke.mjs
       - name: Install FFmpeg and FFprobe for real encoding
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
           ffmpeg -version | head -1
           ffprobe -version | head -1
+      - name: Run completion quality gates
+        run: node scripts/completion-gates.mjs
+      - name: Capture gallery-first homepage (desktop and mobile)
+        run: node scripts/capture-site.mjs
+      - name: Verify live English/Spanish selector and dynamic i18n in Chromium
+        run: node scripts/locale-browser-smoke.mjs
       - name: Decode every gallery MP4 and check exact source prompts
         run: node scripts/gallery-media-smoke.mjs
       - name: Render real HyperFrames smoke video
