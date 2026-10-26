@@ -3,7 +3,7 @@
  * existing HyperFrames film pipeline. This is NOT a distributed job queue.
  * Set MOTION_MASTER_RENDER_WORKER=1 only on the owner-controlled worker.
  */
-import { copyFileSync, existsSync, lstatSync, mkdirSync, renameSync, rmSync } from "node:fs";
+import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readSync, renameSync, rmSync, writeSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Config } from "./config.js";
@@ -94,6 +94,37 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
 };
 
 /**
+ * Publish from an already-open regular-file descriptor. O_NOFOLLOW prevents a
+ * concurrent local writer from replacing the validated MP4 with a symlink
+ * between lstat and copy. The descriptor pins the file throughout the copy.
+ * Staging still requires an owner-only workspace and a single writer.
+ */
+function copyJobLocalVideo(source: string, temp: string): void {
+  const input = openSync(source, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(input).isFile()) throw new Error("Renderer output is not a regular file.");
+    const output = openSync(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
+    try {
+      const buffer = Buffer.allocUnsafe(1024 * 1024);
+      for (;;) {
+        const bytes = readSync(input, buffer, 0, buffer.length, null);
+        if (bytes === 0) break;
+        let offset = 0;
+        while (offset < bytes) {
+          const written = writeSync(output, buffer, offset, bytes - offset);
+          if (written === 0) throw new Error("Unable to copy rendered video.");
+          offset += written;
+        }
+      }
+    } finally {
+      closeSync(output);
+    }
+  } finally {
+    closeSync(input);
+  }
+}
+
+/**
  * Execute exactly one queued job. An injected renderer makes the durable
  * transitions testable with a real ffmpeg MP4 without a registry download.
  */
@@ -132,10 +163,16 @@ export async function runProjectJob(
     if (readProjectJob(config.repoRoot, projectId, jobId)?.status !== "rendering") return;
     const artifact = `artifacts/${jobId}.mp4`;
     const destination = join(projectPath, artifact);
-    mkdirSync(dirname(destination), { recursive: true });
+    const artifactDir = dirname(destination);
+    mkdirSync(artifactDir, { recursive: true });
+    // mkdir(recursive) accepts an existing symlink to a directory. Reject it
+    // before creating any artifact or temporary file outside this project.
+    if (!lstatSync(artifactDir).isDirectory()) {
+      throw new Error("Project artifact directory must be a real directory.");
+    }
     const temp = `${destination}.${randomUUID()}.tmp`;
     try {
-      copyFileSync(source, temp);
+      copyJobLocalVideo(source, temp);
       if (readProjectJob(config.repoRoot, projectId, jobId)?.status !== "rendering") return;
       renameSync(temp, destination);
       transitionProjectJob(config.repoRoot, projectId, jobId, "complete", { artifact });
