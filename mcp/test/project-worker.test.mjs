@@ -165,3 +165,22 @@ test("MM-05: cancelling an active durable job aborts its renderer and never publ
   assert.equal(readProjectJob(root, projectId, job.id).status, "cancelled");
   assert.equal(readProjectJob(root, projectId, job.id).artifact, undefined);
 });
+
+test("MM-09: reject symlinked renderer output instead of exporting an external MP4", async (t) => {
+  const { root, config, projectId } = fixture(t);
+  const job = createProjectJob(root, projectId, 1);
+  const outside = await ffmpegRenderer(config, null, root);
+  const work = await import("node:fs");
+  const external = join(root, "film.mp4");
+  assert.equal(outside, external);
+  await runProjectJob(config, projectId, job.id, async (_config, _revision, outputDir) => {
+    const link = join(outputDir, "film.mp4");
+    work.symlinkSync(external, link);
+    return link;
+  });
+  const saved = readProjectJob(root, projectId, job.id);
+  assert.equal(saved.status, "failed");
+  assert.equal(saved.artifact, undefined);
+  assert.equal(existsSync(join(root, "workspace", "projects", projectId, "artifacts", job.id + ".mp4")), false);
+  assert.equal(existsSync(external), true, "original external video must not be removed");
+});
