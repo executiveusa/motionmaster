@@ -72,7 +72,7 @@ const strings: Record<string, [string, string]> = {
   editorQueued: ['Render queued. The private worker must be running.', 'Video en espera. El motor privado debe estar funcionando.'],
   editorWorking: ['Rendering your video…', 'Generando tu video…'],
   editorComplete: ['Video ready. Watch or download it.', 'Video listo. Reprodúcelo o descárgalo.'],
-  editorFailed: ['The render failed. Reopen the project to retry.', 'No se pudo generar el video. Abre el proyecto de nuevo para intentarlo.'],
+  editorFailed: ['The render stopped. Select Render saved version to retry without creating another job.', 'Se detuvo la generación. Selecciona Generar versión guardada para reintentar sin crear otro trabajo.'],
   editorCancelled: ['Render cancelled. Your saved project is unchanged.', 'Generación cancelada. Tu proyecto guardado no cambió.'],
   editorNoShots: ['This project has no editable shots. Create a lower-third to begin.', 'Este proyecto no tiene tomas editables. Crea un video con rótulo inferior para empezar.'],
   editorError: ['The request failed. Check your connection and permissions.', 'Falló la solicitud. Revisa la conexión y los permisos.'],
