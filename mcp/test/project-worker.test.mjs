@@ -184,3 +184,18 @@ test("MM-09: reject symlinked renderer output instead of exporting an external M
   assert.equal(existsSync(join(root, "workspace", "projects", projectId, "artifacts", job.id + ".mp4")), false);
   assert.equal(existsSync(external), true, "original external video must not be removed");
 });
+
+
+test("MM-09: refuse symlinked artifact directory instead of writing MP4 outside project", async (t) => {
+  const { root, config, projectId } = fixture(t);
+  const { mkdirSync, readdirSync, symlinkSync } = await import("node:fs");
+  const external = join(root, "external-artifacts");
+  mkdirSync(external);
+  symlinkSync(external, join(root, "workspace", "projects", projectId, "artifacts"), "dir");
+  const job = createProjectJob(root, projectId, 1);
+  await runProjectJob(config, projectId, job.id, ffmpegRenderer);
+  const saved = readProjectJob(root, projectId, job.id);
+  assert.equal(saved.status, "failed");
+  assert.equal(saved.artifact, undefined);
+  assert.deepEqual(readdirSync(external), [], "no video or temporary file may escape the project");
+});
