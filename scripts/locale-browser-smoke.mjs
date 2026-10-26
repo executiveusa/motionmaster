@@ -162,7 +162,9 @@ try {
   await until('!document.querySelector("[data-project-cancel]").disabled && !document.querySelector("[data-project-cancel]").hidden', 'cancel action enabled');
   // The fixture worker is intentionally off: a queued job must survive a
   // project reopen and full browser reload without creating another job.
-  await evaluate('document.querySelector("[data-project-open]").click()');
+  // Clear prior UI state so this assertion cannot pass on the old queued
+  // message before openProject has actually recovered the durable job.
+  await evaluate('(() => { document.querySelector("[data-project-status]").dataset.i18n = "pendingProbe"; document.querySelector("[data-project-cancel]").hidden = true; document.querySelector("[data-project-open]").click(); return true; })()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued" && ' +
     '!document.querySelector("[data-project-cancel]").hidden', 'queued job resumed after reopen');
   const queuedJobs = await (await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
