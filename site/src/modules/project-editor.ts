@@ -37,7 +37,7 @@ function status(root: ParentNode, key: string): void {
     editorQueued: 'Render queued. The private worker must be running.',
     editorWorking: 'Rendering your video…',
     editorComplete: 'Video ready. Watch or download it.',
-    editorFailed: 'The render failed. Reopen the project to retry.',
+    editorFailed: 'The render stopped. Select Render saved version to retry without creating another job.',
     editorCancelled: 'Render cancelled. Your saved project is unchanged.',
     editorNoShots: 'This project has no editable shots. Create a lower-third to begin.',
     editorImported: 'Source imported as a new private project. Review its assets before rendering.',
@@ -248,19 +248,26 @@ export function initProjectEditor(): void {
     if (!opened.revision.shots.length) status(root, 'editorNoShots');
     else status(root, 'editorLoaded');
     q<HTMLSelectElement>(root, '[data-project-list]')!.value = id;
-    // Resume the newest active or completed job for this saved revision.
+    // Restore the latest job for this revision, including failed renders. A
+    // recovered interrupted job must remain visible and retryable without
+    // fabricating a second job record.
     // Never enqueue a duplicate on reconnect or show an older revision's MP4.
     const version = watchVersion;
     const jobs = await request<Job[]>('/projects/' + encodeURIComponent(id) + '/jobs');
     if (version !== watchVersion || current?.project.id !== id ||
       current.revision.number !== opened.revision.number) return;
     const latest = jobs.find((item) => item.revision === opened.revision.number &&
-      ['queued', 'rendering', 'ready'].includes(item.status));
+      ['queued', 'rendering', 'ready', 'failed'].includes(item.status));
     if (latest && ['queued', 'rendering'].includes(latest.status)) {
       job = latest;
       cancelButton.hidden = false;
       status(root, latest.status === 'rendering' ? 'editorWorking' : 'editorQueued');
       void watch(id, latest.id, version);
+      return;
+    }
+    if (latest?.status === 'failed') {
+      job = latest;
+      status(root, 'editorFailed');
       return;
     }
     if (latest?.status === 'ready') {
@@ -336,9 +343,15 @@ export function initProjectEditor(): void {
     if (!current) return;
     clearVideo();
     const projectId = current.project.id;
-    const queued = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs', {
-      method: 'POST', body: JSON.stringify({ revision: current.revision.number }),
-    });
+    // Reuse the failed job after a worker crash or render error. The existing
+    // retry endpoint keeps its identity and attempts history; changed edits
+    // were saved above and therefore receive a new revision and job.
+    const retryId = job?.status === 'failed' && job.revision === current.revision.number ? job.id : null;
+    const queued = retryId
+      ? await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(retryId) + '/retry', { method: 'POST' })
+      : await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs', {
+        method: 'POST', body: JSON.stringify({ revision: current.revision.number }),
+      });
     job = queued;
     cancelButton.hidden = false;
     status(root, 'editorQueued');
