@@ -156,6 +156,33 @@ try {
     'browser project creation');
   const projectId = await evaluate('document.querySelector("[data-project-list]").value');
   assert.match(projectId, /^p_[a-zA-Z0-9_-]+$/);
+  // Deterministic browser regression: the real worker still renders the MP4,
+  // but the browser receives 85 synthetic nonterminal job statuses first.
+  // This would strand the UI under the former 80-poll / ~2-minute limit.
+  await evaluate(`(() => {
+    const nativeFetch = window.fetch.bind(window);
+    const nativeTimeout = window.setTimeout.bind(window);
+    const probe = { polls: 0 };
+    window.__mmLongRenderProbe = probe;
+    window.fetch = async (input, init) => {
+      const response = await nativeFetch(input, init);
+      const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      const pathname = new URL(typeof input === 'string' ? input : input.url, location.href).pathname;
+      if (method === 'GET' && /^\\/api\\/v1\\/projects\\/[^/]+\\/jobs\\/[^/]+$/.test(pathname) &&
+          response.ok && probe.polls < 85) {
+        const body = await response.clone().json();
+        probe.polls++;
+        if (probe.polls === 85) window.setTimeout = nativeTimeout;
+        return new Response(JSON.stringify({ ...body, status: 'rendering' }), {
+          status: response.status, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return response;
+    };
+    window.setTimeout = (handler, delay, ...args) => nativeTimeout(
+      handler, delay === 1500 || delay === 5000 ? 1 : delay, ...args);
+    return true;
+  })()`);
   await evaluate(`(() => {
     document.querySelector("[data-shot-variable]").value = "Ana Ruiz";
     document.querySelector("[data-shot-duration]").value = "3";
@@ -169,6 +196,9 @@ try {
   assert.equal(saved.revision.shots[0].duration, 3);
   assert.ok(Object.values(saved.revision.shots[0].values ?? {}).includes('Ana Ruiz'));
   report.checks.push('browser text/duration edit saved as immutable revision 2 before render');
+  await until('window.__mmLongRenderProbe?.polls > 80',
+    'render monitoring must continue after 80 nonterminal status polls', 30000);
+  report.checks.push('Chromium continues monitoring a long render after 80 status polls');
   await until('["editorComplete", "editorFailed"].includes(document.querySelector("[data-project-status]")?.dataset.i18n)',
     'default-worker MP4 render', 200000);
   assert.equal(await evaluate('document.querySelector("[data-project-status]").dataset.i18n'),
