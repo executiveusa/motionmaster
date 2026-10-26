@@ -182,6 +182,19 @@ try {
   await until('document.querySelector("[data-project-video]")?.currentTime > 0.25',
     'rendered private MP4 advances in Chromium', 15000);
   report.checks.push('real default worker ready + private MP4 decoded and played in Chromium');
+  // A completed video must remain playable and exportable after the editor
+  // reopens its persisted project; this must not enqueue a second render.
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorComplete" && ' +
+    '!document.querySelector("[data-project-result]").hidden && ' +
+    'document.querySelector("[data-project-video]")?.videoWidth > 0',
+    'reopened project recovers its completed MP4', 30000);
+  assert.equal((await api('projects/' + projectId + '/jobs')).length, 1,
+    'Reopening a saved video must not queue a duplicate render');
+  await evaluate('document.querySelector("[data-project-video]").play()');
+  await until('document.querySelector("[data-project-video]")?.currentTime > 0.2',
+    'reopened MP4 advances in Chromium', 15000);
+  report.checks.push('saved project reopen restores playable current-revision MP4 without rerender');
   await evaluate('document.querySelector("[data-project-download]").click()');
   await until('!document.querySelector("[data-project-source]").disabled',
     'MP4 download action finished', 30000);
