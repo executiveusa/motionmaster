@@ -430,3 +430,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `0f31c59`, `3cd1525`, `b2cae5d` on draft PR #2. No migrations, main change, force-push, production deployment, paid service, credential disclosure or Montage repository edit.
 
 **NEXT:** On the next run, inspect exact-head CI first. Continue with one safe P1: resume existing queued/running jobs after reconnect **without queueing duplicates**, or move to an explicitly authorized private persistent host. Never self-approve release.
+
+## 2026-10-26 — MM-08 queued-job reconnect and stale-poller isolation
+
+**DECISION:** Continue private v1 on draft PR #2 only. Repair an existing human-facing P1: queued/rendering jobs were forgotten when reopening a project, forcing users to guess whether to render again. Do not alter the October 24 gallery-first hero, the English/es-MX selector, source/licence records, or the live deployment.
+
+**INSPECT:** Before changes, PR #2 was open/draft at `c663704` with 218 commits, main at `adc9685`, and [CI 40249309579](https://github.com/executiveusa/motionmaster/actions/runs/40249309579) SUCCESS. [Vercel preview](https://motionmaster-private-preview.vercel.app/) metadata still reports READY at old SHA `33aee7d`. Direct live-site and motionvideo.xyz page fetches were unavailable; no live design verdict is claimed. Repository visibility is public.
+
+**CHANGES:** `0a45397` restores the newest current-revision queued/rendering job on project reopen, exposes Cancel, resumes polling and never sends a duplicate POST; `be458ac` invalidates older polling loops and stale artifact responses when reopening. `59fe899` adds a real Chromium regression with worker deliberately disabled, exercising queued-job reopen, full reload, explicit reauthentication, and job-ID preservation; `3846e4d` ensures the first reopen assertion cannot pass from stale UI state. Completed-video recovery and older-revision isolation remain intact. No database, API schema or homepage change.
+
+**PROOF STATUS:** [GitHub Actions run 40253084835](https://github.com/executiveusa/motionmaster/actions/runs/40253084835) was started for exact code head `3846e4d`; **result pending when this ledger entry was written**. Do not claim this new regression passed without inspecting the final run. Earlier successful CI is a baseline only, not evidence for the new changes. The fixture tests durable queued state with the actual local authenticated API and Chromium, not a live hosted worker.
+
+**RISKS:** Persistent owner-controlled staging, host backup/restore and rollback, ten hosted complete journeys, live Codex/Claude MCP calls, independent design/security/accessibility and uncoached human approval, asset rights and public repo visibility remain unresolved. `onSale=false` remains the required commercial state.
+
+**ROLLBACK:** Revert `3846e4d`, `be458ac`, `59fe899`, `0a45397` in reverse order on the draft branch. No merge, force-push, production deployment, paid services, credential disclosure, or Montage repository edits.
+
+**NEXT:** Inspect exact-code-head CI and resolve any regressions before recording proof. Then obtain an owner-controlled private staging host and validate durable job recovery across an actual server restart, not just browser reload.
