@@ -250,15 +250,17 @@ export function initProjectEditor(): void {
     q<HTMLSelectElement>(root, '[data-project-list]')!.value = id;
     // Resume the newest active or completed job for this saved revision.
     // Never enqueue a duplicate on reconnect or show an older revision's MP4.
+    const version = watchVersion;
     const jobs = await request<Job[]>('/projects/' + encodeURIComponent(id) + '/jobs');
-    if (current?.project.id !== id || current.revision.number !== opened.revision.number) return;
+    if (version !== watchVersion || current?.project.id !== id ||
+      current.revision.number !== opened.revision.number) return;
     const latest = jobs.find((item) => item.revision === opened.revision.number &&
       ['queued', 'rendering', 'ready'].includes(item.status));
     if (latest && ['queued', 'rendering'].includes(latest.status)) {
       job = latest;
       cancelButton.hidden = false;
       status(root, latest.status === 'rendering' ? 'editorWorking' : 'editorQueued');
-      void watch(id, latest.id, watchVersion);
+      void watch(id, latest.id, version);
       return;
     }
     if (latest?.status === 'ready') {
@@ -266,7 +268,8 @@ export function initProjectEditor(): void {
       const response = await authenticatedFile('/projects/' + encodeURIComponent(id) +
         '/jobs/' + encodeURIComponent(ready.id) + '/artifact');
       const blob = await response.blob();
-      if (current?.project.id !== id || current.revision.number !== opened.revision.number) return;
+      if (version !== watchVersion || current?.project.id !== id ||
+        current.revision.number !== opened.revision.number) return;
       job = ready;
       videoUrl = URL.createObjectURL(blob);
       video.src = videoUrl;
@@ -369,9 +372,9 @@ export function initProjectEditor(): void {
         }
         if (next.status === 'rendering') status(root, 'editorWorking');
       }
-      status(root, 'editorQueued');
+      if (version === watchVersion) status(root, 'editorQueued');
     } catch (error) {
-      failed(error);
+      if (version === watchVersion) failed(error);
     }
   }
   async function cancel(): Promise<void> {
