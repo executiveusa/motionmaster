@@ -195,6 +195,29 @@ try {
   await until('document.querySelector("[data-project-video]")?.currentTime > 0.2',
     'reopened MP4 advances in Chromium', 15000);
   report.checks.push('saved project reopen restores playable current-revision MP4 without rerender');
+  // A full browser reload clears the in-memory bearer. Reconnect explicitly,
+  // reopen the durable project and verify that its MP4 still plays.
+  await command('Page.reload', { ignoreCache: true });
+  await until('document.readyState === "complete" && !!document.querySelector("[data-project-editor]")',
+    'browser reloaded without persisted credentials');
+  assert.equal(await evaluate('document.querySelector("[data-project-key]").value'), '',
+    'Reload must not restore a secret to the key input');
+  await evaluate('document.querySelector("[data-project-editor] summary").click()');
+  await evaluate(`(() => {
+    document.querySelector("[data-project-server]").value = location.origin;
+    document.querySelector("[data-project-key]").value = ${JSON.stringify(fixtureKey)};
+    document.querySelector("[data-project-connect]").requestSubmit();
+    return true;
+  })()`);
+  await until('!document.querySelector("[data-project-workspace]").hidden',
+    'private workspace reconnected after browser reload');
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorComplete" && ' +
+    'document.querySelector("[data-project-video]")?.videoWidth > 0',
+    'rendered MP4 restored after full browser reload', 30000);
+  assert.equal((await api('projects/' + projectId + '/jobs')).length, 1,
+    'Browser reload and reopen must not queue a duplicate render');
+  report.checks.push('full browser reload + explicit reauthentication restores durable MP4');
   await evaluate('document.querySelector("[data-project-download]").click()');
   await until('!document.querySelector("[data-project-source]").disabled',
     'MP4 download action finished', 30000);
