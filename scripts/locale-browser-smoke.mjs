@@ -23,6 +23,7 @@ const server = spawn(process.execPath, [resolve(root, 'mcp/dist/index.js')], {
   cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, MOTION_MASTER_SERVE_SITE: '1',
     MOTION_MASTER_MCP_HOST: '127.0.0.1', MOTION_MASTER_MCP_PORT: String(port),
+    MOTION_MASTER_RENDER_WORKER: '0',
     MOTION_MASTER_API_KEY: 'mm-browser-fixture-key' },
 });
 const browser = spawn(chrome, [
@@ -159,6 +160,35 @@ try {
     throw new Error('Render discarded unsaved browser edits: ' + JSON.stringify(autoSaved.revision));
   }
   await until('!document.querySelector("[data-project-cancel]").disabled && !document.querySelector("[data-project-cancel]").hidden', 'cancel action enabled');
+  // The fixture worker is intentionally off: a queued job must survive a
+  // project reopen and full browser reload without creating another job.
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued" && ' +
+    '!document.querySelector("[data-project-cancel]").hidden', 'queued job resumed after reopen');
+  const queuedJobs = await (await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  })).json();
+  if (queuedJobs.length !== 1 || queuedJobs[0].status !== 'queued' || queuedJobs[0].revision !== 3) {
+    throw new Error('Reopening queued project enqueued a duplicate job');
+  }
+  await command('Page.reload', { ignoreCache: true });
+  await until('document.readyState === "complete" && !!document.querySelector("[data-project-editor]")',
+    'editor reloaded before pending-job recovery');
+  if (await evaluate('document.querySelector("[data-project-key]").value !== ""')) {
+    throw new Error('Reload persisted the private bearer');
+  }
+  await evaluate('document.querySelector("[data-project-editor] summary").click()');
+  await evaluate('(() => { document.querySelector("[data-project-server]").value = location.origin; document.querySelector("[data-project-key]").value = "mm-browser-fixture-key"; document.querySelector("[data-project-connect]").requestSubmit(); return true; })()');
+  await until('!document.querySelector("[data-project-workspace]").hidden', 'reconnect after queued-job reload');
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorQueued" && ' +
+    '!document.querySelector("[data-project-cancel]").hidden', 'queued job resumed after full reload');
+  const recoveredJobs = await (await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
+    headers: { Authorization: 'Bearer mm-browser-fixture-key' },
+  })).json();
+  if (recoveredJobs.length !== 1 || recoveredJobs[0].id !== queuedJobs[0].id) {
+    throw new Error('Reload and reconnect created a duplicate render');
+  }
   await evaluate('document.querySelector("[data-project-cancel]").click()');
   await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorCancelled"', 'render cancelled through browser');
   const jobsResponse = await fetch(base + 'api/v1/projects/' + editorProjectId + '/jobs', {
