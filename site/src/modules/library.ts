@@ -61,7 +61,17 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+// Do not surface untranslated Chinese-language catalogue material to users.
+// Preserve the raw index and upstream licence metadata for internal review.
+const HAN = /[\u3400-\u9FFF\uF900-\uFAFF]/u;
+// Keep the original index and attribution intact. Hide records that would
+// expose untranslated Chinese in any rendered field, including collection
+// identifiers, tags and attribution (not just title and prompt).
+function publicItem(item: LibraryItem): boolean {
+  return !HAN.test([item.t, item.s, item.p, item.c, item.a, item.l, ...item.g].join(' '));
+}
 function matches(item: LibraryItem): boolean {
+  if (!publicItem(item)) return false;
   if (activeKind !== 'all' && item.k !== activeKind) return false;
   if (activeCollection !== 'all' && item.c !== activeCollection) return false;
   if (activeCategory && !item.g.includes(activeCategory)) return false;
@@ -82,6 +92,7 @@ function countFor(category: string): number {
   return payload.items.filter(
     (i) =>
       i.g.includes(category) &&
+      publicItem(i) &&
       (activeKind === 'all' || i.k === activeKind) &&
       (activeCollection === 'all' || i.c === activeCollection),
   ).length;
@@ -94,7 +105,7 @@ function renderCategories(): void {
   const all = el('button', 'library__category');
   all.type = 'button';
   all.textContent = `All`;
-  const allCount = el('span', 'library__count', String(payload.items.length));
+  const allCount = el('span', 'library__count', String(payload.items.filter(matches).length));
   all.appendChild(allCount);
   all.setAttribute('aria-pressed', activeCategory === '' ? 'true' : 'false');
   if (!activeCategory) all.classList.add('is-active');
@@ -107,6 +118,7 @@ function renderCategories(): void {
   list.replaceChildren(all);
 
   for (const cat of payload.categories) {
+    if (HAN.test(cat.slug)) continue;
     const n = countFor(cat.slug);
     if (n === 0) continue;
     const button = el('button', 'library__category');
@@ -132,7 +144,7 @@ function renderItems(): void {
 
   const found = currentItems();
   if (count) {
-    count.textContent = `${found.length} of ${payload.items.length} items`;
+    count.textContent = `${found.length} visible items`;
   }
 
   if (found.length === 0) {
@@ -216,16 +228,21 @@ function renderStats(): void {
   const set = (selector: string, value: string): void => {
     for (const node of qsa<HTMLElement>(selector)) node.textContent = value;
   };
-  set('[data-library-stat-items]', String(payload.counts.items));
-  set('[data-library-stat-collections]', String(payload.collections.length));
-  set('[data-library-stat-categories]', String(payload.counts.categories));
+  const visible = payload.items.filter(publicItem);
+  const collections = payload.collections.filter(
+    (collection) => !HAN.test(collection.title + collection.id) &&
+      visible.some((item) => item.c === collection.id),
+  );
+  set('[data-library-stat-items]', String(visible.length));
+  set('[data-library-stat-collections]', String(collections.length));
+  set('[data-library-stat-categories]', String(new Set(visible.flatMap((item) => item.g.filter((tag) => !HAN.test(tag)))).size));
   set('[data-library-stat-blocks]', String(payload.counts.blocks));
 
   // The collection picker is built from the payload so it can never drift
   // from what the index actually holds.
   const select = qs<HTMLSelectElement>('[data-library-collection]');
   if (select && select.options.length <= 1) {
-    for (const collection of payload.collections) {
+    for (const collection of collections) {
       const option = el('option');
       option.value = collection.id;
       option.textContent = `${collection.title} (${collection.count})`;

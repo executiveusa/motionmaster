@@ -1,0 +1,94 @@
+name: Motion Master completion gates
+
+on:
+  pull_request:
+    paths:
+      - "site/**"
+      - "mcp/**"
+      - "bridge/**"
+      - "generator/**"
+      - "library/**"
+      - "plugins/**"
+      - "scripts/completion-gates.mjs"
+      - "scripts/hyperframes-smoke.mjs"
+      - "scripts/default-worker-edit-smoke.mjs"
+      - "scripts/browser-real-worker-smoke.mjs"
+      - "scripts/staging-workspace.mjs"
+      - "scripts/staging-workspace-smoke.mjs"
+      - "scripts/staging-preflight.mjs"
+      - "scripts/staging-preflight-smoke.mjs"
+      - "scripts/staging-live-smoke.mjs"
+      - "scripts/staging-live-smoke-smoke.mjs"
+      - "scripts/gallery-media-smoke.mjs"
+      - "scripts/capture-site.mjs"
+      - "scripts/locale-browser-smoke.mjs"
+      - "licence.json"
+      - ".github/workflows/completion-gates.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: completion-gates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            mcp/package-lock.json
+            site/package-lock.json
+            bridge/package-lock.json
+      - name: Install frozen dependencies
+        run: |
+          npm ci --prefix mcp --no-audit --no-fund
+          npm ci --prefix site --no-audit --no-fund
+          npm ci --prefix bridge --no-audit --no-fund
+      - name: Verify FFmpeg and FFprobe for real encoding
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+      - name: Verify offline staging backup and no-overwrite restore
+        run: node scripts/staging-workspace-smoke.mjs
+      - name: Verify fail-closed private staging preflight
+        run: node scripts/staging-preflight-smoke.mjs
+      - name: Verify read-only live-staging probe against disposable HTTP fixture
+        run: node scripts/staging-live-smoke-smoke.mjs
+      - name: Run completion quality gates
+        run: node scripts/completion-gates.mjs
+      - name: Capture gallery-first homepage (desktop and mobile)
+        run: node scripts/capture-site.mjs
+      - name: Verify live English/Spanish selector and dynamic i18n in Chromium
+        run: node scripts/locale-browser-smoke.mjs
+      - name: Decode every gallery MP4 and check exact source prompts
+        run: node scripts/gallery-media-smoke.mjs
+      - name: Render real HyperFrames smoke video
+        timeout-minutes: 15
+        run: node scripts/hyperframes-smoke.mjs
+      - name: Render and rerender edited project using default HyperFrames worker
+        timeout-minutes: 20
+        run: node scripts/default-worker-edit-smoke.mjs
+      - name: Prove uninterrupted Chromium to default worker and source re-import
+        timeout-minutes: 12
+        run: node scripts/browser-real-worker-smoke.mjs
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-master-completion-proof
+          path: .completion-proof/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14

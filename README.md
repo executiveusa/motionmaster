@@ -18,6 +18,35 @@ repository may present a purchase as available.
 
 ---
 
+## Run the private human + agent MVP on one machine
+
+The public MiniMax page is static. For **real local use**, build the existing site
+and server and let the Node agent serve both. This is local-only while private
+API authentication, durable hosting and remote worker deployment are unfinished.
+
+```bash
+npm ci --prefix site
+npm ci --prefix mcp
+npm run build --prefix site
+npm run build --prefix mcp
+MOTION_MASTER_SERVE_SITE=1 npm start --prefix mcp
+```
+
+In Windows PowerShell set `$env:MOTION_MASTER_SERVE_SITE="1"` first, then run
+`npm --prefix mcp start`. Open **http://127.0.0.1:8787/** in the browser.
+The same process serves `/chat`, `/api/v1`, `/mcp`, `/health` and MP4s.
+A local Codex/Claude MCP client can connect to **http://127.0.0.1:8787/mcp**
+once that server is running; actual supported-host setup still needs testing.
+
+The page's OpenRouter sign-in needs the user's own authorized model access.
+Never put API credentials in the repository, browser screenshots or CI logs.
+
+**Security:** Do not set `MOTION_MASTER_MCP_HOST=0.0.0.0` to expose the
+combined mode. It explicitly rejects non-loopback bindings. The private file,
+job and rendering APIs require a stronger authorization boundary before a
+remote public launch. This local mode is not proof of a deployed SaaS.
+
+
 ## What is in this repository
 
 | Path | What it is | Licence |

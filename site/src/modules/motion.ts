@@ -46,6 +46,9 @@ export function initMotion(): void {
   const seen = new Set<Element>();
   for (const g of GROUPS) {
     for (const el of document.querySelectorAll(g.selector)) {
+      // The gallery is the product proof and begins in the first viewport.
+      // Never hide it behind an entrance tween while videos are loading.
+      if (el.closest('#proof')) continue;
       if (seen.has(el)) continue;
       seen.add(el);
       groups.push(el);

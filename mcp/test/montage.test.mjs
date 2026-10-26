@@ -173,16 +173,19 @@ test("mix_footage refuses a timeline that would break the Montage rules", async 
   assert.ok(issues.some((issue) => issue.message.includes("Unknown overlay type")));
 });
 
-test("the health document states the paid one-time licence and that the server never renders", async () => {
-  const response = await fetch(`${baseUrl}/health`);
-  const document = await response.json();
-  assert.equal(document.licence.type, "paid-one-time");
-  assert.equal(document.licence.tiers[0].price, 99);
-  assert.equal(document.licence.tiers[1].price, 399);
-  assert.equal(document.rendering.local.available, true);
-  assert.equal(document.rendering.hosted.tier, "studio");
-  // the allowance is not a decided number, so it is never published
-  assert.equal(document.rendering.hosted.allowance, null);
-  assert.equal(document.domain.url, null);
-  assert.equal(document.domain.tld, null);
+test("the recorded licence stays available via the API, not the public health probe", async () => {
+  const health = await (await fetch(`${baseUrl}/health`)).json();
+  assert.deepEqual(Object.keys(health).sort(), ["name", "status", "version"]);
+  const response = await fetch(`${baseUrl}/api/v1/licence`);
+  assert.equal(response.status, 200);
+  const licence = await response.json();
+  assert.equal(licence.type, "paid-one-time");
+  assert.equal(licence.status.onSale, false);
+  assert.equal(licence.tiers[0].price, 99);
+  assert.equal(licence.tiers[1].price, 399);
+  assert.equal(licence.rendering.local.available, true);
+  assert.equal(licence.rendering.hosted.tier, "studio");
+  assert.equal(licence.rendering.hosted.allowance, null);
+  assert.equal(licence.domain.url, null);
+  assert.equal(licence.domain.tld, null);
 });

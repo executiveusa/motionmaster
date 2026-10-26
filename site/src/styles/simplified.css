@@ -1,0 +1,56 @@
+/* The interface is the product: one action, real examples, quiet supporting material. */
+.topbar__inner { gap: 16px; }
+.locale-picker { display: inline-flex; align-items: center; margin-left: auto; }
+.locale-picker select { appearance: auto; background: transparent; color: var(--ink); border: 1px solid var(--hairline); padding: 8px 10px; font: inherit; font-size: 13px; max-width: 162px; }
+.locale-picker select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hero { padding-top: clamp(32px, 5vw, 68px); }
+.hero__body { padding-bottom: clamp(20px, 3vw, 40px); }
+.hero__aside { gap: 18px; }
+.section--proof { padding-top: clamp(30px, 4vw, 60px); }
+.section--proof .section__head { margin-bottom: 22px; }
+.clip__frame { background: var(--player); }
+.full-film { border-top: 1px solid var(--hairline); padding: 18px 0; margin-top: 40px; }
+.full-film > summary { display: list-item; cursor: pointer; font-size: 15px; font-weight: 600; padding: 10px 0; }
+.full-film .hero__film { margin-top: 14px; }
+.full-film .hero__video { max-height: 560px; object-fit: contain; }
+#console, #library { scroll-margin-top: 70px; }
+@media (max-width: 1023px) {
+ .locale-picker { margin-left: auto; }
+ .locale-picker select { max-width: 140px; font-size: 12px; padding: 9px 5px; }
+}
+@media (max-width: 520px) {
+ .hero__body { row-gap: 18px; }
+ .section--proof { padding-top: 18px; }
+ .locale-picker select { max-width: 115px; }
+ .topbar__inner { gap: 9px; }
+}
+
+/* The reel is the product demonstration; make it visible above the fold. */
+@media (min-width: 768px) {
+  .hero { padding-top: clamp(24px, 3vw, 48px); }
+  .hero__body {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    grid-template-areas: 'title aside';
+    align-items: end;
+    column-gap: clamp(36px, 5vw, 90px);
+    row-gap: 0;
+    padding-bottom: clamp(24px, 3vw, 42px);
+  }
+  .hero .display {
+    font-size: clamp(56px, 5.6vw, 86px);
+    line-height: .98;
+    max-width: 15ch;
+  }
+  .hero__aside { align-self: end; padding-bottom: 6px; }
+  .section--proof { padding-top: clamp(25px, 3vw, 42px); }
+  .section--proof .h2 { font-size: clamp(32px, 3vw, 46px); }
+}
+@media (max-width: 767px) {
+  .hero__body {
+    grid-template-areas: 'title' 'aside';
+    grid-template-columns: minmax(0,1fr);
+    row-gap: 18px;
+  }
+  .hero .display { font-size: clamp(45px, 10vw, 68px); max-width: 15ch; }
+  .hero { padding-top: 22px; }
+}

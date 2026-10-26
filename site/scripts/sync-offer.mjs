@@ -63,6 +63,18 @@ const head = onSale
     };
 
 const html = readFileSync(htmlPath, 'utf8');
+/* Private, not-for-sale homepage intentionally omits pricing furniture.
+ * The status and canonical terms still live in licence.json; it is not
+ * appropriate to generate a sales section on an internal preview. */
+if (!onSale && !html.includes('data-tier="solo"') && !html.includes('id="pricing-title"')) {
+  if (!html.toLowerCase().includes('not on sale')) {
+    console.error('[offer] private homepage must disclose its not-for-sale state');
+    process.exit(1);
+  }
+  console.log('[offer] private preview: canonical sale lock verified; no pricing section');
+  process.exit(0);
+}
+
 const start = html.indexOf('            <article class="tier');
 const end = html.indexOf('          </div>\n\n          <div class="buy" id="buy">');
 if (start === -1 || end === -1 || end < start) {

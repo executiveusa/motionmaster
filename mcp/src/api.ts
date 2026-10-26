@@ -35,8 +35,8 @@
  * open, which is the right thing for a server running on your own machine.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { createReadStream, existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { join, sep } from "node:path";
 import type { Config } from "./config.js";
 import { listSkills } from "./skills.js";
 import { loadTokens, tokenSource } from "./tokens.js";
@@ -70,6 +70,9 @@ import {
   type RenderJob,
 } from "./render.js";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
+import { cancelRunningProjectJob, processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
+import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -78,7 +81,8 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
-    "access-control-allow-origin": "*",
+    // Preserve the exact allowlisted CORS origin set by createHttpHandler.
+    // A wildcard here silently overrides the private-route origin policy.
   });
   res.end(payload);
 }
@@ -104,6 +108,20 @@ async function readJson(req: IncomingMessage, limit = 4_000_000): Promise<unknow
   }
   if (!chunks.length) return {};
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+/** Read an uploaded gzip source archive as bytes; never decode it as JSON. */
+async function readSourceArchive(req: IncomingMessage): Promise<Buffer> {
+  const limit = 64 * 1024 * 1024;
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const bytes = chunk as Buffer;
+    size += bytes.length;
+    if (size > limit) throw new Error("Source archive exceeds upload limit.");
+    chunks.push(bytes);
+  }
+  return Buffer.concat(chunks);
 }
 
 /**
@@ -139,7 +157,9 @@ export function openApiDocument(config: Config): Record<string, unknown> {
         licenceSentence(),
       license: { name: LICENCE.type },
     },
-    servers: [{ url: `http://${config.host}:${config.port}${API_PREFIX}` }],
+    // Relative root keeps the declared /api/v1 paths from acquiring a second
+    // /api/v1 prefix, and works when the API is behind a same-origin proxy.
+    servers: [{ url: "/" }],
     security: process.env.MOTION_MASTER_API_KEY
       ? [{ bearerAuth: [] }]
       : [],
@@ -277,6 +297,64 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           responses: { 200: { description: "ok", content: json(obj) } },
         },
       },
+      [`${API_PREFIX}/projects`]: {
+        get: { summary: "List private local projects.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
+        post: {
+          summary: "Create a private local project and its first immutable revision.",
+          requestBody: { required: true, content: json({
+            type: "object", properties: { title: str, brief: str, shots: arr(obj) },
+            required: ["title", "brief"],
+          }) },
+          responses: { 201: { description: "created", content: json(obj) }, 400: { description: "invalid input", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/projects/import`]: {
+        post: { summary: "Import a validated source archive as a new private project; imported code is never executed.",
+          requestBody: { required: true, content: { "application/gzip": { schema: { type: "string", format: "binary" } } } },
+          responses: { 201: { description: "new project", content: json(obj) }, 400: { description: "invalid archive", content: json(obj) }, 401: { description: "unauthorized" } } },
+      },
+      [`${API_PREFIX}/projects/{id}`]: {
+        get: { summary: "Reopen the current project revision.", responses: {
+          200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
+        } },
+      },
+      [`${API_PREFIX}/projects/{id}/revisions`]: {
+        post: {
+          summary: "Save a new immutable revision with optimistic concurrency.",
+          requestBody: { required: true, content: json({
+            type: "object", properties: { expectedRevision: num, title: str, brief: str, shots: arr(obj) },
+            required: ["expectedRevision", "title", "brief", "shots"],
+          }) },
+          responses: { 201: { description: "created", content: json(obj) }, 409: { description: "revision conflict", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/projects/{id}/revisions/{number}`]: {
+        get: { summary: "Read an immutable project revision.", responses: {
+          200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) },
+        } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs`]: {
+        get: { summary: "List durable render jobs for a private project.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
+        post: { summary: "Queue a project revision for rendering (does not start the worker).",
+          requestBody: { required: true, content: json({ type: "object", properties: { revision: num }, required: ["revision"] }) },
+          responses: { 201: { description: "queued", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}`]: {
+        get: { summary: "Read a durable job's current status.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/artifact`]: {
+        get: { summary: "Download an authenticated completed MP4.", responses: { 200: { description: "video/mp4" }, 401: { description: "unauthorized" }, 409: { description: "not ready" } } },
+        head: { summary: "Inspect an authenticated completed MP4.", responses: { 200: { description: "video/mp4" } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/source`]: {
+        get: { summary: "Download a private, checksum-verified editable source archive (gzip JSON; not MP4).", responses: { 200: { description: "application/gzip" }, 401: { description: "unauthorized" }, 409: { description: "source unavailable" } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/cancel`]: {
+        post: { summary: "Cancel a queued job or abort a running HyperFrames render.", responses: { 200: { description: "cancelled", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/projects/{id}/jobs/{jobId}/retry`]: {
+        post: { summary: "Requeue a failed job; execution requires a worker.", responses: { 200: { description: "queued", content: json(obj) } } },
+      },
       [`${API_PREFIX}/films`]: {
         get: { summary: "The films rendered here.", responses: { 200: { description: "ok", content: json(arr(obj)) } } },
         post: {
@@ -348,6 +426,19 @@ export async function handleApi(
         "GET  /sfx",
         "GET  /sfx/{id}",
         "POST /sound/plan",
+        "GET  /projects",
+        "POST /projects",
+        "POST /projects/import",
+        "GET  /projects/{id}",
+        "POST /projects/{id}/revisions",
+        "GET  /projects/{id}/revisions/{number}",
+        "GET  /projects/{id}/jobs",
+        "POST /projects/{id}/jobs",
+        "GET  /projects/{id}/jobs/{jobId}",
+        "GET  /projects/{id}/jobs/{jobId}/artifact",
+        "GET  /projects/{id}/jobs/{jobId}/source",
+        "POST /projects/{id}/jobs/{jobId}/cancel",
+        "POST /projects/{id}/jobs/{jobId}/retry",
         "GET  /films",
         "POST /films",
         "GET  /films/{id}",
@@ -578,6 +669,211 @@ export async function handleApi(
     }));
     const kit = planSound(catalogue, beats as never);
     writeJson(res, 200, { beats, takes: kit.takes });
+    return true;
+  }
+
+  // ── private project drafts (MM-03) ─────────────────────────────────────────
+  // No anonymous project storage when bound beyond loopback. Hosted auth,
+  // tenant isolation and worker job execution are separate MM-05/MM-06 gates.
+  if (route === "/projects" || route.startsWith("/projects/")) {
+    if (!process.env.MOTION_MASTER_API_KEY?.trim() &&
+        !["127.0.0.1", "::1", "localhost"].includes(config.host)) {
+      fail(res, 403, "Private project storage requires a configured API key outside loopback.");
+      return true;
+    }
+
+    if (route === "/projects/import" && method === "POST") {
+      const mediaType = (req.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
+      if (mediaType !== "application/gzip" && mediaType !== "application/octet-stream") {
+        fail(res, 415, "Upload a gzip JSON source archive.");
+        return true;
+      }
+      try {
+        const archive = await readSourceArchive(req);
+        const imported = importProjectSource(config.repoRoot, archive);
+        writeJson(res, 201, imported);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Source import failed.";
+        fail(res, message.includes("upload limit") ? 413 : 400, message);
+      }
+      return true;
+    }
+
+    if (route === "/projects" && method === "GET") {
+      writeJson(res, 200, listProjects(config.repoRoot));
+      return true;
+    }
+
+    if (route === "/projects" && method === "POST") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      if (!body || typeof body.title !== "string" || typeof body.brief !== "string" ||
+          (body.shots !== undefined && !Array.isArray(body.shots))) {
+        fail(res, 400, "Project title and brief are required.");
+        return true;
+      }
+      try {
+        const created = createProject(config.repoRoot, {
+          title: body.title, brief: body.brief, shots: body.shots as never,
+        });
+        writeJson(res, 201, created);
+      } catch (error) {
+        fail(res, 400, error instanceof Error ? error.message : "Invalid project.");
+      }
+      return true;
+    }
+
+    // A client can queue, inspect, cancel or retry a job. Only the trusted
+    // worker may transition it to rendering/ready/failed.
+    const jobMatch = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})\/jobs(?:\/(j_[a-zA-Z0-9_-]+)(?:\/(cancel|retry|artifact|source))?)?$/.exec(route);
+    if (jobMatch) {
+      const [, projectId, jobId, action] = jobMatch;
+      if (!readProject(config.repoRoot, projectId)) {
+        fail(res, 404, "Project not found.");
+        return true;
+      }
+      if (!jobId && method === "GET") {
+        writeJson(res, 200, listProjectJobs(config.repoRoot, projectId));
+        return true;
+      }
+      if (!jobId && method === "POST") {
+        const body = (await readJson(req)) as { revision?: unknown };
+        if (!body || !Number.isSafeInteger(body.revision) || (body.revision as number) < 1) {
+          fail(res, 400, "A valid project revision is required.");
+          return true;
+        }
+        try {
+          const job = createProjectJob(config.repoRoot, projectId, body.revision as number);
+          writeJson(res, 201, job);
+          if (projectWorkerEnabled()) void processProjectQueue(config);
+        } catch (error) {
+          fail(res, 404, error instanceof Error ? error.message : "Revision not found.");
+        }
+        return true;
+      }
+      // MM-09: source archives are private, bounded and independently hashed.
+      if (jobId && action === "source" && method === "GET") {
+        try {
+          const archive = exportProjectSource(config.repoRoot, projectId, jobId);
+          res.writeHead(200, {
+            "content-type": "application/gzip",
+            "content-length": archive.length,
+            "content-disposition": `attachment; filename="motion-master-${projectId}-${jobId}.json.gz"`,
+            "cache-control": "private, no-store",
+            "x-content-type-options": "nosniff",
+          });
+          res.end(archive);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Source export unavailable.";
+          fail(res, message.includes("not found") ? 404 : 409, message);
+        }
+        return true;
+      }
+      // MM-09: never trust an artifact path supplied by the client.
+      if (jobId && action === "artifact" && (method === "GET" || method === "HEAD")) {
+        const job = readProjectJob(config.repoRoot, projectId, jobId);
+        if (!job) {
+          fail(res, 404, "Project job not found.");
+          return true;
+        }
+        if (job.status !== "ready" || job.artifact !== `artifacts/${jobId}.mp4`) {
+          fail(res, 409, "This job has no completed MP4 to download.");
+          return true;
+        }
+        const projectDir = join(projectsRoot(config.repoRoot), projectId);
+        const artifactDir = join(projectDir, "artifacts");
+        const path = join(artifactDir, `${jobId}.mp4`);
+        let size: number;
+        try {
+          const dir = lstatSync(artifactDir);
+          const file = lstatSync(path);
+          if (!dir.isDirectory() || dir.isSymbolicLink() ||
+              !file.isFile() || file.isSymbolicLink() || file.size <= 0 ||
+              !realpathSync(path).startsWith(realpathSync(projectDir) + sep)) {
+            fail(res, 403, "Artifact access denied.");
+            return true;
+          }
+          size = statSync(path).size;
+        } catch {
+          fail(res, 404, "The completed MP4 is missing.");
+          return true;
+        }
+        res.writeHead(200, {
+          "content-type": "video/mp4",
+          "content-length": size,
+          "content-disposition": `attachment; filename="${jobId}.mp4"`,
+          "cache-control": "private, no-store",
+          "x-content-type-options": "nosniff",
+        });
+        if (method === "HEAD") {
+          res.end();
+        } else {
+          const stream = createReadStream(path);
+          stream.on("error", () => res.destroy());
+          stream.pipe(res);
+        }
+        return true;
+      }
+      if (jobId && !action && method === "GET") {
+        const job = readProjectJob(config.repoRoot, projectId, jobId);
+        if (!job) fail(res, 404, "Project job not found.");
+        else writeJson(res, 200, { ...job, ...(job.status === "ready" ? { downloadUrl: `${API_PREFIX}/projects/${projectId}/jobs/${jobId}/artifact` } : {}) });
+        return true;
+      }
+      if (jobId && (action === "cancel" || action === "retry") && method === "POST") {
+        try {
+          const job = transitionProjectJob(config.repoRoot, projectId, jobId, action as "cancel" | "retry");
+          if (action === "cancel") cancelRunningProjectJob(config.repoRoot, projectId, jobId);
+          writeJson(res, 200, job);
+          if (action === "retry" && projectWorkerEnabled()) void processProjectQueue(config);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Job transition failed.";
+          fail(res, message.includes("not found") ? 404 : 409, message);
+        }
+        return true;
+      }
+      fail(res, 405, "Unsupported job method.");
+      return true;
+    }
+
+    const match = /^\/projects\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,79})(?:\/revisions(?:\/([0-9]+))?)?$/.exec(route);
+    if (!match) {
+      fail(res, 400, "Invalid project route or id.");
+      return true;
+    }
+    const id = match[1];
+    if (match[2] && method === "GET") {
+      const number = Number(match[2]);
+      const revision = Number.isSafeInteger(number) ? readRevision(config.repoRoot, id, number) : undefined;
+      if (!revision) fail(res, 404, "Project revision not found.");
+      else writeJson(res, 200, revision);
+      return true;
+    }
+    if (route.endsWith("/revisions") && method === "POST") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      if (!body || !Number.isSafeInteger(body.expectedRevision) ||
+          typeof body.title !== "string" || typeof body.brief !== "string" ||
+          !Array.isArray(body.shots)) {
+        fail(res, 400, "expectedRevision, title, brief and shots are required.");
+        return true;
+      }
+      try {
+        const saved = saveRevision(config.repoRoot, id, body.expectedRevision as number, {
+          title: body.title, brief: body.brief, shots: body.shots as never,
+        });
+        writeJson(res, 201, saved);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Invalid revision.";
+        fail(res, message.includes("conflict") ? 409 : message.includes("not found") ? 404 : 400, message);
+      }
+      return true;
+    }
+    if (route === `/projects/${id}` && method === "GET") {
+      const project = readProject(config.repoRoot, id);
+      if (!project) fail(res, 404, "Project not found.");
+      else writeJson(res, 200, project);
+      return true;
+    }
+    fail(res, 405, "Unsupported project method.");
     return true;
   }
 

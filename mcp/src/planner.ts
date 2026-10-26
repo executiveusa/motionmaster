@@ -624,7 +624,10 @@ export function planVideo(options: PlanOptions, tokens: MotionTokens): Storyboar
   const animationMs = beats.map((beat) => styleTokens[beat.easingRole]);
 
   // Fixed holds (the readable hold) are reserved before the flexible time.
-  const defaultHold = Math.min(2000, Math.round(totalMs * 0.25));
+  // Hold options and parsed brief values are in SECONDS. The old default was
+  // already in milliseconds and was multiplied by 1000 again below, turning
+  // a 2s hold into 2,000s and consuming almost the entire 15s storyboard.
+  const defaultHold = Math.min(2, requestedDuration * 0.25);
   const holdMs = beats.map((beat) =>
     beat.holdBeat ? Math.round((requestedHold ?? defaultHold) * 1000) : 0,
   );

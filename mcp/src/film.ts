@@ -26,6 +26,8 @@ export interface FilmShot {
   /** Where the block's composition lives inside the project. */
   src: string;
   duration: number;
+  /** Explicit editor trim, applied after reading the installed block's true duration. */
+  requestedDuration?: number;
   dimensions: { width: number; height: number };
   values: Record<string, unknown>;
   unresolved: { id: string; reason: string }[];
@@ -80,25 +82,53 @@ export function planFilm(
     tags?: string[];
     /** Blocks the gate has already rejected. They are not tried again. */
     exclude?: string[];
+    /** Ordered block IDs from an editable project revision, not a free-form match. */
+    selectedIds?: string[];
   },
 ): FilmPlan {
   const count = options.count ?? 3;
   const query = `${brief} ${(options.tags ?? []).join(" ")}`.trim();
   const excluded = new Set(options.exclude ?? []);
+  // These mountable upstream blocks failed the REAL default-worker HyperFrames
+  // readability gate. Keep them out of automatic plans and explicit edits
+  // until requalified by an actual MP4 + craft-check run; do not weaken the
+  // gate or pretend catalogue metadata is a quality verdict.
+  // caret-swap: CI 40193087103; split-flap-board: CI 40193303487.
+  const craftQuarantine = new Set(["caret-swap", "split-flap-board"]);
+  // HTML snippets are not mountable HyperFrames compositions, even when they
+  // expose editable variables or have a .html source file.
+  const mountable = (block: MotionBlock): boolean =>
+    block.files.some((file) => file.type === "hyperframes:composition");
 
   const matched = matchBlocks(options.blocks, query, {
     limit: count * 8,
     requireVariables: true,
   })
-    .filter((candidate) => !excluded.has(candidate.block.id))
+    .filter((candidate) => !excluded.has(candidate.block.id) && !craftQuarantine.has(candidate.block.id))
     // The registry marks a handful of entries as ports: markup to paste into
     // a composition, not a composition to mount. Every one of them is a
     // fragment, and mounting a fragment produces a shot with no identity.
-    .filter((candidate) => !candidate.block.tags.includes("transitions-dev-port"));
+    .filter((candidate) => !candidate.block.tags.includes("transitions-dev-port"))
+    .filter((candidate) => mountable(candidate.block));
 
   const chosen: MotionBlock[] = [];
+  const selected = options.selectedIds;
+  if (selected) {
+    if (selected.length === 0 || selected.length > 20 || new Set(selected).size !== selected.length) {
+      throw new Error("Edited shot selection must contain 1–20 unique block IDs.");
+    }
+    for (const id of selected) {
+      const block = options.blocks.blocks.find((entry) => entry.id === id);
+      if (!block || excluded.has(id) || craftQuarantine.has(id) || block.variables.length === 0 ||
+          block.tags.includes("transitions-dev-port") ||
+          !mountable(block)) {
+        throw new Error(`Edited shot block is unavailable or ineligible: ${id}`);
+      }
+      chosen.push(block);
+    }
+  }
   const usedFamilies = new Set<string>();
-  for (const candidate of matched) {
+  for (const candidate of selected ? [] : matched) {
     if (chosen.length >= count) break;
     const family = candidate.block.id.replace(/-\d+$/, "");
     if (usedFamilies.has(family)) continue;
@@ -123,14 +153,14 @@ export function planFilm(
     (block) => block !== opening && hasTag(block, CLOSING) && !hasTag(block, OPENING),
   );
 
-  if (opening) {
+  if (!selected && opening) {
     const at = chosen.indexOf(opening);
     if (at > 0) {
       chosen.splice(at, 1);
       chosen.unshift(opening);
     }
   }
-  if (closing) {
+  if (!selected && closing) {
     const at = chosen.indexOf(closing);
     if (at !== -1 && at !== chosen.length - 1) {
       chosen.splice(at, 1);
@@ -232,12 +262,25 @@ export function installBlocks(
      */
     const declared = contents.match(/data-duration="([0-9.]+)"/);
     const duration = declared ? Number(declared[1]) : undefined;
-    installed.push(
-      duration && Number.isFinite(duration) && duration > 0 ? { ...shot, duration } : shot,
-    );
+    const naturalDuration = duration && Number.isFinite(duration) && duration > 0
+      ? duration : shot.duration;
+    // An editor can shorten a real motion block, but extending past its source
+    // duration would introduce blank/undefined frames. Refuse that edit.
+    const finalDuration = trimShotDuration(shot.requestedDuration, naturalDuration);
+    installed.push({ ...shot, duration: finalDuration });
   }
 
   return { installed, skipped };
+}
+
+/** Never extend a motion block beyond its actual installed timeline. */
+export function trimShotDuration(requested: number | undefined, natural: number): number {
+  if (!Number.isFinite(natural) || natural <= 0) throw new Error("Invalid installed block duration.");
+  if (requested === undefined) return natural;
+  if (!Number.isFinite(requested) || requested <= 0 || requested > natural) {
+    throw new Error(`Edited shot duration must be greater than zero and no longer than ${natural}s.`);
+  }
+  return requested;
 }
 
 /**

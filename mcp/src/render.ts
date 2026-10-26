@@ -7,8 +7,8 @@
  * a file or it did not.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, extname, join, resolve } from "node:path";
+import { constants, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export interface FilmFile {
   /** The file's name, e.g. "acme.mp4". */
@@ -93,43 +93,71 @@ function runHyperFrames(
   repoRoot: string,
   args: string[],
   timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<RunResult> {
+  if (signal?.aborted) {
+    return Promise.resolve({ ok: false, code: 130, output: "HyperFrames command cancelled before start." });
+  }
   return new Promise((resolvePromise) => {
+    // The shell launches the HyperFrames CLI and ffmpeg. On POSIX, a separate
+    // process group lets cancellation stop the children, not just the shell.
+    const grouped = process.platform !== "win32";
     const child = spawn("bash", [hfScript(repoRoot), ...args], {
       cwd: repoRoot,
       env: process.env,
+      detached: grouped,
       stdio: ["ignore", "pipe", "pipe"],
     });
-
     let output = "";
+    let stopped: "cancelled" | "timed out" | undefined;
+    let settled = false;
+    let escalation: ReturnType<typeof setTimeout> | undefined;
     const collect = (chunk: Buffer): void => {
       output += chunk.toString();
-      // Keep the tail. A render log can be enormous and the useful part is
-      // always at the end.
       if (output.length > 40_000) output = output.slice(-40_000);
     };
     child.stdout.on("data", collect);
     child.stderr.on("data", collect);
 
-    let settled = false;
-    const finish = (ok: boolean, code: number): void => {
+    const killTree = (kind: "SIGTERM" | "SIGKILL"): void => {
+      try {
+        if (grouped && child.pid) process.kill(-child.pid, kind);
+        else child.kill(kind);
+      } catch {
+        // The process may have exited between the state check and the signal.
+      }
+    };
+    const stop = (reason: "cancelled" | "timed out"): void => {
+      if (settled || stopped) return;
+      stopped = reason;
+      killTree("SIGTERM");
+      // A process ignoring TERM must not leave a running render behind.
+      escalation = setTimeout(() => killTree("SIGKILL"), 2_000);
+      escalation.unref();
+    };
+    const onAbort = (): void => stop("cancelled");
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const timer = setTimeout(() => stop("timed out"), timeoutMs);
+    const finish = (code: number): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      resolvePromise({ ok, code, output: output.trim() });
+      if (escalation) clearTimeout(escalation);
+      signal?.removeEventListener("abort", onAbort);
+      const note = stopped === "cancelled" ? "\nHyperFrames command cancelled." :
+        stopped === "timed out" ? `\nHyperFrames command timed out after ${Math.round(timeoutMs / 1000)}s.` : "";
+      resolvePromise({
+        ok: !stopped && code === 0,
+        code: stopped === "cancelled" ? 130 : stopped === "timed out" ? 124 : code,
+        output: (output + note).trim(),
+      });
     };
-
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      output += `\nThe command was stopped after ${Math.round(timeoutMs / 1000)}s.`;
-      finish(false, 124);
-    }, timeoutMs);
-
     child.on("error", (error) => {
-      output += `\n${error instanceof Error ? error.message : String(error)}`;
-      finish(false, 1);
+      collect(Buffer.from(`\n${error instanceof Error ? error.message : String(error)}`));
+      finish(1);
     });
-    child.on("close", (code) => finish(code === 0, code ?? 1));
+    child.on("close", (code) => finish(code ?? 1));
+    if (signal?.aborted) stop("cancelled");
   });
 }
 
@@ -152,8 +180,9 @@ export async function gateProject(
   repoRoot: string,
   projectDir: string,
   timeoutMs = 180_000,
+  signal?: AbortSignal,
 ): Promise<GateResult> {
-  const result = await runHyperFrames(repoRoot, ["check", projectDir], timeoutMs);
+  const result = await runHyperFrames(repoRoot, ["check", projectDir], timeoutMs, signal);
   return {
     ok: result.ok,
     errors: result.ok ? 0 : Math.max(1, countGateErrors(result.output)),
@@ -212,14 +241,34 @@ export function writeProject(
   files: { path: string; contents: string }[],
 ): string[] {
   mkdirSync(projectDir, { recursive: true });
+  const root = realpathSync(projectDir);
+  const inside = (target: string): boolean => {
+    const rel = relative(root, target);
+    return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  };
   const written: string[] = [];
   for (const file of files) {
-    // The path is relative to the project, and a path that tries to escape it
-    // is refused rather than written.
-    const target = resolve(projectDir, file.path);
-    if (!target.startsWith(resolve(projectDir))) continue;
-    mkdirSync(resolve(target, ".."), { recursive: true });
-    writeFileSync(target, file.contents, "utf8");
+    // A string prefix is not a containment check: /film-evil starts with /film.
+    // Refuse traversal and absolute paths, rather than silently dropping files.
+    if (!file.path || isAbsolute(file.path)) {
+      throw new Error(`Invalid project file path: ${file.path}`);
+    }
+    const target = resolve(root, file.path);
+    if (!inside(target)) throw new Error(`Project file escapes root: ${file.path}`);
+    mkdirSync(dirname(target), { recursive: true });
+    // Parent symlinks can redirect a seemingly contained path outside root.
+    const realParent = realpathSync(dirname(target));
+    if (realParent !== root && !inside(realParent)) {
+      throw new Error(`Project file parent escapes root: ${file.path}`);
+    }
+    // O_NOFOLLOW also refuses a final-component symlink. Do not truncate the
+    // symlink's target even when the target exists outside the project.
+    const fd = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600);
+    try {
+      writeFileSync(fd, file.contents, "utf8");
+    } finally {
+      closeSync(fd);
+    }
     written.push(target);
   }
   return written;
@@ -257,7 +306,7 @@ function newestWith(dir: string, extensions: string[]): string | undefined {
 export async function renderProject(
   repoRoot: string,
   projectDir: string,
-  options: { fps?: number; timeoutMs?: number; skipGate?: boolean } = {},
+  options: { fps?: number; timeoutMs?: number; skipGate?: boolean; signal?: AbortSignal } = {},
 ): Promise<{
   video?: FilmFile;
   poster?: FilmFile;
@@ -270,7 +319,7 @@ export async function renderProject(
 
   let gate: GateResult | undefined;
   if (!options.skipGate) {
-    gate = await gateProject(repoRoot, projectDir, Math.min(timeoutMs, 240_000));
+    gate = await gateProject(repoRoot, projectDir, Math.min(timeoutMs, 240_000), options.signal);
     if (!gate.ok) {
       return { gate, log: gate.output, ok: false };
     }
@@ -281,6 +330,7 @@ export async function renderProject(
     repoRoot,
     ["render", projectDir, "--output", output, ...(options.fps ? ["-f", String(options.fps)] : [])],
     timeoutMs,
+    options.signal,
   );
   if (!render.ok || !existsSync(output)) {
     return { gate, log: render.output, ok: false };
@@ -293,6 +343,7 @@ export async function renderProject(
     repoRoot,
     ["snapshot", projectDir, "--output", stills, "--frames", "5"],
     Math.min(timeoutMs, 240_000),
+    options.signal,
   );
 
   const posterPath = newestWith(stills, [".png", ".jpg", ".jpeg"]);

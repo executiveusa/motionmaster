@@ -6,8 +6,8 @@
  * servers). The endpoint is /mcp; /health returns a small status document.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { createReadStream, existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { loadConfig, type Config } from "./config.js";
@@ -19,7 +19,9 @@ import { LICENCE } from "./licence.js";
 import { handleChat, type ChatRequestBody } from "./chat.js";
 import { listFiles, storeFile, workspaceDir } from "./files.js";
 import { filmsDir, listFilms, readJob } from "./render.js";
-import { handleApi } from "./api.js";
+import { authorised, handleApi } from "./api.js";
+import { recoverInterruptedProjectJobs } from "./projects.js";
+import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -103,6 +105,28 @@ function readBody(req: IncomingMessage, limitBytes = 1_000_000): Promise<unknown
   });
 }
 
+/**
+ * Uploads are binary. Do not pass them through the JSON chat-body decoder:
+ * MP4s and multipart bodies are not JSON, and that silently broke intake.
+ */
+function readBinaryBody(req: IncomingMessage, limitBytes: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limitBytes) {
+        reject(new Error("Upload exceeds the request limit."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
 /** Guess a content type from a filename. */
 function guessType(name: string): string {
   const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
@@ -113,9 +137,79 @@ function guessType(name: string): string {
     ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4",
     ".json": "application/json", ".txt": "text/plain", ".md": "text/markdown",
     ".srt": "text/plain", ".vtt": "text/vtt", ".woff2": "font/woff2",
+    ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8", ".ico": "image/x-icon",
+    ".woff": "font/woff",
     ".ttf": "font/ttf", ".otf": "font/otf",
   };
   return types[ext] ?? "application/octet-stream";
+}
+
+/**
+ * Opt-in local combined mode: the Vite build and the agent are served from
+ * the same loopback origin. This is a DEVELOPMENT/PRIVATE test surface.
+ * Do not bind to the public Internet: the private file/job routes still need
+ * an authorization boundary before a hosted deployment.
+ */
+function tryServeLocalSite(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: Config,
+  pathname: string,
+): boolean {
+  if (process.env.MOTION_MASTER_SERVE_SITE !== "1") return false;
+  if (req.method !== "GET" && req.method !== "HEAD") return false;
+  if (!["127.0.0.1", "::1", "localhost"].includes(config.host)) {
+    writeJson(res, 403, { error: "Combined site mode is loopback-only until private API auth is complete." });
+    return true;
+  }
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    writeJson(res, 400, { error: "Malformed asset path." });
+    return true;
+  }
+  if (decoded.includes("\\") || decoded.includes("\0") || decoded.split("/").includes("..")) {
+    writeJson(res, 403, { error: "Asset path rejected." });
+    return true;
+  }
+  const base = resolve(config.repoRoot, "site", "dist");
+  const candidate = resolve(base, "." + (decoded === "/" ? "/index.html" : decoded));
+  if (!candidate.startsWith(base + sep) || !existsSync(candidate)) return false;
+  let target: string;
+  try {
+    target = realpathSync(candidate);
+    if (!target.startsWith(realpathSync(base) + sep) || !statSync(target).isFile()) return false;
+  } catch {
+    return false;
+  }
+  const bytes = statSync(target).size;
+  const headers: Record<string, string | number> = {
+    "content-type": guessType(target),
+    "accept-ranges": "bytes",
+    "cache-control": "no-store",
+  };
+  // Range responses are needed to seek and play MP4s without reading the entire film.
+  const range = req.headers.range?.trim().match(/^bytes=([0-9]+)-([0-9]*)$/i);
+  if (req.headers.range && !range) {
+    res.writeHead(416, { "content-range": `bytes */${bytes}` });
+    res.end();
+    return true;
+  }
+  const start = range ? Number(range[1]) : 0;
+  const end = range && range[2] ? Number(range[2]) : bytes - 1;
+  if (start >= bytes || end < start || end >= bytes) {
+    res.writeHead(416, { "content-range": `bytes */${bytes}` });
+    res.end();
+    return true;
+  }
+  headers["content-length"] = end - start + 1;
+  if (range) headers["content-range"] = `bytes ${start}-${end}/${bytes}`;
+  res.writeHead(range ? 206 : 200, headers);
+  if (req.method === "HEAD") { res.end(); return true; }
+  createReadStream(target, { start, end }).pipe(res);
+  return true;
 }
 
 /**
@@ -156,44 +250,13 @@ function writeJson(res: ServerResponse, status: number, payload: unknown): void 
   res.end(body);
 }
 
-function statusDocument(config: Config): Record<string, unknown> {
-  const skills = listSkills(config.skillsDir);
-  const gallery = readGallery(config.clipsPath);
-  return {
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-    status: "ok",
-    mcpEndpoint: config.publicUrl,
-    tools: [...TOOL_NAMES],
-    skills: {
-      count: skills.length,
-      directory: config.skillsDir,
-      router: "skills/motion-master/SKILL.md",
-    },
-    clips: {
-      available: gallery.available,
-      source: gallery.source,
-      count: gallery.clips.length,
-    },
-    tokens: {
-      source: tokenSource(config.tokensPath),
-      canonicalPath: config.tokensPath,
-    },
-    montage: {
-      configured: config.montage.baseUrl.length > 0,
-      baseUrl: config.montage.baseUrl.length > 0 ? config.montage.baseUrl : null,
-      tenant: config.montage.tenant,
-      tokenConfigured: Boolean(config.montage.token),
-    },
-    licence: LICENCE,
-    domain: {
-      recordedIn: config.brandPath,
-      tld: null,
-      url: null,
-      note: "The TLD has not been chosen. No URL is published by this server.",
-    },
-    rendering: LICENCE.rendering,
-  };
+/**
+ * Public liveness is intentionally non-diagnostic. This endpoint can be
+ * reached without a bearer token, including through a reverse proxy; never
+ * expose local paths, upstream URLs, tenant configuration or tool inventory.
+ */
+function statusDocument(): Record<string, string> {
+  return { name: SERVER_NAME, version: SERVER_VERSION, status: "ok" };
 }
 
 /**
@@ -204,6 +267,26 @@ function statusDocument(config: Config): Record<string, unknown> {
  * which keeps it on the local machine; the allowlist is here so it can be
  * narrowed to the exact site that talks to it.
  */
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+/**
+ * Browser access to private local files and tools is opt-in. Without an
+ * allowlist, an arbitrary website must not be able to drive the local agent.
+ * The local combined site is the only implicit browser origin.
+ */
+function privateOriginAllowed(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (!origin) return true; // Non-browser clients still require the bearer key.
+  const allowed = (process.env.MOTION_MASTER_ALLOWED_ORIGINS ?? "")
+    .split(",").map((item) => item.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  const host = req.headers.host ?? "";
+  const name = host.startsWith("[") ? host.slice(1, host.indexOf("]")) : host.split(":")[0];
+  return isLoopbackHost(name) && origin === `http://${host}`;
+}
+
 function corsOrigin(config: Config, requestOrigin: string | undefined): string {
   const allowed = (process.env.MOTION_MASTER_ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -237,15 +320,37 @@ export function createHttpHandler(config: Config) {
      * agent here" rather than like a policy.
      */
     res.setHeader("access-control-allow-private-network", "true");
+    const privateRoute = url.pathname.startsWith("/api/") ||
+      url.pathname === "/files" || url.pathname.startsWith("/files/") ||
+      url.pathname === "/films" || url.pathname.startsWith("/films/") ||
+      url.pathname === "/chat" || url.pathname === "/mcp";
+    if (privateRoute && !privateOriginAllowed(req)) {
+      writeJson(res, 403, { error: "Browser origin is not approved for private tools." });
+      return;
+    }
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "access-control-allow-methods": "GET, POST, OPTIONS",
         "access-control-allow-headers":
-          "content-type, x-file-name, x-motion-master, access-control-request-private-network",
+          "content-type, authorization, x-file-name, x-motion-master, access-control-request-private-network",
         "access-control-max-age": "600",
       });
       res.end();
       return;
+    }
+
+    // Never expose private projects, uploads, rendered films, chat or MCP
+    // tools on a network interface without a configured server-side key.
+    // A loopback-only instance remains convenient for local development.
+    if (privateRoute) {
+      if (!isLoopbackHost(config.host) && !process.env.MOTION_MASTER_API_KEY?.trim()) {
+        writeJson(res, 403, { error: "Private endpoints require MOTION_MASTER_API_KEY on a network listener." });
+        return;
+      }
+      if (!authorised(req)) {
+        writeJson(res, 401, { error: "Private endpoint requires a bearer token." });
+        return;
+      }
     }
 
     // The HTTP API. It answers before the MCP route, so /api/v1 is the
@@ -255,12 +360,15 @@ export function createHttpHandler(config: Config) {
       return;
     }
 
+    // Prefer the built frontend on / only when private combined mode is on.
+    if (url.pathname === "/" && tryServeLocalSite(req, res, config, url.pathname)) return;
+
     if (url.pathname === "/health" || url.pathname === "/") {
       if (req.method !== "GET") {
         writeJson(res, 405, { error: "Method not allowed" });
         return;
       }
-      writeJson(res, 200, statusDocument(config));
+      writeJson(res, 200, statusDocument());
       return;
     }
 
@@ -281,7 +389,7 @@ export function createHttpHandler(config: Config) {
           writeJson(res, 400, { error: "The upload had no boundary." });
           return;
         }
-        const raw = await readBody(req, 600 * 1024 * 1024);
+        const raw = await readBinaryBody(req, 600 * 1024 * 1024);
         const parsed = parseMultipart(raw as Buffer, boundary);
         if (!parsed) {
           writeJson(res, 400, { error: "The upload could not be read." });
@@ -296,7 +404,7 @@ export function createHttpHandler(config: Config) {
         return;
       }
       const name = String(req.headers["x-file-name"] ?? "upload.bin");
-      const bytes = (await readBody(req, 600 * 1024 * 1024)) as Buffer;
+      const bytes = await readBinaryBody(req, 600 * 1024 * 1024);
       const stored = storeFile(config, name, bytes, contentType || "application/octet-stream");
       if (!stored.ok) {
         writeJson(res, stored.status, { error: stored.error });
@@ -307,16 +415,45 @@ export function createHttpHandler(config: Config) {
     }
 
     if (url.pathname.startsWith("/files/")) {
-      const name = decodeURIComponent(url.pathname.slice("/files/".length));
-      const path = join(workspaceDir(config), name);
-      if (!path.startsWith(workspaceDir(config)) || !existsSync(path)) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        writeJson(res, 405, { error: "Method not allowed." });
+        return;
+      }
+      let name: string;
+      try {
+        name = decodeURIComponent(url.pathname.slice("/files/".length));
+      } catch {
+        writeJson(res, 400, { error: "Invalid file name." });
+        return;
+      }
+      // Flat hash-named uploads only. Reject encoded slashes, dot segments,
+      // backslashes, and symlink targets outside the private workspace.
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,255}$/.test(name) || name === "." || name === "..") {
+        writeJson(res, 400, { error: "Invalid file name." });
+        return;
+      }
+      const root = workspaceDir(config);
+      const path = join(root, name);
+      if (!existsSync(path)) {
         writeJson(res, 404, { error: "No such file." });
         return;
       }
-      const body = readFileSync(path);
+      try {
+        const realRoot = realpathSync(root);
+        const realFile = realpathSync(path);
+        if (!realFile.startsWith(realRoot + sep) || !statSync(realFile).isFile()) {
+          writeJson(res, 403, { error: "File access denied." });
+          return;
+        }
+      } catch {
+        writeJson(res, 404, { error: "No such file." });
+        return;
+      }
+      const body = req.method === "HEAD" ? Buffer.alloc(0) : readFileSync(path);
       res.writeHead(200, {
         "content-type": guessType(name),
-        "content-length": body.length,
+        "content-length": statSync(path).size,
+        "cache-control": "no-store",
       });
       res.end(body);
       return;
@@ -345,6 +482,10 @@ export function createHttpHandler(config: Config) {
     }
 
     if (url.pathname.startsWith("/films/")) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        writeJson(res, 405, { error: "Method not allowed." });
+        return;
+      }
       const rest = url.pathname.slice("/films/".length);
       const slash = rest.indexOf("/");
       const id = decodeURIComponent(slash === -1 ? rest : rest.slice(0, slash));
@@ -491,6 +632,7 @@ export function createHttpHandler(config: Config) {
       return;
     }
 
+    if (tryServeLocalSite(req, res, config, url.pathname)) return;
     writeJson(res, 404, { error: "Not found", endpoints: ["/mcp", "/health"] });
   };
 }
@@ -507,6 +649,12 @@ export async function startChatServer(config: Config): Promise<{
   url: string;
   close: () => Promise<void>;
 }> {
+  // A single-writer restart cannot leave abandoned jobs looking active.
+  // Never automatically execute a recovered job; the owner may retry it.
+  recoverInterruptedProjectJobs(config.repoRoot);
+  // Only an explicitly enabled owner-controlled worker resumes queued work.
+  // Interrupted rendering jobs stay failed until manually retried.
+  if (projectWorkerEnabled()) void processProjectQueue(config);
   const httpServer = createServer(createHttpHandler(config));
   await new Promise<void>((resolve) => {
     httpServer.listen(config.port, config.host, () => resolve());

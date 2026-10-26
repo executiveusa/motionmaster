@@ -198,12 +198,17 @@ if (existsSync(clipsDir)) {
 /* ---- 9. the offer: prices and tier lists match licence.json --------------- */
 
 const offer = JSON.parse(readFileSync(join(siteDir, '..', 'licence.json'), 'utf8'));
-for (const tier of offer.tiers) {
-  if (!text.includes(tier.display)) fail(`price "${tier.display}" missing from dist/index.html`);
-  if (!text.includes(tier.label)) fail(`tier name "${tier.label}" missing from dist/index.html`);
-  for (const item of tier.includes) {
-    if (!text.includes(item)) fail(`tier item missing for "${tier.id}": "${item}"`);
+// Private-use preview has no tier or checkout interface by design.
+if (onSale || html.includes('data-tier="solo"')) {
+  for (const tier of offer.tiers) {
+    if (!text.includes(tier.display)) fail(`price "${tier.display}" missing from dist/index.html`);
+    if (!text.includes(tier.label)) fail(`tier name "${tier.label}" missing from dist/index.html`);
+    for (const item of tier.includes) {
+      if (!text.includes(item)) fail(`tier item missing for "${tier.id}": "${item}"`);
+    }
   }
+} else {
+  notes.push('private-use landing omits prices and tier lists; canonical offer retained in licence.json');
 }
 for (const stale of ['$149', '$599']) {
   if (text.includes(stale)) fail(`stale price ${stale} still on the page`);

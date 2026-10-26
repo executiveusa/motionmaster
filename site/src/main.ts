@@ -29,6 +29,10 @@ import { initPricing } from './modules/pricing';
 import { initLibrary } from './modules/library';
 import { initSound } from './modules/sound';
 import { initConsole } from './modules/chat';
+import { initLocale } from './modules/locale';
+import { initProjectEditor } from './modules/project-editor';
+import './styles/simplified.css';
+import './styles/project-editor.css';
 
 function boot(): void {
   initRail();
@@ -38,11 +42,13 @@ function boot(): void {
   initClips();
   initTree();
   initMenu();
-  initMobileBar();
   initPricing();
   initLibrary();
   initSound();
   initConsole();
+  initProjectEditor();
+  initMobileBar();
+  initLocale();
 }
 
 if (document.readyState === 'loading') {

@@ -71,20 +71,29 @@ export function initMenu(): void {
   });
 }
 
-/** Sticky mobile bar: appears once the hero has passed. */
+/** Sticky mobile CTA stays out of the way of the private video editor. */
 export function initMobileBar(): void {
   const bar = qs<HTMLElement>('[data-mobile-bar]');
   const hero = qs<HTMLElement>('.hero');
   if (!bar || !hero) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const passed = entry.boundingClientRect.top < 0;
-      bar.hidden = !passed;
-    },
-    { threshold: 0 },
-  );
-  observer.observe(hero);
+  const editor = qs<HTMLElement>('[data-project-editor]');
+  const details = editor?.querySelector('details');
+  let heroPassed = false;
+  const update = () => {
+    // Read current geometry, not a potentially stale IntersectionObserver
+    // callback: opening the editor can change its height while scrolling.
+    const rect = details?.open ? editor?.getBoundingClientRect() : null;
+    const editingInView = !!rect && rect.top < window.innerHeight && rect.bottom > 0;
+    bar.hidden = !heroPassed || editingInView;
+  };
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    if (!entry) return;
+    heroPassed = entry.boundingClientRect.top < 0;
+    update();
+  }, { threshold: 0 });
+  heroObserver.observe(hero);
+  details?.addEventListener('toggle', update);
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
 }
