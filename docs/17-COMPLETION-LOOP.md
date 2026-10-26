@@ -446,3 +446,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `3846e4d`, `be458ac`, `59fe899`, `0a45397` in reverse order on the draft branch. No merge, force-push, production deployment, paid services, credential disclosure, or Montage repository edits.
 
 **NEXT:** Inspect exact-code-head CI and resolve any regressions before recording proof. Then obtain an owner-controlled private staging host and validate durable job recovery across an actual server restart, not just browser reload.
+
+## 2026-10-26 02:17 UTC — MM-13 actual private API/worker process restart acceptance
+
+**DECISION:** Continue private v1, release blocked. Prove that an actual process restart does not lose the completed user's editable video or weaken the private API boundary. This is an isolated CI/loopback rehearsal, **not** an owner-controlled hosted staging deployment.
+
+**INSPECT:** Draft PR #2 was open and unmerged on `agent/completion-loop-v1` at `26635e0` (223 commits); `main` remains `adc9685`. The previous CI [40253402306](https://github.com/executiveusa/motionmaster/actions/runs/40253402306) passed. The Vercel preview deployment metadata still identifies older `33aee7d`, not the branch head. Live preview and motionvideo.xyz could not be directly fetched. The gallery-first October 24 hero, four source-prompt examples, English/es-MX UI, source/licence records and `onSale=false` are unchanged.
+
+**CHANGES:** `dc90b34` extends `scripts/browser-real-worker-smoke.mjs` to terminate the real isolated authenticated API/HyperFrames worker after a browser-created and edited MP4 is ready, wait for process exit, restart the same server against the same on-disk workspace, reject unauthenticated project access, verify the original job ID/status remain intact, reload/reconnect the browser without a persisted bearer, reopen and play the MP4, and verify no duplicate render. Existing browser download, source export/import and mobile acceptance then continue against the restarted process. No application runtime code, schema, hosting, frontend, or production change.
+
+**PROOF:** [GitHub Actions run 40258017370](https://github.com/executiveusa/motionmaster/actions/runs/40258017370) **SUCCESS** at exact code commit `dc90b34c3347ecabfff09721e385e5e588863cc8`; [artifact 12623427692](https://github.com/executiveusa/motionmaster/actions/runs/40258017370/artifacts/12623427692) downloaded and inspected. The machine-readable `browser-real-worker/report.json` says `status: passed` and explicitly includes **real API/worker process restart preserves private auth, job ID and playable MP4**, followed by download/export/import/reopen and 390px mobile assertions. CI passed all seven quality gates, actual default HyperFrames rendering, English/es-MX browser checks and four gallery MP4 checks. Independently probed browser-downloaded MP4: H.264, 1920×1080, 3.000 seconds; SHA-256 `ae77f7ace53e65b31adb1f051f6fef5dac8189a6664d246ea3adac2bb115f173`. Sampled frame visibly contains edited name **Ana Ruiz**.
+
+**LIMITS:** This proves a completed render survives a real local process restart; it does not prove in-flight rendering survives restart, hosted storage durability, encrypted volumes, remote backup/restore/rollback, ten hosted journeys, actual Codex/Claude host calls, independent security/taste/accessibility council or five uncoached users. The repo remains public. No new deployment, sale activation, paid service, merge, force-push, secret disclosure or Montage edit.
+
+**ROLLBACK:** Revert `dc90b34` (browser acceptance test only) and this documentation entry on the draft branch; no data migration or runtime behavior change. `main` remains the recovery anchor.
+
+**NEXT:** Obtain an owner-selected private persistent host and explicit staging deployment authorization; rehearse backup/restore and real worker restart on that host, then ten consecutive browser workflows and Codex/Claude MCP host smoke. Keep release blocked until independent approvals.
