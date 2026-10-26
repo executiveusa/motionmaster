@@ -414,3 +414,19 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `1618d64`, `c825d71`, `d843b37`, `6939921`, `3de3bbe` on draft PR #2; main, deployment, database and user assets unchanged. No production deployment, merge, force-push, paid service, credential disclosure or Montage edit.
 
 **NEXT:** Stop adding preflight-only features. Obtain owner-controlled private staging authorization, then verify encrypted persistence, backup/restore, ten hosted browser runs, live Codex/Claude MCP calls and independent release reviews. Keep sale blocked.
+
+## 2026-10-26 00:25 UTC — MM-08 durable completed-video reopen
+
+**DECISION:** Fix a human-facing P1 in the existing private editor, not the homepage. The gallery-first October 24 hero, four real examples/prompts, English default, es-MX toggle and source/licence records are unchanged. Draft PR #2 remains unmerged, main remains `adc9685`, and `licence.json.status.onSale=false`.
+
+**DEFECT:** A rendered MP4 persisted on the backend, but reopening its project cleared the editor's in-memory video/job state. Users could not watch/download/export that completed video without a new render or direct API access.
+
+**CHANGES:** `b2cae5d` restores the most recent ready job **only when its revision matches the current saved revision**, fetching the MP4 through the existing authenticated artifact route and restoring playback/download/source export. A stale previous-revision render is never misrepresented as the current edit. `3cd1525` tests reopen and no duplicate render; `0f31c59` tests full browser reload, explicit reauthentication, durable MP4 reopen and secret-not-persisted behavior. No API, schema, job transition or hosting change.
+
+**PROOF:** [GitHub Actions 40248939877](https://github.com/executiveusa/motionmaster/actions/runs/40248939877) **SUCCESS** at exact code head `0f31c59`. [Evidence artifact 12619957821](https://github.com/executiveusa/motionmaster/actions/runs/40248939877/artifacts/12619957821) was downloaded and inspected. `browser-real-worker/report.json` explicitly passes **saved-project reopen**, **full reload + explicit reauthentication**, **playback**, **no duplicate render**, **download**, **source export/import**, and **390px mobile editor**. The actual MP4 independently probes as H.264, 1920×1080, 3.000s, and its sampled late frame visibly reads **Ana Ruiz**. All seven quality gates, 135/135 MCP tests, 46/46 MCP tool-policy checks, English/es-MX Chromium, four gallery MP4s, HyperFrames smoke and backup/preflight checks passed. CI tests the PR merge ref, not hosting.
+
+**LIMITS:** The existing Vercel preview is still READY on old SHA `33aee7d`, not this branch; live page/benchmark fetches were unavailable. Completed MP4 recovery downloads the video into browser memory; in-flight queued/running job resume on browser reconnect is not implemented. Persistent owner-controlled staging, encrypted storage and actual host backup/restore/rollback, 10 consecutive hosted journeys, Codex/Claude MCP host calls, independent design/security/accessibility/asset-rights review and five uncoached users remain release blockers. Repository visibility remains public.
+
+**ROLLBACK:** Revert `0f31c59`, `3cd1525`, `b2cae5d` on draft PR #2. No migrations, main change, force-push, production deployment, paid service, credential disclosure or Montage repository edit.
+
+**NEXT:** On the next run, inspect exact-head CI first. Continue with one safe P1: resume existing queued/running jobs after reconnect **without queueing duplicates**, or move to an explicitly authorized private persistent host. Never self-approve release.
