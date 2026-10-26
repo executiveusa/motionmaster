@@ -476,3 +476,18 @@ PR on branch `agent/completion-loop-v1`:
 **ROLLBACK:** Revert `e9973c3` and `dcd12ce` on draft PR #2; no schema or user-data migration. Main and production remain untouched; no paid services, force-push, auto-merge, secret disclosure or Montage edits.
 
 **NEXT:** Obtain explicit owner authorization and configuration for a private persistent staging host; rehearse restore and rollback there, then ten hosted browser workflows and actual Codex/Claude MCP host smoke. Do not treat CI as a deployment.
+
+
+## 2026-10-26 04:15 UTC — MM-09 artifact publication path confinement
+
+**DECISION:** Continue private v1, release blocked. Focused follow-up to the previous renderer symlink fix. A symlink at the project's `artifacts/` directory could redirect the worker's temporary and final MP4 writes outside the project. The earlier source `lstat` check also had a local-file replacement window before `copyFileSync`.
+
+**CHANGES:** `4b2075d` adds a real-FFmpeg regression with `artifacts/` symlinked to an external directory and requires a failed job, no artifact and no external writes. `d7cc219` rejects symlinked artifact directories and copies renderer output from a pinned `O_NOFOLLOW` regular-file descriptor to an exclusive mode-0600 temporary file. The October 24 gallery-first hero, source prompts, English/es-MX UI, public preview and data schema are unchanged.
+
+**PROOF:** [CI 40267709142](https://github.com/executiveusa/motionmaster/actions/runs/40267709142) **SUCCESS** at exact code head `d7cc2191a409f7fc1ea413ebb8668d9139f11a8a`. [Artifact 12627805131](https://github.com/executiveusa/motionmaster/actions/runs/40267709142/artifacts/12627805131) downloaded and independently inspected. MCP tests **137/137** pass; new regression is `ok 100`. All seven completion gates and desktop/mobile Chromium, English/es-MX dynamic translations, four playable source-prompt gallery MP4s, default HyperFrames render/rerender, browser edit/watch/download/export/import/reopen and real local API/worker restart pass. Actual browser MP4 is H.264, 1920×1080, 3.000 seconds; sampled frame visibly reads **Ana Ruiz**. This is local CI proof, not hosted staging.
+
+**LIMITS:** Owner-controlled persistent staging, encrypted/off-host backups and restore, hosted rollback, 10 consecutive hosted journeys, actual Codex/Claude host MCP calls, independent design/security/accessibility review, asset rights and five uncoached users remain outstanding. Workspace must be owner-only and single-writer; this change does not defend against a malicious process that can mutate parent directories concurrently. GitHub repository remains public. Vercel preview metadata still points to `33aee7d`; direct live page and benchmark fetches were unavailable. `licence.json.status.onSale=false` verified.
+
+**ROLLBACK:** Revert `d7cc219` then `4b2075d` on draft PR #2. No schema migration, main change, merge, force-push, paid service, production deployment, secret disclosure or Montage repository edit.
+
+**NEXT:** Stop accumulating local-only hardening unless a concrete P0/P1 appears. The critical path is explicit owner-controlled private staging authorization and host access, then encrypted persistent storage, restore/rollback rehearsal, 10 hosted browser journeys and live Codex/Claude MCP verification. No release approval is implied.
