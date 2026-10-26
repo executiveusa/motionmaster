@@ -34,7 +34,7 @@ mkdirSync(join(isolated, 'generator', 'vendor'), { recursive: true });
 copyFileSync(join(root, 'generator', 'hf.sh'), join(isolated, 'generator', 'hf.sh'));
 copyFileSync(join(root, 'generator', 'vendor', 'gsap-3.14.2.min.js'),
   join(isolated, 'generator', 'vendor', 'gsap-3.14.2.min.js'));
-const server = spawn(process.execPath, [join(root, 'mcp', 'dist', 'index.js')], {
+let server = spawn(process.execPath, [join(root, 'mcp', 'dist', 'index.js')], {
   cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, MOTION_MASTER_REPO_ROOT: isolated,
     MOTION_MASTER_SERVE_SITE: '1', MOTION_MASTER_RENDER_WORKER: '1',
@@ -218,6 +218,64 @@ try {
   assert.equal((await api('projects/' + projectId + '/jobs')).length, 1,
     'Browser reload and reopen must not queue a duplicate render');
   report.checks.push('full browser reload + explicit reauthentication restores durable MP4');
+  // MM-13: actually terminate and restart the private API + worker process.
+  // The browser and the on-disk project survive; no mocked API or renderer is used.
+  const stopped = new Promise((done) => server.once('exit', done));
+  assert.equal(server.kill('SIGTERM'), true, 'Private server did not accept shutdown');
+  await Promise.race([
+    stopped,
+    sleep(10000).then(() => { throw new Error('Private server did not stop for restart'); }),
+  ]);
+  server = spawn(process.execPath, [join(root, 'mcp', 'dist', 'index.js')], {
+    cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, MOTION_MASTER_REPO_ROOT: isolated,
+      MOTION_MASTER_SERVE_SITE: '1', MOTION_MASTER_RENDER_WORKER: '1',
+      MOTION_MASTER_MCP_HOST: '127.0.0.1', MOTION_MASTER_MCP_PORT: String(port),
+      MOTION_MASTER_API_KEY: fixtureKey },
+  });
+  for (const stream of [server.stdout, server.stderr]) {
+    stream.on('data', (chunk) => {
+      serverTail.push(String(chunk).slice(-2500));
+      if (serverTail.length > 30) serverTail.shift();
+    });
+  }
+  let restarted = false;
+  for (let i = 0; i < 100; i++) {
+    if (server.exitCode !== null) throw new Error('Private server exited during restart');
+    try { restarted = (await fetch(base)).ok; if (restarted) break; } catch {}
+    await sleep(150);
+  }
+  assert.ok(restarted, 'Private API did not return after process restart');
+  const durableJobs = await api('projects/' + projectId + '/jobs');
+  assert.equal(durableJobs.length, 1, 'Server restart duplicated the completed job');
+  assert.equal(durableJobs[0].id, jobs[0].id, 'Server restart changed the job identity');
+  assert.equal(durableJobs[0].status, 'ready', 'Server restart lost the completed MP4');
+  const denied = await fetch(base + 'api/v1/projects/' + projectId + '/jobs');
+  assert.equal(denied.status, 401, 'Restarted private API must still require authentication');
+  await command('Page.reload', { ignoreCache: true });
+  await until('document.readyState === "complete" && !!document.querySelector("[data-project-editor]")',
+    'site loaded after private API process restart');
+  assert.equal(await evaluate('document.querySelector("[data-project-key]").value'), '',
+    'Server restart must not cause a bearer secret to persist in the browser');
+  await evaluate('document.querySelector("[data-project-editor] summary").click()');
+  await evaluate(`(() => {
+    document.querySelector("[data-project-server]").value = location.origin;
+    document.querySelector("[data-project-key]").value = ${JSON.stringify(fixtureKey)};
+    document.querySelector("[data-project-connect]").requestSubmit();
+    return true;
+  })()`);
+  await until('!document.querySelector("[data-project-workspace]").hidden',
+    'private workspace reconnect after server restart');
+  await evaluate('document.querySelector("[data-project-open]").click()');
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorComplete" && ' +
+    'document.querySelector("[data-project-video]")?.videoWidth > 0',
+    'completed MP4 restored after real API process restart', 30000);
+  await evaluate('document.querySelector("[data-project-video]").play()');
+  await until('document.querySelector("[data-project-video]")?.currentTime > 0.2',
+    'MP4 plays after private API process restart', 15000);
+  assert.equal((await api('projects/' + projectId + '/jobs')).length, 1,
+    'Reopening after server restart must not create a duplicate render');
+  report.checks.push('real API/worker process restart preserves private auth, job ID and playable MP4');
   await evaluate('document.querySelector("[data-project-download]").click()');
   await until('!document.querySelector("[data-project-source]").disabled',
     'MP4 download action finished', 30000);
