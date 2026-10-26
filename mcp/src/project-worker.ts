@@ -3,7 +3,7 @@
  * existing HyperFrames film pipeline. This is NOT a distributed job queue.
  * Set MOTION_MASTER_RENDER_WORKER=1 only on the owner-controlled worker.
  */
-import { copyFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Config } from "./config.js";
@@ -121,9 +121,10 @@ export async function runProjectJob(
     rmSync(outputDir, { recursive: true, force: true });
     mkdirSync(outputDir, { recursive: true });
     const source = resolve(await renderer(config, revision, outputDir, controller.signal));
-    // Only a film produced inside this job's own output directory is eligible.
+    // Only a real job-local MP4 is eligible. lstat (not stat) rejects a
+    // renderer-created symlink to a video outside this private project.
     if (source !== resolve(outputDir, "film.mp4") ||
-        !existsSync(source) || !statSync(source).isFile()) {
+        !existsSync(source) || !lstatSync(source).isFile()) {
       throw new Error("Renderer did not produce its expected job-local MP4.");
     }
     // A client may cancel while HyperFrames runs. Never publish that output
