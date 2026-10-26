@@ -17,6 +17,8 @@ on:
       - "scripts/staging-workspace-smoke.mjs"
       - "scripts/staging-preflight.mjs"
       - "scripts/staging-preflight-smoke.mjs"
+      - "scripts/staging-live-smoke.mjs"
+      - "scripts/staging-live-smoke-smoke.mjs"
       - "scripts/gallery-media-smoke.mjs"
       - "scripts/capture-site.mjs"
       - "scripts/locale-browser-smoke.mjs"
@@ -62,6 +64,8 @@ jobs:
         run: node scripts/staging-workspace-smoke.mjs
       - name: Verify fail-closed private staging preflight
         run: node scripts/staging-preflight-smoke.mjs
+      - name: Verify read-only live-staging probe against disposable HTTP fixture
+        run: node scripts/staging-live-smoke-smoke.mjs
       - name: Run completion quality gates
         run: node scripts/completion-gates.mjs
       - name: Capture gallery-first homepage (desktop and mobile)
