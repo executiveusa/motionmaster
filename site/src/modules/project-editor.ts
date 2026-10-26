@@ -113,6 +113,8 @@ export function initProjectEditor(): void {
   let job: Job | null = null;
   let videoUrl: string | null = null;
   let busy = false;
+  // Invalidates old pollers when a project is reopened or another render begins.
+  let watchVersion = 0;
   const blocks = new Map<string, Block>();
   const workspace = q<HTMLElement>(root, '[data-project-workspace]')!;
   const connectForm = q<HTMLFormElement>(root, '[data-project-connect]')!;
@@ -190,6 +192,7 @@ export function initProjectEditor(): void {
   async function openProject(id: string): Promise<void> {
     const opened = await request<OpenProject>('/projects/' + encodeURIComponent(id));
     current = opened;
+    ++watchVersion;
     job = null;
     cancelButton.hidden = true;
     clearVideo();
@@ -245,13 +248,21 @@ export function initProjectEditor(): void {
     if (!opened.revision.shots.length) status(root, 'editorNoShots');
     else status(root, 'editorLoaded');
     q<HTMLSelectElement>(root, '[data-project-list]')!.value = id;
-    // Reopening a saved project must recover its last completed video. A
-    // previous revision's render is deliberately not presented as the current
-    // edit; it could contain outdated on-screen text or colours.
+    // Resume the newest active or completed job for this saved revision.
+    // Never enqueue a duplicate on reconnect or show an older revision's MP4.
     const jobs = await request<Job[]>('/projects/' + encodeURIComponent(id) + '/jobs');
-    const ready = jobs.find((item) => item.status === 'ready' &&
-      item.revision === opened.revision.number);
-    if (ready) {
+    if (current?.project.id !== id || current.revision.number !== opened.revision.number) return;
+    const latest = jobs.find((item) => item.revision === opened.revision.number &&
+      ['queued', 'rendering', 'ready'].includes(item.status));
+    if (latest && ['queued', 'rendering'].includes(latest.status)) {
+      job = latest;
+      cancelButton.hidden = false;
+      status(root, latest.status === 'rendering' ? 'editorWorking' : 'editorQueued');
+      void watch(id, latest.id, watchVersion);
+      return;
+    }
+    if (latest?.status === 'ready') {
+      const ready = latest;
       const response = await authenticatedFile('/projects/' + encodeURIComponent(id) +
         '/jobs/' + encodeURIComponent(ready.id) + '/artifact');
       const blob = await response.blob();
@@ -329,21 +340,23 @@ export function initProjectEditor(): void {
     cancelButton.hidden = false;
     status(root, 'editorQueued');
     // Do not lock the editor while a render is running. Users can cancel.
-    void watch(projectId, queued.id);
+    void watch(projectId, queued.id, ++watchVersion);
   }
-  async function watch(projectId: string, jobId: string): Promise<void> {
+  async function watch(projectId: string, jobId: string, version: number): Promise<void> {
     try {
       for (let attempt = 0; attempt < 80; attempt++) {
         if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
-        if (!job || job.id !== jobId || current?.project.id !== projectId) return;
+        if (version !== watchVersion || !job || job.id !== jobId || current?.project.id !== projectId) return;
         const next = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(jobId));
-        if (!job || job.id !== jobId) return;
+        if (version !== watchVersion || !job || job.id !== jobId) return;
         job = next;
         if (next.status === 'ready') {
           cancelButton.hidden = true;
           const response = await authenticatedFile('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(jobId) + '/artifact');
-          if (job?.id !== jobId) return;
-          videoUrl = URL.createObjectURL(await response.blob());
+          if (version !== watchVersion || job?.id !== jobId) return;
+          const blob = await response.blob();
+          if (version !== watchVersion || job?.id !== jobId) return;
+          videoUrl = URL.createObjectURL(blob);
           video.src = videoUrl;
           result.hidden = false;
           status(root, 'editorComplete');
