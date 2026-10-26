@@ -245,6 +245,23 @@ export function initProjectEditor(): void {
     if (!opened.revision.shots.length) status(root, 'editorNoShots');
     else status(root, 'editorLoaded');
     q<HTMLSelectElement>(root, '[data-project-list]')!.value = id;
+    // Reopening a saved project must recover its last completed video. A
+    // previous revision's render is deliberately not presented as the current
+    // edit; it could contain outdated on-screen text or colours.
+    const jobs = await request<Job[]>('/projects/' + encodeURIComponent(id) + '/jobs');
+    const ready = jobs.find((item) => item.status === 'ready' &&
+      item.revision === opened.revision.number);
+    if (ready) {
+      const response = await authenticatedFile('/projects/' + encodeURIComponent(id) +
+        '/jobs/' + encodeURIComponent(ready.id) + '/artifact');
+      const blob = await response.blob();
+      if (current?.project.id !== id || current.revision.number !== opened.revision.number) return;
+      job = ready;
+      videoUrl = URL.createObjectURL(blob);
+      video.src = videoUrl;
+      result.hidden = false;
+      status(root, 'editorComplete');
+    }
   }
   function editedShots(): Shot[] {
     if (!current) throw new Error('No project open');
