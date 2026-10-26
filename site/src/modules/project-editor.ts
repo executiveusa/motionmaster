@@ -360,8 +360,11 @@ export function initProjectEditor(): void {
   }
   async function watch(projectId: string, jobId: string, version: number): Promise<void> {
     try {
-      for (let attempt = 0; attempt < 80; attempt++) {
-        if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Long HyperFrames renders can exceed two minutes. Keep watching the
+      // existing job until it reaches a terminal state or the user leaves it;
+      // slow polling after the first 80 checks to avoid unnecessary API load.
+      for (let attempt = 0; ; attempt++) {
+        if (attempt) await new Promise((resolve) => setTimeout(resolve, attempt < 80 ? 1500 : 5000));
         if (version !== watchVersion || !job || job.id !== jobId || current?.project.id !== projectId) return;
         const next = await request<Job>('/projects/' + encodeURIComponent(projectId) + '/jobs/' + encodeURIComponent(jobId));
         if (version !== watchVersion || !job || job.id !== jobId) return;
@@ -385,7 +388,6 @@ export function initProjectEditor(): void {
         }
         if (next.status === 'rendering') status(root, 'editorWorking');
       }
-      if (version === watchVersion) status(root, 'editorQueued');
     } catch (error) {
       if (version === watchVersion) failed(error);
     }
