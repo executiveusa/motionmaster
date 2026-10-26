@@ -13,6 +13,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { gunzipSync } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { createProject, createProjectJob, recoverInterruptedProjectJobs, transitionProjectJob } from '../mcp/dist/projects.js';
 
 const root = resolve(import.meta.dirname, '..');
 const proof = join(root, '.completion-proof', 'browser-real-worker');
@@ -373,6 +374,65 @@ try {
   assert.ok(mobile.scrollWidth <= mobile.width + 2, 'Mobile editor overflows viewport');
   assert.equal(exceptions.length, 0, 'Uncaught browser exception: ' + exceptions.slice(0, 3).join('; '));
   report.checks.push('mobile 390px imported editor, no overflow or uncaught errors');
+
+  // MM-08: simulate a durable in-flight job interrupted at process startup.
+  // The browser must disclose the failure and reuse the SAME job on retry.
+  // This fixture runs only in the isolated workspace, never against owner data.
+  const retryProject = createProject(isolated, {
+    title: 'Interrupted render recovery', brief: 'A clean cinematic lower-third',
+    shots: imported.revision.shots,
+  }).project;
+  const interrupted = createProjectJob(isolated, retryProject.id, 1);
+  transitionProjectJob(isolated, retryProject.id, interrupted.id, 'start');
+  assert.equal(recoverInterruptedProjectJobs(isolated), 1);
+  assert.equal((await api('projects/' + retryProject.id + '/jobs'))[0].status, 'failed');
+  await evaluate('document.querySelector("[data-project-refresh]").click()');
+  await until(`[...document.querySelector("[data-project-list]").options].some(o => o.value === ${JSON.stringify(retryProject.id)})`,
+    'interrupted project listed');
+  await evaluate(`(() => {
+    document.querySelector("[data-project-list]").value = ${JSON.stringify(retryProject.id)};
+    document.querySelector("[data-project-open]").click();
+  })()`);
+  await until('document.querySelector("[data-project-status]")?.dataset.i18n === "editorFailed"',
+    'reopened interrupted job shows retryable failure');
+  assert.equal((await api('projects/' + retryProject.id + '/jobs')).length, 1,
+    'Opening a failed render must not create another job');
+  await evaluate(`(() => {
+    const selector = document.querySelector("[data-locale]");
+    selector.value = "es-MX";
+    selector.dispatchEvent(new Event("change", { bubbles: true }));
+  })()`);
+  await until('document.documentElement.lang === "es-MX" && ' +
+    'document.querySelector("[data-project-status]")?.textContent.includes("Se detuvo")',
+    'Mexican Spanish failed-render recovery copy');
+  await evaluate(`(() => {
+    const selector = document.querySelector("[data-locale]");
+    selector.value = "en";
+    selector.dispatchEvent(new Event("change", { bubbles: true }));
+  })()`);
+  await until('document.documentElement.lang === "en" && ' +
+    'document.querySelector("[data-project-status]")?.textContent.includes("The render stopped")',
+    'English failed-render recovery copy');
+  report.checks.push('reopen interrupted render shows failure and reversible en/es-MX guidance');
+  await evaluate('document.querySelector("[data-project-render]").click()');
+  await until('["editorQueued", "editorWorking", "editorComplete"].includes(document.querySelector("[data-project-status]")?.dataset.i18n)',
+    'existing failed job retried from browser');
+  await until('["editorComplete", "editorFailed"].includes(document.querySelector("[data-project-status]")?.dataset.i18n)',
+    'retried job completes through real worker', 200000);
+  assert.equal(await evaluate('document.querySelector("[data-project-status]").dataset.i18n'),
+    'editorComplete', 'Retried render did not complete');
+  const afterRetry = await api('projects/' + retryProject.id + '/jobs');
+  assert.equal(afterRetry.length, 1, 'Retry must not create a duplicate job');
+  assert.equal(afterRetry[0].id, interrupted.id, 'Retry must retain durable job identity');
+  assert.equal(afterRetry[0].status, 'ready');
+  assert.equal(afterRetry[0].attempts, 2, 'Retry must increment attempts only when started');
+  await until('document.querySelector("[data-project-video]")?.videoWidth > 0',
+    'retried MP4 decoded in browser', 20000);
+  await evaluate('document.querySelector("[data-project-video]").play()');
+  await until('document.querySelector("[data-project-video]")?.currentTime > 0.2',
+    'retried MP4 advances in Chromium', 15000);
+  report.checks.push('failed durable job retried with same ID, real worker MP4 playable in Chromium');
+
   report.status = 'passed';
   console.log('PASS: uninterrupted Chromium -> real HyperFrames worker -> playable/downloadable MP4 -> source export/import/reopen');
 } catch (error) {
