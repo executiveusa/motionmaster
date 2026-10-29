@@ -37,9 +37,9 @@ const NODES: Record<string, Node> = {
       'Sequencing and position parameters — the choreography layer: tween order, stagger budgets, and the easing role each movement is allowed to use.',
   },
   'more-skills': {
-    label: 'skills/ — 34 more',
+    label: 'skills/ — 37 more',
     text:
-      'Remotion captions, multimedia, interactivity and rendering, the GSAP core, plugins and utilities, plus the craft law, the film-style library and the technique catalogue. Thirty-three in total, every one licensed and attributed.',
+      'Remotion captions, multimedia, interactivity and rendering, the GSAP core, plugins and utilities, plus the craft law, the film-style library and the technique catalogue. Forty-two in total, every one licensed and attributed.',
   },
   tokens: {
     label: 'tokens/',
