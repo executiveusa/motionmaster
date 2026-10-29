@@ -1,0 +1,24 @@
+/* Generic editorial theme. Motion lives in each board's original CSS. */
+.ebs{
+ --space:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ --mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+ --hand:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ --ink:#20262c;--paper:#f8fafb;--wash:#eef2f4;--line:#d5dde2;
+ --indigo:#526475;--indigo-l:#edf1f5;--mint:#526475;--mint-l:#edf1f5;
+ --hi:#e5ebef;--sticker:#edf1f5;--sh-soft:0 6px 20px rgba(20,35,50,.045);
+ --sh-film:0 8px 24px rgba(20,35,50,.08);--sh-hard:none;--sh-hard-l:none;
+ --sh-prompt:none;--sh-sticker:none;--ring-hi:none;
+ background:#f8fafb!important;background-image:none!important;
+ font-family:var(--space)!important;font-weight:600;
+}
+.ebs .title{font-family:var(--space)!important;font-weight:700;letter-spacing:-.035em}
+.ebs .title span{background:none!important;padding:0}
+.ebs .card,.ebs .tbl,.ebs .swatch{border-radius:12px!important;border-width:1px!important;border-color:#cbd4db;box-shadow:0 6px 20px rgba(20,35,50,.045)!important}
+.ebs .film,.ebs .image{border-radius:10px!important;border-width:1px!important;box-shadow:0 8px 24px rgba(20,35,50,.08)!important}
+.ebs .pending,.ebs .stamp,.ebs .sticker{border-radius:6px!important;border-width:1px!important;box-shadow:none!important}
+.ebs .note{font-family:var(--space)!important;font-style:normal;font-weight:400;letter-spacing:-.02em}
+.ebs .spec{font-family:var(--space)!important;font-size:20px;line-height:1.5;color:#55616c;padding-left:24px;border-left:2px solid #d8e0e6}
+.ebs .spec b{background:none!important;font-weight:600;color:#20262c}
+.ebs .kicker,.ebs .eyebrow{font-family:var(--space)!important;letter-spacing:.06em;font-weight:500;color:#697681}
+.ebs .camera{border-width:1px!important;border-color:#d5dde2!important;border-radius:12px!important;box-shadow:none!important;background:#edf1f5}
+.ebs img,.ebs video{filter:grayscale(1)}
