@@ -12,7 +12,7 @@
     {
       "name": "motion-master",
       "source": "./plugins/motion-master",
-      "description": "Motion design for AI agents: 39 motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion and HyperFrames composition generator. A paid, one-time licence: $99 Solo, $399 Studio.",
+      "description": "Motion design for AI agents: 42 skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Remotion and HyperFrames composition generator. A paid, one-time licence: $99 Solo, $399 Studio.",
       "displayName": "Motion Master",
       "category": "Productivity",
       "interface": {
