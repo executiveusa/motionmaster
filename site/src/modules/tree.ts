@@ -14,7 +14,7 @@ const NODES: Record<string, Node> = {
   skills: {
     label: 'skills/',
     text:
-      'Thirty-eight motion skills: the LottieFiles motion-design doctrine, the official GreenSock GSAP and Remotion packs, the motionmaxxing craft law with its measured gates, sixty complete film styles, and libraries for launch films, canvas animation and a 637-technique catalogue. Each keeps its own licence and attribution. The agent loads the two or three a brief actually needs.',
+      'Forty-two motion skills: the LottieFiles motion-design doctrine, the official GreenSock GSAP and Remotion packs, the motionmaxxing craft law with its measured gates, sixty complete film styles, and libraries for launch films, canvas animation and a 637-technique catalogue. Each keeps its own licence and attribution. The agent loads the two or three a brief actually needs.',
   },
   'motion-design': {
     label: 'skills/motion-design/',

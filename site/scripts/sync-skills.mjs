@@ -61,7 +61,10 @@ const nextHtml = html
   .replace(/\b\d+ motion skills\b/g, `${count} motion skills`)
   .replace(/\b\d+ skills · licences kept/g, `${count} skills · licences kept`);
 
+const SPELLED = '(?:(?:Twenty|Thirty|Forty|Fifty|Sixty|Seventy|Eighty|Ninety)(?:-(?:one|two|three|four|five|six|seven|eight|nine))?|Zero|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirteen|Fourteen|Fifteen|Sixteen|Seventeen|Eighteen|Nineteen)';
 const nextTree = tree
+  .replace(new RegExp(`\\b${SPELLED} motion skills`, 'g'), `${Cap} motion skills`)
+  .replace(new RegExp(`\\b${SPELLED} in total`, 'g'), `${Cap} in total`)
   .replace(/Thirty-three motion skills/g, `${Cap} motion skills`)
   .replace(/\b\d+ motion skills\b/g, `${Cap} motion skills`)
   .replace(/skills\/ — \d+ more/g, `skills/ — ${count - NAMED_IN_TREE} more`);
