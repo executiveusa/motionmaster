@@ -107,7 +107,7 @@ try {
   await until('document.readyState === "complete" && !!document.querySelector("[data-locale]")', 'initial page');
   await sleep(300);
   const initial = await state();
-  if (initial.lang !== 'en' || initial.selector !== 'en' || !initial.hero?.includes('Make a video')) {
+  if (initial.lang !== 'en' || initial.selector !== 'en' || !initial.hero?.includes('Create the best videos')) {
     throw new Error('Fresh browser did not default to English: ' + JSON.stringify(initial));
   }
 
@@ -329,7 +329,7 @@ try {
   }
 
   if (spanish.lang !== 'es-MX' || spanish.storage !== 'es-MX' ||
-      !spanish.hero?.includes('Crea un video') || !spanish.cta?.includes('Crear un video')) {
+      !spanish.hero?.includes('Crea los mejores videos') || !spanish.cta?.includes('Crear un video')) {
     throw new Error('Spanish selector interaction failed: ' + JSON.stringify(spanish));
   }
   await evaluate(`(() => {
@@ -350,7 +350,7 @@ try {
   const english = await state();
   if (english.lang !== 'en' || english.storage !== 'en' ||
       english.injected !== 'Create a video' || english.dynamicCopy !== 'Copy prompt' ||
-      !english.hero?.includes('Make a video')) {
+      !english.hero?.includes('Create the best videos')) {
     throw new Error('English selector round trip failed: ' + JSON.stringify(english));
   }
 
@@ -358,7 +358,7 @@ try {
   await command('Page.reload', { ignoreCache: true });
   await until(`document.readyState === 'complete' && document.documentElement.lang === 'es-MX' && !document.querySelector('#__mm_locale_dynamic')`, 'persisted Spanish after actual reload');
   const reloaded = await state();
-  if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea un video')) {
+  if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea los mejores videos')) {
     throw new Error('Spanish preference did not persist across reload: ' + JSON.stringify(reloaded));
   }
   await until('document.querySelector("[data-project-new-title]")?.value === "Mi rótulo"', 'Spanish private editor template default');
