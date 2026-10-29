@@ -59,6 +59,9 @@ import {
 import { loadVerdicts, recordVerdict } from "./verdicts.js";
 import { gateProject } from "./render.js";
 import { isAbsolute } from "node:path";
+import {
+  BOARD_SYNC_ARTIFACTS, BoardSyncError, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
+} from "./board-sync.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
 
 type TextContent = { type: "text"; text: string };
@@ -1119,6 +1122,85 @@ server.registerTool(
           "Render it with the values above, or let compose_film assemble the whole film.",
         ],
       });
+    },
+  );
+
+  // ── board-sync: animate .m-root boards to a WAV with word timings ─────────
+  server.registerTool(
+    "board_sync_check",
+    {
+      title: "Check board-sync readiness",
+      description:
+        "Report whether this machine can run board-sync (Python environment, ffmpeg, a browser, packages, GSAP) " +
+        "and where the input folders must live. Nothing is installed or started. Transcription is not exposed: " +
+        "a words.tsv with word timings is required.",
+      inputSchema: {},
+    },
+    async () => ok(checkReadiness(config)),
+  );
+
+  server.registerTool(
+    "board_sync_start",
+    {
+      title: "Start a board-sync job",
+      description:
+        "Animate .m-root Design-Component boards to a final-cut WAV and its words.tsv, locally. `input` is one " +
+        "folder name under the board-sync input root containing 02-cut (one .wav and one '... words.tsv'), " +
+        "03-board-brief (script-marked.md, optional brief.md) and 04-boards (NN-Name.html). Reference boards " +
+        "(seek()/.ebs) and boards without .m-root are rejected. Returns a job id; poll board_sync_status. " +
+        "One job runs at a time. No cloud, no paid model.",
+      inputSchema: {
+        input: z.string().describe("Folder name under the input root, e.g. my-video."),
+        only: z.string().optional().describe("Redo only these boards, e.g. 4,5."),
+      },
+    },
+    async ({ input, only }) => {
+      try {
+        return ok(startBoardSyncJob(config, input, only));
+      } catch (e) {
+        if (e instanceof BoardSyncError) return fail(e.message);
+        throw e;
+      }
+    },
+  );
+
+  server.registerTool(
+    "board_sync_status",
+    {
+      title: "Board-sync job status",
+      description:
+        "Status of one board-sync job (running, ready, failed, cancelled), its log tail, and the artifacts it made. " +
+        "Without an id, lists recent jobs. A job is only 'ready' when board-track.mp4 exists. Artifact download: " +
+        "GET /api/v1/board-sync/jobs/{id}/artifacts/{name}. Names: " + BOARD_SYNC_ARTIFACTS.join(", ") + ".",
+      inputSchema: { id: z.string().optional().describe("Job id (bs_...).") },
+    },
+    async ({ id }) => {
+      try {
+        if (!id) return ok({ jobs: listBoardSyncJobs(config) });
+        const job = readBoardSyncJob(config, id);
+        return job ? ok(job) : fail("Unknown job id.");
+      } catch (e) {
+        if (e instanceof BoardSyncError) return fail(e.message);
+        throw e;
+      }
+    },
+  );
+
+  server.registerTool(
+    "board_sync_cancel",
+    {
+      title: "Cancel a board-sync job",
+      description: "Stop a running board-sync job, including its browser and ffmpeg children.",
+      inputSchema: { id: z.string().describe("Job id (bs_...).") },
+    },
+    async ({ id }) => {
+      try {
+        cancelBoardSyncJob(config, id);
+        return ok({ id, status: "cancelling" });
+      } catch (e) {
+        if (e instanceof BoardSyncError) return fail(e.message);
+        throw e;
+      }
     },
   );
 

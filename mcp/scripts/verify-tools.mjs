@@ -105,6 +105,7 @@ const main = async () => {
       "render_film", "film_status", "list_films",
       "list_sfx_kinds", "browse_sfx", "search_sfx", "get_sfx", "plan_sound",
       "enhance_prompt",
+      "board_sync_check", "board_sync_start", "board_sync_status", "board_sync_cancel",
     ];
     check(
       "every tool is advertised",

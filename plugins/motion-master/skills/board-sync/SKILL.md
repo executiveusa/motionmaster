@@ -20,7 +20,8 @@ every element appears on the word that names it, and a timeline the editor opens
   (tokens, components). Reference boards can be shown to that assistant as style and motion examples. Then board-sync runs.
 - Audio: a final-cut WAV plus word timings (`words.tsv`, or local faster-whisper on the WAV, first run downloads a ~1.6 GB model).
 - Tested in this repo only on synthetic media (`selftest/run.sh`): a sine tone with made-up word times and a two-card fixture.
-  Not tested with real speech, real Claude Design exports, Windows (`setup.ps1`) or inside the Motion Master MCP.
+  Not tested with real speech, real Claude Design exports or Windows (`setup.ps1`).
+- Motion Master MCP/HTTP path (`board_sync_check`, `board_sync_start`, `board_sync_status`, `board_sync_cancel`; `/api/v1/board-sync/*`): runs this same script locally on a folder under `MOTION_MASTER_BOARD_SYNC_ROOT` (default `.board-sync/inputs`). `words.tsv` is required there (no transcription through MCP/HTTP), one job at a time, readiness comes from `--check`. Exercised in tests with a fake runner and once end to end on the synthetic selftest media. There is no site UI for it yet.
 
 ## What it needs (the video's folder)
 

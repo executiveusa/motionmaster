@@ -75,6 +75,10 @@ test("the server advertises every tool", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((tool) => tool.name).sort();
   assert.deepEqual(names, [
+    "board_sync_cancel",
+    "board_sync_check",
+    "board_sync_start",
+    "board_sync_status",
     "browse_library",
     "browse_sfx",
     "build_composition",
