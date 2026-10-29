@@ -52,7 +52,7 @@ remote public launch. This local mode is not proof of a deployed SaaS.
 | Path | What it is | Licence |
 |---|---|---|
 | `site/` | The landing page. Vite + TypeScript + GSAP. | proprietary |
-| `plugins/motion-master/` | The portable agent plugin: manifests, 38 motion skills, the Motion Master router. | proprietary (MIT / Apache / CC-BY upstream skills, attributed) |
+| `plugins/motion-master/` | The portable agent plugin: manifests, 42 skills, the Motion Master router. | proprietary (MIT / Apache / CC-BY upstream skills, attributed) |
 | `mcp/` | The MCP server — `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`, the prompt library and the prompt enhancer. | proprietary |
 | `library/` | **The open-source motion library.** Nine upstream collections normalised into one index: 3,988 items, 756 categories, 448 motion blocks. Every item carries its licence. | see `library/README.md` |
 | `generator/` | The HyperFrames render path: compositions, the render script, and the gate that catches what a render will not. | proprietary (HyperFrames is Apache-2.0) |
