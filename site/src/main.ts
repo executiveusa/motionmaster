@@ -32,6 +32,7 @@ import { initConsole } from './modules/chat';
 import { initLocale } from './modules/locale';
 import { initProjectEditor } from './modules/project-editor';
 import './styles/simplified.css';
+import './styles/hero-brand.css';
 import './styles/project-editor.css';
 
 function boot(): void {
