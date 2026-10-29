@@ -12,5 +12,7 @@ Setup for board-sync: `bash setup.sh` (venv + pip, downloads packages; a ~1.6 GB
 then `bash fetch-gsap.sh` (GSAP is GreenSock's own licence, so it is not committed).
 Check: `skills/board-sync/selftest/run.sh` (synthetic media, offline after setup).
 
+The 187 boards are NOT voice-synced and are NOT board-sync inputs. Generation path: explainer-board-brief (script -> brief) ->
+a design assistant builds `.m-root` boards using explainer-board-system -> board-sync (words + WAV -> timed render, QA, timelines).
 Limits: board-sync inputs are `.m-root` Design-Component boards (made with a design assistant), not the reference boards.
 Not wired into the MCP server yet. setup.ps1 (Windows) is untested. No whisper transcription run was tested here.

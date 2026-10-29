@@ -8,6 +8,20 @@ description: Animate explainer boards to the presenter's voice. Takes the board 
 Step 5 of the explainer pipeline: the boards from Claude Design plus the final-cut audio become a board video where
 every element appears on the word that names it, and a timeline the editor opens in DaVinci Resolve or Premiere.
 
+## Read this first: what board-sync can and cannot take (Motion Master integration note)
+
+- board-sync takes **`.m-root` Design-Component boards only**: one 1920x1080 `.m-root`, absolutely positioned children,
+  optionally inside `.m-fit`, one HTML per board named `NN-Name.html` (NN matches `[▸ SLIDE NN]` in script-marked.md).
+- The 187 reference boards in `library/boards/sirio-explainer-boards/` and the 74 showcase boards in the upstream
+  YouTube-AI-Motion-Graphics repo are **not** board-sync inputs. They are `.ebs`/`seek()` motion references with their own
+  timing. They are not voice-synced and they have no `.m-root`. Do not feed them in.
+- How boards are produced: step 3 `explainer-board-brief` writes the brief and marked script from the script; step 4 a design
+  assistant with HTML output (the upstream used Claude Design) builds the `.m-root` boards using `explainer-board-system`
+  (tokens, components). Reference boards can be shown to that assistant as style and motion examples. Then board-sync runs.
+- Audio: a final-cut WAV plus word timings (`words.tsv`, or local faster-whisper on the WAV, first run downloads a ~1.6 GB model).
+- Tested in this repo only on synthetic media (`selftest/run.sh`): a sine tone with made-up word times and a two-card fixture.
+  Not tested with real speech, real Claude Design exports, Windows (`setup.ps1`) or inside the Motion Master MCP.
+
 ## What it needs (the video's folder)
 
 ```

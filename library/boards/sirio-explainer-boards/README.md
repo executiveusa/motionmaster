@@ -1,3 +1,5 @@
+> Motion Master note: these are reference boards (seek() motion), not voice-synced and not board-sync inputs. See NOTICE.md and docs/INTEGRATION-SIRIO.md.
+
 # Animated board library
 
 > **Style these yourself.** These are starter templates, not a finished visual identity. Customize the colors, fonts, shapes, and layouts for your own videos. Adapt the animation examples to your content.
