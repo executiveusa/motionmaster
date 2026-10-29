@@ -165,7 +165,7 @@ test("child environment does not inherit API keys", async (t) => {
   const fake = `#!/usr/bin/env bash
 for a in "$@"; do [ "$a" = "--check" ] && { printf "python 3\\nplaywright ok\\nbrowser /b\\nstage render   ready\\n"; exit 1; }; done
 out=""; while [ $# -gt 0 ]; do [ "$1" = "--out" ] && out="$2"; shift; done
-mkdir -p "$out"; echo mp4 > "$out/board-track.mp4"; echo "KEY=[\${MOTION_MASTER_API_KEY:-}][\${OPENROUTER_API_KEY:-}]"
+mkdir -p "$out"; echo mp4 > "$out/board-track.mp4"; echo "KEY=[\${MOTION_MASTER_API_KEY:-}][\${OPENROUTER_API_KEY:-}] ROOTS=\${BOARD_SYNC_FILE_ROOTS:-}"
 `;
   const { config, inputs } = env(t, fake);
   process.env.MOTION_MASTER_API_KEY = "secret-a";
@@ -174,6 +174,10 @@ mkdir -p "$out"; echo mp4 > "$out/board-track.mp4"; echo "KEY=[\${MOTION_MASTER_
   const j = await settle(config, startBoardSyncJob(config, "demo").id);
   assert.match(j.log, /KEY=\[\]\[\]/);
   assert.doesNotMatch(j.log, /secret/);
+  // render confinement: the child is told to allow files only under input, job and skill folders
+  const roots = /ROOTS=(.*)/.exec(j.log)[1].split(":");
+  assert.equal(roots.length, 3);
+  assert.ok(roots[0].endsWith("/inputs/demo") && roots[1].endsWith(`/${j.id}`) && roots[2].endsWith("/board-sync"), roots.join(" | "));
 });
 
 import http from "node:http";
@@ -221,4 +225,15 @@ test("HTTP: non-loopback host without an API key is refused", async (t) => {
   await withServer(config, async (base) => {
     assert.equal((await fetch(`${base}/readiness`)).status, 403);
   });
+});
+
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+test("render confinement and browser detection probes (real chromium; skipped when the skill venv is absent)", (t) => {
+  const py = process.env.BOARD_SYNC_TEST_PYTHON;
+  if (!py || !existsSync(py)) return t.skip("set BOARD_SYNC_TEST_PYTHON to the board-sync venv python to run the real-browser probes");
+  const script = fileURLToPath(new URL("../../plugins/motion-master/skills/board-sync/selftest/test_confine.py", import.meta.url));
+  const r = spawnSync(py, [script], { encoding: "utf8", timeout: 90_000 });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  assert.match(r.stdout, /F3 ok: network hits 0/);
 });

@@ -17,7 +17,7 @@ import { randomBytes } from "node:crypto";
 import {
   existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync,
 } from "node:fs";
-import { basename, join, resolve, sep } from "node:path";
+import { basename, delimiter, join, resolve, sep } from "node:path";
 import type { Config } from "./config.js";
 
 export const BOARD_SYNC_ARTIFACTS = [
@@ -74,10 +74,13 @@ function pythonPath(config: Config): string | undefined {
   return undefined;
 }
 /** A minimal environment for the child: no API keys or tokens are passed on. */
-function childEnv(): NodeJS.ProcessEnv {
+function childEnv(fileRoots?: string[]): NodeJS.ProcessEnv {
   const keep = ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SYSTEMROOT", "TEMP", "TMP", "CHROME_PATH", "BOARD_SYNC_CHROME"];
   const env: NodeJS.ProcessEnv = { PYTHONUNBUFFERED: "1", PYTHONDONTWRITEBYTECODE: "1" };
   for (const k of keep) if (process.env[k] !== undefined) env[k] = process.env[k];
+  // Render-time confinement: the browser may load local files only under these
+  // folders and makes no network request (see scripts/render.py).
+  if (fileRoots) env.BOARD_SYNC_FILE_ROOTS = fileRoots.join(delimiter);
   return env;
 }
 
@@ -254,16 +257,19 @@ export function startBoardSyncJob(config: Config, input: string, only?: string):
   ];
   const controller = new AbortController();
   running.set(id, controller);
-  void runChild(config, id, pythonPath(config) as string, args, controller);
+  void runChild(config, id, pythonPath(config) as string, args, controller,
+    [realpathSync(inputs.dir), realpathSync(jobDir(config, id)), realpathSync(skillDir(config))]);
   return job;
 }
 
-function runChild(config: Config, id: string, py: string, args: string[], controller: AbortController): Promise<void> {
+function runChild(
+  config: Config, id: string, py: string, args: string[], controller: AbortController, fileRoots: string[],
+): Promise<void> {
   const timeoutMs = Number(process.env.MOTION_MASTER_BOARD_SYNC_TIMEOUT_MS) || 30 * 60_000;
   return new Promise<void>((done) => {
     const grouped = process.platform !== "win32";
     const child = spawn(py, args, {
-      cwd: skillDir(config), env: childEnv(), detached: grouped, stdio: ["ignore", "pipe", "pipe"],
+      cwd: skillDir(config), env: childEnv(fileRoots), detached: grouped, stdio: ["ignore", "pipe", "pipe"],
     });
     let log = "";
     let stopped: "cancelled" | "timed out" | undefined;

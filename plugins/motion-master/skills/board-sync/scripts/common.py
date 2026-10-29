@@ -106,3 +106,46 @@ def log(msg: str) -> None:
 
 CAM_ZONE_1080 = {"x": 1920 - 40 - 615, "y": 1080 - 40 - 430, "w": 615, "h": 430}   # bottom-right camera zone at 1080p
 CAM_ZONE_4K = {"x": 3840 - 80 - 1230, "y": 2160 - 80 - 860, "w": 1230, "h": 860}
+
+
+def allowed_file_roots() -> list[Path]:
+    """Folders a board may load files from. Set by the Motion Master job runner (BOARD_SYNC_FILE_ROOTS, path-separated);
+    unset on the plain command line, where any local file the board names is allowed as before."""
+    raw = os.environ.get("BOARD_SYNC_FILE_ROOTS", "")
+    return [Path(r).resolve() for r in raw.split(os.pathsep) if r.strip()]
+
+
+def confine_context(context, blocked: list[str]) -> None:
+    """Boards are third-party HTML. Render them with no network at all and, when roots are set, only local files
+    under those roots. Anything else is aborted and recorded (never fetched)."""
+    from urllib.parse import unquote, urlparse
+    roots = allowed_file_roots()
+
+    def allowed(url: str) -> bool:
+        if url.startswith(("data:", "blob:", "about:")):
+            return True
+        if url.startswith("file:"):
+            if not roots:
+                return True
+            try:
+                target = Path(unquote(urlparse(url).path)).resolve()
+            except Exception:  # noqa: BLE001
+                return False
+            return any(target == r or r in target.parents for r in roots)
+        return False
+
+    def handler(route):
+        url = route.request.url
+        if allowed(url):
+            route.continue_()
+        else:
+            if len(blocked) < 50:
+                blocked.append(url[:200])
+            route.abort()
+
+    context.route("**/*", handler)
+    context.set_offline(True)   # second layer: WebSocket, IP-literal and any request the route hook cannot see
+
+
+# Chromium flag that makes every non-local hostname fail to resolve, a third layer under confine_context.
+NO_NETWORK_ARGS = ["--host-resolver-rules=MAP * ~NOTFOUND"]

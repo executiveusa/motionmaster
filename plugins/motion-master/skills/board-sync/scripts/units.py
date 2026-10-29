@@ -126,7 +126,8 @@ def launch_browser(pw):
     errs = []
     for ch in order + [None]:
         try:
-            return pw.chromium.launch(channel=ch) if ch else pw.chromium.launch()
+            kw = {"args": common.NO_NETWORK_ARGS}
+            return pw.chromium.launch(channel=ch, **kw) if ch else pw.chromium.launch(**kw)
         except Exception as e:  # noqa: BLE001
             errs.append(f"{ch or 'bundled chromium'}: {str(e).splitlines()[0]}")
     raise SystemExit("No browser found for board-sync (tried " + "; ".join(errs) +
@@ -511,7 +512,10 @@ def run(ctx, numbers=None) -> dict:
     done = {}
     with sync_playwright() as pw:
         browser = launch_browser(pw)
-        page = browser.new_page(viewport={"width": W, "height": HGT}, device_scale_factor=1)
+        context = browser.new_context(viewport={"width": W, "height": HGT}, device_scale_factor=1)
+        blocked: list[str] = []
+        common.confine_context(context, blocked)
+        page = context.new_page()
         for n, p in sorted(todo.items()):
             data = parse_board(p, page, work_dir=out / "units")
             common.write_json(out / "units" / f"{n:02d}.json", data)
@@ -522,6 +526,10 @@ def run(ctx, numbers=None) -> dict:
             common.log(f"units: board {n:02d} {p.name}: {len(data['units'])} units "
                        f"({', '.join(f'{v} {k}' for k, v in sorted(kinds.items()))}){zone}")
             done[n] = data
+            if blocked:
+                common.log(f"units: board {n:02d}: blocked {len(blocked)} request(s) outside local files (first: {blocked[0]}); "
+                           "boards are measured with no network")
+                blocked.clear()
         browser.close()
     return done
 
@@ -535,6 +543,8 @@ if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
     with sync_playwright() as pw:
         b = launch_browser(pw)
-        pg = b.new_page(viewport={"width": W, "height": HGT})
+        ctx = b.new_context(viewport={"width": W, "height": HGT})
+        common.confine_context(ctx, [])
+        pg = ctx.new_page()
         print(json.dumps(parse_board(a.board, pg), ensure_ascii=False, indent=1))
         b.close()

@@ -39,7 +39,7 @@ except ImportError:  # pragma: no cover
 
 W, H = 1920, 1080
 CHANNELS = ("chrome", "msedge", None)          # installed Chrome, then Edge, then Playwright's bundled chromium
-LAUNCH_ARGS = ["--force-color-profile=srgb", "--hide-scrollbars", "--mute-audio"]
+LAUNCH_ARGS = ["--force-color-profile=srgb", "--hide-scrollbars", "--mute-audio", *C.NO_NETWORK_ARGS]
 NO_MOTION_CSS = ("*, *::before, *::after { animation: none !important; transition: none !important;"
                  " caret-color: transparent !important; }")
 PROGRESS_EVERY = 5.0                           # seconds between progress lines per board
@@ -193,12 +193,15 @@ def launch_browser(pw):
                      "(it runs `playwright install chromium`).\n  " + "\n  ".join(errors))
 
 
+
 class _Page:
     """One reusable page per worker, with a CDP session for fast captures."""
 
     def __init__(self, browser):
         self.browser = browser
         self.context = browser.new_context(viewport={"width": W, "height": H}, device_scale_factor=1)
+        self.blocked: list[str] = []
+        C.confine_context(self.context, self.blocked)
         self.page = self.context.new_page()
         self.errors: list[str] = []
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
@@ -379,6 +382,10 @@ def _render_board(pg: _Page, item: dict, out: Path, fps: Fraction, reuse: bool, 
     errlog.unlink(missing_ok=True)
     if pg.errors:
         C.log(f"{label}: page script error(s) during render: {pg.errors[0][:200]}")
+    if pg.blocked:
+        C.log(f"{label}: blocked {len(pg.blocked)} request(s) the board made outside local files (first: {pg.blocked[0]}); "
+              "boards render with no network")
+        pg.blocked.clear()
     rate = n_frames / elapsed if elapsed else 0.0
     C.log(f"{label}: done, {n_frames} frames in {_fmt_s(elapsed)} ({rate:.1f} fps; "
           f"{captured} captured, {reused} reused) -> boards/{out_mp4.name}")
