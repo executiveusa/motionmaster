@@ -194,7 +194,22 @@ def browsers() -> list[str]:
     else:
         cands += [Path(p) for p in (shutil.which("microsoft-edge") or "", shutil.which("google-chrome") or "",
                                     shutil.which("chromium") or "") if p]
-    return [str(p) for p in cands if str(p) and p.exists()]
+    found = [str(p) for p in cands if str(p) and p.exists()]
+    bundled = playwright_chromium()
+    if bundled and bundled not in found:
+        found.append(bundled)
+    return found
+
+
+def playwright_chromium() -> str | None:
+    """The chromium that `playwright install chromium` put on this machine (what render.py falls back to), or None."""
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+        with sync_playwright() as pw:
+            path = pw.chromium.executable_path
+        return path if path and Path(path).exists() else None
+    except Exception:  # noqa: BLE001  (playwright missing or no browser installed: not an error here)
+        return None
 
 
 def main(argv=None) -> int:

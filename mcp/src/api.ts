@@ -72,6 +72,9 @@ import {
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { cancelRunningProjectJob, processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
+import {
+  BoardSyncError, boardSyncArtifactPath, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
+} from "./board-sync.js";
 import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
 
 export const API_PREFIX = "/api/v1";
@@ -349,6 +352,22 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       [`${API_PREFIX}/projects/{id}/jobs/{jobId}/source`]: {
         get: { summary: "Download a private, checksum-verified editable source archive (gzip JSON; not MP4).", responses: { 200: { description: "application/gzip" }, 401: { description: "unauthorized" }, 409: { description: "source unavailable" } } },
       },
+      [`${API_PREFIX}/board-sync/readiness`]: {
+        get: { summary: "Is board-sync ready on this machine (python, ffmpeg, browser, packages, GSAP, input root)? Nothing is installed.", responses: { 200: { description: "readiness", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/board-sync/jobs`]: {
+        get: { summary: "Recent board-sync jobs.", responses: { 200: { description: "jobs", content: json(obj) } } },
+        post: { summary: "Start a local board-sync job for a folder under the input root: body { input, only? }. .m-root boards, one WAV and a words.tsv are required.", responses: { 202: { description: "started", content: json(obj) }, 400: { description: "invalid input" }, 409: { description: "not ready or a job is running" } } },
+      },
+      [`${API_PREFIX}/board-sync/jobs/{id}`]: {
+        get: { summary: "One board-sync job: status, log tail, artifacts.", responses: { 200: { description: "job", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/board-sync/jobs/{id}/cancel`]: {
+        post: { summary: "Cancel a running board-sync job.", responses: { 200: { description: "cancelling", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/board-sync/jobs/{id}/artifacts/{name}`]: {
+        get: { summary: "Download one allow-listed artifact of a ready job.", responses: { 200: { description: "file" } } },
+      },
       [`${API_PREFIX}/projects/{id}/jobs/{jobId}/cancel`]: {
         post: { summary: "Cancel a queued job or abort a running HyperFrames render.", responses: { 200: { description: "cancelled", content: json(obj) } } },
       },
@@ -413,6 +432,12 @@ export async function handleApi(
         "GET  /tokens",
         "GET  /clips",
         "GET  /licence",
+        "GET  /board-sync/readiness",
+        "GET  /board-sync/jobs",
+        "POST /board-sync/jobs",
+        "GET  /board-sync/jobs/{id}",
+        "POST /board-sync/jobs/{id}/cancel",
+        "GET  /board-sync/jobs/{id}/artifacts/{name}",
         "GET  /library/collections",
         "GET  /library/categories",
         "GET  /library/items",
@@ -669,6 +694,55 @@ export async function handleApi(
     }));
     const kit = planSound(catalogue, beats as never);
     writeJson(res, 200, { beats, takes: kit.takes });
+    return true;
+  }
+
+  // ── board-sync (local, .m-root boards + WAV + word timings) ───────────────
+  if (route === "/board-sync" || route.startsWith("/board-sync/")) {
+    if (!process.env.MOTION_MASTER_API_KEY?.trim() &&
+        !["127.0.0.1", "::1", "localhost"].includes(config.host)) {
+      fail(res, 403, "Board-sync requires a configured API key outside loopback.");
+      return true;
+    }
+    try {
+      if (route === "/board-sync/readiness" && method === "GET") {
+        writeJson(res, 200, checkReadiness(config));
+        return true;
+      }
+      if (route === "/board-sync/jobs" && method === "GET") {
+        writeJson(res, 200, { jobs: listBoardSyncJobs(config) });
+        return true;
+      }
+      if (route === "/board-sync/jobs" && method === "POST") {
+        const body = (await readJson(req, 10_000)) as { input?: unknown; only?: unknown };
+        if (typeof body?.input !== "string") throw new BoardSyncError("input (a folder name under the input root) is required.");
+        if (body.only !== undefined && typeof body.only !== "string") throw new BoardSyncError("only must be a string like 4,5.");
+        writeJson(res, 202, startBoardSyncJob(config, body.input, body.only as string | undefined));
+        return true;
+      }
+      const m = /^\/board-sync\/jobs\/(bs_[a-f0-9]{16})(?:\/(cancel)|\/artifacts\/([A-Za-z0-9._-]+))?$/.exec(route);
+      if (m) {
+        const [, id, cancel, artifact] = m;
+        if (cancel && method === "POST") { cancelBoardSyncJob(config, id); writeJson(res, 200, { id, status: "cancelling" }); return true; }
+        if (artifact && method === "GET") {
+          const file = boardSyncArtifactPath(config, id, artifact);
+          const type = file.endsWith(".mp4") ? "video/mp4" : file.endsWith(".xml") || file.endsWith(".fcpxml") ? "application/xml" : "text/markdown; charset=utf-8";
+          res.writeHead(200, { "content-type": type, "content-length": statSync(file).size, "x-content-type-options": "nosniff", "content-disposition": `attachment; filename="${artifact}"` });
+          createReadStream(file).pipe(res);
+          return true;
+        }
+        if (!cancel && !artifact && method === "GET") {
+          const job = readBoardSyncJob(config, id);
+          if (!job) throw new BoardSyncError("Unknown job id.", 404);
+          writeJson(res, 200, job);
+          return true;
+        }
+      }
+      fail(res, 404, "Unknown board-sync route.");
+    } catch (error) {
+      if (error instanceof BoardSyncError) fail(res, error.status, error.message);
+      else fail(res, 400, error instanceof Error ? error.message : "Board-sync request failed.");
+    }
     return true;
   }
 
