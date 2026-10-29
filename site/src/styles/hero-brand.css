@@ -1,0 +1,28 @@
+/* Brand hero: gradient field, a cascade of real Motion Master renders, a heavy headline. */
+.hero--brand { position: relative; overflow: hidden; isolation: isolate; padding: 0; min-height: min(94vh, 820px); background: linear-gradient(180deg, #6b6ff2 0%, #b9bdfa 38%, #fff 62%); }
+.hero--brand .hero__stack { position: absolute; inset: 0; z-index: -1; }
+.hero__card { position: absolute; display: block; width: clamp(180px, 27vw, 380px); aspect-ratio: 16/9; background: #fff; box-shadow: 0 14px 34px rgba(30,30,90,.18); }
+.hero__card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hero__card::after { content: ""; position: absolute; inset: -3px; border: 3px solid #5560f0; filter: url(#wobble); pointer-events: none; }
+.hero__card--c1 { left: 2%; top: 4%; }
+.hero__card--c2 { left: 22%; top: 9%; }
+.hero__card--c3 { left: 41%; top: 14%; }
+.hero__card--c4 { left: 60%; top: 19%; }
+.hero__card--c5 { left: 76%; top: 24%; }
+.hero__card--c6 { left: 66%; top: 4%; }
+.hero--brand .hero__body { display: flex; flex-direction: column; justify-content: flex-end; min-height: min(94vh, 820px); padding-bottom: clamp(28px, 4vw, 56px); gap: 22px; margin-top: 0; }
+.hero--brand .display { max-width: 16ch; font-family: var(--font-sans); font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; line-height: .98; font-size: clamp(40px, 6.2vw, 92px); color: #0b0b12; text-shadow: 0 0 22px #fff, 0 0 8px #fff; }
+.hero--brand .hero__aside { padding: 0; max-width: 44ch; }
+.hero--brand .hero__lede { color: #1b1b24; }
+@media (max-width: 767px) {
+  .hero--brand { min-height: 640px; }
+  .hero--brand .hero__body { min-height: 640px; }
+  .hero__card { width: 52vw; }
+  .hero__card--c1 { left: 3%; top: 3%; } .hero__card--c2 { left: 40%; top: 9%; } .hero__card--c3 { left: 8%; top: 18%; }
+  .hero__card--c4 { left: 44%; top: 25%; } .hero__card--c5, .hero__card--c6 { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .hero__card { transition: transform .4s ease; } .hero--brand:hover .hero__card { transform: translateY(-4px); } }
+.hero--brand .hero__body { align-items: flex-start; }
+.hero--brand .display { margin: 0; text-align: left; }
+.hero__card--c6 { display: none; }
+.hero--brand .hero__aside { align-self: flex-start; }
