@@ -109,10 +109,10 @@
 
 .hero__card--c6 {
   display: block;
-  left: 88%;
-  top: 57%;
-  width: clamp(210px, 22vw, 370px);
-  aspect-ratio: 0.92 / 1;
+  left: 91%;
+  top: 63%;
+  width: clamp(180px, 18vw, 300px);
+  aspect-ratio: 0.86 / 1;
   transform: rotate(1.35deg);
   z-index: 8;
 }
@@ -135,7 +135,7 @@
 
 .hero--brand .display {
   margin: 0;
-  max-width: 15.3ch;
+  max-width: 17.4ch;
   font-family: var(--font-sans);
   font-size: clamp(64px, 7.35vw, 118px);
   font-weight: 800;
@@ -145,7 +145,6 @@
   text-transform: uppercase;
   color: var(--hero-ink);
   text-shadow: none;
-  text-wrap: balance;
 }
 
 /* Keep the existing functional copy/actions, but make them secondary to the work. */
