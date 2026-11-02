@@ -147,6 +147,11 @@
   text-shadow: none;
 }
 
+.hero--brand .hero__line {
+  display: block;
+  white-space: nowrap;
+}
+
 /* Keep the existing functional copy/actions, but make them secondary to the work. */
 .hero--brand .hero__aside {
   position: absolute;
@@ -283,8 +288,8 @@
   }
 
   .hero--brand .display {
-    max-width: 12.5ch;
-    font-size: clamp(47px, 13.2vw, 68px);
+    max-width: 100%;
+    font-size: clamp(39px, 11.5vw, 52px);
     line-height: 0.92;
     letter-spacing: -0.045em;
   }
@@ -319,6 +324,6 @@
   .hero__card--c4 { left: 58%; width: 62vw; }
 
   .hero--brand .display {
-    font-size: clamp(43px, 13vw, 58px);
+    font-size: clamp(39px, 11.5vw, 49px);
   }
 }
