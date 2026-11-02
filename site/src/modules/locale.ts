@@ -5,7 +5,7 @@ const strings: Record<string, [string, string]> = {
   examples: ['Watch videos', 'Ver videos'],
   makeVideo: ['Create a video', 'Crear un video'],
   library: ['Library', 'Biblioteca'],
-  hero: ['Create the best videos for your brand', 'Crea los mejores videos para tu marca'],
+  hero: ['<span class="hero__line">Create the best </span><span class="hero__line">videos for your </span><span class="hero__line">brand</span>', '<span class="hero__line">Crea los mejores </span><span class="hero__line">videos para tu </span><span class="hero__line">marca</span>'],
   lede: ['Describe the video you need. See real examples, then make your own.', 'Describe el video que necesitas. Mira ejemplos reales y después crea el tuyo.'],
   proofTitle: ['Watch what you can make.', 'Mira lo que puedes crear.'],
   proofLede: ['Play a real video. Copy its prompt, or use it to start your own.', 'Reproduce un video real. Copia las instrucciones o úsalas para crear el tuyo.'],
