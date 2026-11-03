@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Motion Master — Describe the video. Get the file.</title>
+    <title>Motion Master — Create Motion Videos For Your Brand Today</title>
     <meta
       name="description"
-      content="Motion Master teaches an AI agent to storyboard, choreograph and render motion design in code. You get the video, the project and the source. One-time licence, renders on your own machine."
+      content="Browse real motion examples, start from one, then create, edit, render and export your own motion video with Motion Master."
     />
     <!-- The product domain word is confirmed; the TLD is not, and the domain is
          not purchased. This meta tag is the ONE place it is written. No URL
@@ -15,10 +15,10 @@
     <meta name="theme-color" content="#F4F4F2" />
     <meta name="color-scheme" content="light" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Motion Master — Describe the video. Get the file." />
+    <meta property="og:title" content="Motion Master — Create Motion Videos For Your Brand Today" />
     <meta
       property="og:description"
-      content="An agent skills pack for motion design in code. Storyboard, choreography and render, then hand the creator the file they own."
+      content="Real motion examples, editable projects, rendering, export, and agent access through one Motion Master workflow."
     />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -54,8 +54,24 @@
           <span class="brand__mark" aria-hidden="true"></span>
           <span class="brand__name">Motion Master</span>
         </a>
-        <nav class="nav" aria-label="Sections"><ul class="nav__list"><li><a class="nav__link" href="#proof" data-i18n="examples">Videos</a></li><li><a class="nav__link" href="#console" data-i18n="makeVideo">Create a video</a></li><li><a class="nav__link" href="#library" data-i18n="library">Library</a></li></ul></nav>
-        <label class="locale-picker" for="locale"><span class="visually-hidden">Language / Idioma</span><select id="locale" data-locale aria-label="Language / Idioma"><option value="en">English</option><option value="es-MX">Español MX</option></select></label><a class="btn btn--primary btn--sm topbar__cta" href="#console" data-i18n="makeVideo">Create a video</a>
+        <nav class="nav" aria-label="Sections">
+          <ul class="nav__list">
+            <li><a class="nav__link" href="#proof" data-i18n="examples">Examples</a></li>
+            <li><a class="nav__link" href="#console" data-i18n="createNav">Create</a></li>
+            <li><a class="nav__link" href="#library" data-i18n="library">Library</a></li>
+            <li><a class="nav__link" href="#agents" data-i18n="agentsNav">MCP / Plugins</a></li>
+            <li><a class="nav__link" href="#docs" data-i18n="docsNav">Docs</a></li>
+          </ul>
+        </nav>
+        <label class="locale-picker" for="locale">
+          <span class="visually-hidden">Language / Idioma</span>
+          <select id="locale" data-locale aria-label="Language / Idioma">
+            <option value="en">EN</option>
+            <option value="es-MX">ES</option>
+          </select>
+        </label>
+        <a class="btn btn--ghost btn--sm topbar__signin" href="#console" data-focus-signin data-i18n="signInNav">Sign in</a>
+        <a class="btn btn--primary btn--sm topbar__cta" href="#console" data-i18n="startCreating">Start Creating</a>
         <button
           class="menu-toggle"
           type="button"
@@ -70,8 +86,14 @@
     </header>
 
     <div class="mobile-menu" id="mobile-menu" data-menu-panel hidden>
-      <nav class="mobile-menu__nav" aria-label="Sections"><a class="mobile-menu__link" href="#proof" data-i18n="examples">Videos</a><a class="mobile-menu__link" href="#console" data-i18n="makeVideo">Create a video</a><a class="mobile-menu__link" href="#library" data-i18n="library">Library</a></nav>
-      <a class="btn btn--primary mobile-menu__cta" href="#proof" data-i18n="examples">Watch videos</a>
+      <nav class="mobile-menu__nav" aria-label="Sections">
+        <a class="mobile-menu__link" href="#proof" data-i18n="examples">Examples</a>
+        <a class="mobile-menu__link" href="#console" data-i18n="createNav">Create</a>
+        <a class="mobile-menu__link" href="#library" data-i18n="library">Library</a>
+        <a class="mobile-menu__link" href="#agents" data-i18n="agentsNav">MCP / Plugins</a>
+        <a class="mobile-menu__link" href="#docs" data-i18n="docsNav">Docs</a>
+      </nav>
+      <a class="btn btn--primary mobile-menu__cta" href="#console" data-i18n="startCreating">Start Creating</a>
     </div>
 
     <main id="main">
@@ -89,30 +111,44 @@
             <a class="hero__card hero__card--c6" href="#proof" tabindex="-1" aria-hidden="true"><img src="/clips/footage-title.jpg" alt="" width="520" height="293" loading="lazy" decoding="async" /></a>
         </div>
         <div class="shell hero__body">
-          <h1 class="display" id="hero-title" data-i18n="hero"><span class="hero__line">Create the best </span><span class="hero__line">videos for your </span><span class="hero__line">brand</span></h1>
+          <h1 class="display" id="hero-title" data-i18n="hero"><span class="hero__line">Create Motion </span><span class="hero__line">Videos For Your </span><span class="hero__line">Brand Today</span></h1>
           <div class="hero__aside">
-            <p class="hero__lede" data-i18n="lede">
-              Describe the video you need. See real examples, then make your own.
-            </p>
+            <p class="hero__lede" data-i18n="lede">Browse real motion examples, start from one, then edit and export your own.</p>
             <div class="hero__actions">
-              <a class="btn btn--primary" href="#console" data-i18n="makeVideo">Create a video</a>
-              <a class="btn btn--link" href="#proof" data-i18n="examples">Watch videos</a>
+              <a class="btn btn--primary" href="#console" data-i18n="startCreating">Start Creating</a>
+              <a class="btn btn--ghost" href="#proof" data-i18n="browseExamples">Browse Examples</a>
+              <button class="btn btn--link hero__demo" type="button" data-watch-demo data-i18n="watchDemo">Watch Demo</button>
             </div>
           </div>
         </div>
-        <svg width="0" height="0" aria-hidden="true" focusable="false"><filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="5"/></filter></svg>
       </section>
 
       <!-- ================= LIVE PROOF STRIP ================= -->
       <section class="section section--proof" id="proof" aria-labelledby="proof-title">
         <div class="shell">
-          <header class="section__head">
-            <h2 class="h2" id="proof-title" data-i18n="proofTitle">Watch what you can make.</h2>
-            <p class="section__lede" data-i18n="proofLede">Play a real video. Copy its prompt, or use it to start your own.</p>
+          <header class="section__head proof__head">
+            <div>
+              <h2 class="h2" id="proof-title" data-i18n="proofTitle">Start with real motion.</h2>
+              <p class="section__lede" data-i18n="proofLede">Search the examples. Play one. Copy its prompt or use it as your starting point.</p>
+            </div>
+            <p class="proof__status" data-example-status aria-live="polite"></p>
           </header>
+          <div class="example-discovery" data-example-discovery>
+            <label class="example-discovery__search">
+              <span class="visually-hidden" data-i18n="searchExamples">Search examples</span>
+              <input type="search" autocomplete="off" data-example-search placeholder="Search motion examples, prompts, or skills" data-i18n-placeholder="searchExamplesPlaceholder" />
+            </label>
+            <div class="example-discovery__filters" role="group" aria-label="Filter examples">
+              <button type="button" class="example-filter is-active" data-example-filter="all" aria-pressed="true" data-i18n="filterAll">All</button>
+              <button type="button" class="example-filter" data-example-filter="product-ui" aria-pressed="false">Product UI</button>
+              <button type="button" class="example-filter" data-example-filter="kinetic-type" aria-pressed="false">Kinetic Type</button>
+              <button type="button" class="example-filter" data-example-filter="footage" aria-pressed="false">Footage</button>
+              <button type="button" class="example-filter" data-example-filter="brand" aria-pressed="false">Brand</button>
+            </div>
+          </div>
 
           <div class="contact-sheet">
-            <article class="clip" data-clip="launch-title">
+            <article class="clip" data-clip="launch-title" data-example-tags="product-ui brand launch">
               <div class="clip__frame">
                 <div class="clip__media">
                   <video
@@ -147,7 +183,7 @@
               </div>
             </article>
 
-            <article class="clip" data-clip="kinetic-type">
+            <article class="clip" data-clip="kinetic-type" data-example-tags="kinetic-type brand typography">
               <div class="clip__frame">
                 <div class="clip__media">
                   <video
@@ -182,7 +218,7 @@
               </div>
             </article>
 
-            <article class="clip" data-clip="product-loop">
+            <article class="clip" data-clip="product-loop" data-example-tags="product-ui brand product">
               <div class="clip__frame">
                 <div class="clip__media">
                   <video
@@ -217,7 +253,7 @@
               </div>
             </article>
 
-            <article class="clip" data-clip="footage-title">
+            <article class="clip" data-clip="footage-title" data-example-tags="footage brand title">
               <div class="clip__frame">
                 <div class="clip__media">
                   <video
@@ -252,32 +288,7 @@
               </div>
             </article>
           </div>
-
-          <p class="contact-sheet__foot">
-            Rendered with the shipped skills — the exact prompt behind each one is printed above and
-            copied to your clipboard in one click.
-          </p>
         </div>
-        <details class="full-film"><summary data-i18n="fullFilm">Watch the full behind-the-scenes film (104 seconds)</summary>
-        <figure class="hero__film">
-          <video
-            class="hero__video"
-            data-film
-            src="/film/motion-master-hero.mp4"
-            poster="/film/hero-poster.jpg"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="metadata"
-            aria-label="A motion film: a brief becomes a shot list, the shot list becomes code, the code renders a file."
-          ></video>
-          <figcaption class="hero__caption">
-            <p class="hero__brief">The brief: make a launch film.</p>
-            <p class="hero__meta">104 seconds · 1920×1080</p>
-          </figcaption>
-        </figure>
-        </details>
       </section>
 
       <!-- ================= THREE MORE WAYS ================= -->
@@ -291,10 +302,8 @@
       <section class="section section--console" id="console" aria-labelledby="console-title" data-console data-console-endpoint="/chat" data-console-files-endpoint="/files">
         <div class="shell">
           <header class="section__head">
-            <h2 class="h2" id="console-title" data-i18n="consoleTitle">Describe your video.</h2>
-            <p class="section__lede" data-i18n="consoleLede">
-              Write what you want to make. Your connected agent uses the motion tools to produce the file.
-            </p>
+            <h2 class="h2" id="console-title" data-i18n="consoleTitle">Create from an example or a brief.</h2>
+            <p class="section__lede" data-i18n="consoleLede">Start with a prompt above or describe what you need. The same Motion Master tools plan, render and return the file.</p>
           </header>
 
           <div class="console" data-console-frame>
@@ -372,8 +381,8 @@
       <section class="section section--library" id="library" aria-labelledby="library-title" data-library>
         <div class="shell">
           <header class="section__head">
-            <h2 class="h2" id="library-title" data-i18n="libraryTitle">Find a starting point.</h2>
-            <p class="section__lede" data-i18n="libraryLede">Search real prompts and reusable motion components.</p>
+            <h2 class="h2" id="library-title" data-i18n="libraryTitle">Prompt & skill library.</h2>
+            <p class="section__lede" data-i18n="libraryLede">Search the reusable prompts, techniques and motion blocks that the human interface and agent use.</p>
           </header>
 
           <div class="library__stats" role="list">
@@ -435,22 +444,45 @@
           </div>
         </div>
       </section>
+      <section class="section section--agents" id="agents" aria-labelledby="agents-title">
+        <div class="shell">
+          <header class="section__head agents__head">
+            <h2 class="h2" id="agents-title" data-i18n="agentsTitle">Use the same product from Claude, Codex or MCP.</h2>
+            <p class="section__lede" data-i18n="agentsLede">Human UI and agent clients share the same Motion Master tools and project state. The private preview does not fake a hosted agent connection.</p>
+          </header>
+          <div class="agent-grid">
+            <article class="agent-card">
+              <h3>Claude Code</h3>
+              <p data-i18n="claudeBody">The repository ships a Claude plugin manifest and the Motion Master skills.</p>
+              <code>plugins/motion-master/.claude-plugin/plugin.json</code>
+            </article>
+            <article class="agent-card">
+              <h3>Codex / ChatGPT</h3>
+              <p data-i18n="codexBody">The repository ships a Codex / ChatGPT plugin manifest that points to the same skills and MCP server.</p>
+              <code>plugins/motion-master/.codex-plugin/plugin.json</code>
+            </article>
+            <article class="agent-card agent-card--endpoint">
+              <h3>MCP endpoint</h3>
+              <p data-i18n="mcpBody">Run the private Motion Master server locally, then connect any compatible client to this endpoint.</p>
+              <div class="agent-endpoint">
+                <code data-agent-endpoint>http://127.0.0.1:8787/mcp</code>
+                <button type="button" class="btn btn--ghost btn--sm" data-copy-agent data-i18n="copyEndpoint">Copy endpoint</button>
+              </div>
+            </article>
+          </div>
 
-      
-
-      <!-- ================= WHAT'S IN THE BOX ================= -->
-      
-
-
-
-
-
-      <!-- ================= PRICING ================= -->
-      
-
-      <!-- ================= FAQ ================= -->
-      
-    </main>
+          <div class="product-docs" id="docs">
+            <h3 data-i18n="docsTitle">Private quickstart</h3>
+            <ol>
+              <li data-i18n="docsOne">Run the Motion Master server and worker on the owner-controlled machine.</li>
+              <li data-i18n="docsTwo">Connect the browser, Claude, Codex or another MCP client to the same server.</li>
+              <li data-i18n="docsThree">Create, edit, render, export and reopen the same saved project.</li>
+            </ol>
+            <p class="product-docs__note" data-i18n="docsNote">This preview is not on sale and does not claim a public hosted render service.</p>
+          </div>
+        </div>
+      </section>
+</main>
 
     <footer class="footer">
       <div class="shell footer__inner">
@@ -458,7 +490,13 @@
           <p class="footer__name">Motion Master</p>
           <p class="footer__line" data-i18n="footerLine">Make a video. Keep the source.</p>
         </div>
-        <nav class="footer__nav" aria-label="Footer"><a class="footer__link" href="#proof" data-i18n="examples">Videos</a><a class="footer__link" href="#console" data-i18n="makeVideo">Create a video</a><a class="footer__link" href="#library" data-i18n="library">Library</a></nav>
+        <nav class="footer__nav" aria-label="Footer">
+          <a class="footer__link" href="#proof" data-i18n="examples">Examples</a>
+          <a class="footer__link" href="#console" data-i18n="createNav">Create</a>
+          <a class="footer__link" href="#library" data-i18n="library">Library</a>
+          <a class="footer__link" href="#agents" data-i18n="agentsNav">MCP / Plugins</a>
+          <a class="footer__link" href="#docs" data-i18n="docsNav">Docs</a>
+        </nav>
         <p class="footer__legal"><span data-i18n="privateSale">Private preview · Not on sale.</span> 
           © 2026 Motion Master. Skill packs adapted from LottieFiles, GreenSock, Remotion and
           HyperFrames, used under their licences.
@@ -467,7 +505,7 @@
     </footer>
 
     <div class="mobile-bar" data-mobile-bar hidden>
-      <a class="btn btn--primary btn--block" href="#proof" data-i18n="examples">Watch videos</a>
+      <a class="btn btn--primary btn--block" href="#console" data-i18n="startCreating">Start Creating</a>
     </div>
 
     <p class="visually-hidden" role="status" aria-live="polite" data-live-region></p>
