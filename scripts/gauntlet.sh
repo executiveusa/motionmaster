@@ -15,7 +15,7 @@ EXTRACTOR="${EXTRACTOR:-$REPO/.research/the-extractor/extractor.mjs}"
 if [ ! -f "$EXTRACTOR" ]; then
   EXTRACTOR="/tmp/motion-master-the-extractor/extractor.mjs"
   rm -rf "/tmp/motion-master-the-extractor"
-  git clone --depth 1 https://github.com/executiveusa/the-extractor.git "/tmp/motion-master-the-extractor" >/dev/null 2>&1
+  timeout 45s git clone --depth 1 https://github.com/executiveusa/the-extractor.git "/tmp/motion-master-the-extractor" >/dev/null 2>&1
 fi
 BAR="${BAR:-https://motionvideo.xyz/en}"
 PORT="${PORT:-4173}"
@@ -52,11 +52,12 @@ echo "ours: http://127.0.0.1:$PORT/ (HTTP $code)"
 
 # ── 2. the measurable half: slop signals, same rules on both pages ─────────────
 log "the-extractor — ours"
-node "$EXTRACTOR" audit "http://127.0.0.1:$PORT/" --format json >"$OUT/ours.json" 2>"$OUT/ours.err"
+node "$EXTRACTOR" audit "$REPO/site/dist/index.html" --format json >"$OUT/ours.json" 2>"$OUT/ours.err"
 node -e "const d=require('$OUT/ours.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
 
 log "the-extractor — the bar"
-node "$EXTRACTOR" audit "$BAR" --format json >"$OUT/bar.json" 2>"$OUT/bar.err"
+curl --fail --location --silent --show-error --max-time 30 "$BAR" -o "$OUT/bar.html"
+node "$EXTRACTOR" audit "$OUT/bar.html" --format json >"$OUT/bar.json" 2>"$OUT/bar.err"
 node -e "const d=require('$OUT/bar.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
 
 node - "$OUT/ours.json" "$OUT/bar.json" "$OUT/extractor-summary.json" <<'NODE'
@@ -113,9 +114,9 @@ kill $CHROME_PID 2>/dev/null
 log "blind capture"
 for w in 1440 390; do
   h=$([ "$w" = "1440" ] && echo 900 || echo 844)
-  "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --virtual-time-budget=8000 \
+  timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --virtual-time-budget=8000 \
     --window-size=$w,$h --screenshot="$OUT/ours-$w.png" "http://127.0.0.1:$PORT/" >/dev/null 2>&1
-  "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --virtual-time-budget=8000 \
+  timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --virtual-time-budget=8000 \
     --window-size=$w,$h --screenshot="$OUT/bar-$w.png" "$BAR" >/dev/null 2>&1
   ls -la "$OUT"/*-$w.png 2>/dev/null
 done
