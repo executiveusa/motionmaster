@@ -358,7 +358,7 @@ try {
   }
 
   if (spanish.lang !== 'es-MX' || spanish.storage !== 'es-MX' ||
-      !spanish.hero?.includes('Crea los mejores videos') || !spanish.cta?.includes('Crear un video')) {
+      !spanish.hero?.includes('Crea videos de motion para tu marca hoy') || !spanish.cta?.includes('Empezar a crear')) {
     throw new Error('Spanish selector interaction failed: ' + JSON.stringify(spanish));
   }
   await evaluate(`(() => {
@@ -379,7 +379,7 @@ try {
   const english = await state();
   if (english.lang !== 'en' || english.storage !== 'en' ||
       english.injected !== 'Create a video' || english.dynamicCopy !== 'Copy prompt' ||
-      !english.hero?.includes('Create the best videos')) {
+      !english.hero?.includes('Create Motion Videos For Your Brand Today')) {
     throw new Error('English selector round trip failed: ' + JSON.stringify(english));
   }
 
@@ -387,7 +387,7 @@ try {
   await command('Page.reload', { ignoreCache: true });
   await until(`document.readyState === 'complete' && document.documentElement.lang === 'es-MX' && !document.querySelector('#__mm_locale_dynamic')`, 'persisted Spanish after actual reload');
   const reloaded = await state();
-  if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea los mejores videos')) {
+  if (reloaded.selector !== 'es-MX' || !reloaded.hero?.includes('Crea videos de motion para tu marca hoy')) {
     throw new Error('Spanish preference did not persist across reload: ' + JSON.stringify(reloaded));
   }
   await until('document.querySelector("[data-project-new-title]")?.value === "Mi rótulo"', 'Spanish private editor template default');
