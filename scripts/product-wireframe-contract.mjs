@@ -2,7 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const html = readFileSync(resolve(import.meta.dirname, '..', 'site', 'dist', 'index.html'), 'utf8');
+const root = resolve(import.meta.dirname, '..');
+const html = readFileSync(resolve(root, 'site', 'dist', 'index.html'), 'utf8');
+const editorSource = readFileSync(resolve(root, 'site', 'src', 'modules', 'project-editor.ts'), 'utf8');
 const failures = [];
 const requireText = (value, label) => { if (!html.includes(value)) failures.push(label); };
 
@@ -25,9 +27,11 @@ for (const control of [
   'data-start-prompt',
   'data-console-signin',
   'data-console-send',
-  'data-project-editor',
   'data-copy-agent',
 ]) requireText(control, `missing wired control ${control}`);
+if (!editorSource.includes("data.projectEditor") && !editorSource.includes("dataset.projectEditor")) {
+  failures.push('private project editor module missing');
+}
 
 requireText('Create Motion', 'approved hero headline missing');
 requireText('Videos For Your', 'approved hero headline line 2 missing');
