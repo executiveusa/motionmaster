@@ -174,7 +174,9 @@ body { padding-left: 0 !important; background: #fff; }
 @media (max-width:1023px) {
   .topbar { position:absolute; height:62px; }
   .topbar__inner { padding-inline:20px; }
-  .topbar__signin, .locale-picker { display:none; }
+  .topbar__signin { display:none; }
+  .locale-picker { display:inline-flex; margin-left:auto; }
+  .locale-picker select { min-height:34px; padding-inline:10px; font-size:12px; }
   .hero--brand { min-height:760px; }
   .hero--brand .hero__body { min-height:760px; padding-top:390px; }
   .hero__card--c1 { left:-10%; width:38vw; }
