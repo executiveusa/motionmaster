@@ -50,6 +50,8 @@ import {
   loadCatalogue,
 } from "./library.js";
 import { fillBlock, headlineFrom, matchBlocks, type MotionBlock } from "./blocks.js";
+import { enhance, type TokenShape } from "./enhancer.js";
+import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxKinds } from "./sfx.js";
@@ -187,6 +189,13 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       },
       [`${API_PREFIX}/clips`]: {
         get: { summary: "The gallery clips and the exact prompt behind each.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/prompts/enhance`]: {
+        post: {
+          summary: "Preview an improved motion brief without rendering or changing the original.",
+          requestBody: { required: true, content: json({ type: "object", properties: { prompt: str }, required: ["prompt"] }) },
+          responses: { 200: { description: "Enhanced brief and original for review", content: json(obj) }, 400: { description: "Invalid brief", content: json(obj) } },
+        },
       },
       [`${API_PREFIX}/licence`]: {
         get: { summary: "The terms, as recorded.", responses: { 200: { description: "ok", content: json(obj) } } },
@@ -432,6 +441,7 @@ export async function handleApi(
         "GET  /tokens",
         "GET  /clips",
         "GET  /licence",
+        "POST /prompts/enhance",
         "GET  /board-sync/readiness",
         "GET  /board-sync/jobs",
         "POST /board-sync/jobs",
@@ -470,6 +480,42 @@ export async function handleApi(
       ],
       mcp: config.publicUrl,
     });
+    return true;
+  }
+
+  // A preview-only operation: uses the SAME deterministic enhancer as MCP.
+  // The UI never automatically substitutes the result or starts rendering.
+  if (route === "/prompts/enhance" && method === "POST") {
+    let body: unknown;
+    try { body = await readJson(req, 16384); }
+    catch { fail(res, 400, "A valid JSON brief is required."); return true; }
+    const raw = body && typeof body === "object" && "prompt" in body
+      ? (body as { prompt: unknown }).prompt : undefined;
+    if (typeof raw !== "string" || !raw.trim() || raw.length > 6000) {
+      fail(res, 400, "prompt must contain 1–6000 characters.");
+      return true;
+    }
+    const result = enhance(raw, loadCatalogue(config.libraryPath), loadTokens(config.tokensPath) as unknown as TokenShape, {});
+    const useHunyuan = body && typeof body === "object" && "provider" in body &&
+      (body as { provider?: unknown }).provider === "hunyuan";
+    // Hunyuan is trained for image prompts. Preserve the deterministic motion
+    // contract and append only a user-reviewable visual note if requested.
+    if (useHunyuan) {
+      const suggestion = await requestHunyuanVisual(raw);
+      if (suggestion.visual) {
+        writeJson(res, 200, {
+          ...result,
+          enhanced: result.enhanced + "\n\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\n" + suggestion.visual,
+          provider: "hunyuan + motion-master",
+          applied: false,
+          warning: "Image-prompt visual direction only; it does not render or override the original brief.",
+        });
+      } else {
+        writeJson(res, 200, { ...result, provider: "motion-master", applied: false, warning: suggestion.warning });
+      }
+    } else {
+      writeJson(res, 200, { ...result, provider: "motion-master", applied: false });
+    }
     return true;
   }
 

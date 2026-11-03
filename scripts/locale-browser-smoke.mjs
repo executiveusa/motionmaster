@@ -137,6 +137,43 @@ try {
   const loadedPrompt = await evaluate(`document.querySelector('[data-console-input]').value`);
   if (loadedPrompt !== firstPrompt) throw new Error('Start-from-example did not load the canonical prompt');
 
+  // Prompt enhancer: real authenticated HTTP route, not a mocked suggestion.
+  // It must never change the original until explicitly accepted.
+  await evaluate(`(() => {
+    localStorage.setItem('motion-master:agent', location.origin);
+    document.querySelector('[data-project-server]').value = location.origin;
+    document.querySelector('[data-project-key]').value = 'mm-browser-fixture-key';
+    document.querySelector('[data-enhance-brief]').click();
+    return true;
+  })()`);
+  await until(`!!document.querySelector('[data-enhance-output]')?.value?.includes('BRIEF') &&
+    !document.querySelector('[data-enhance-apply]')?.disabled`, 'real enhancer preview');
+  const beforeReject = await evaluate(`document.querySelector('[data-console-input]').value`);
+  if (beforeReject !== loadedPrompt) throw new Error('Enhancement silently overwrote original text');
+  await evaluate(`document.querySelector('[data-enhance-dismiss]').click()`);
+  const afterReject = await evaluate(`({
+    prompt: document.querySelector('[data-console-input]').value,
+    hidden: document.querySelector('[data-enhance-review]').hidden
+  })`);
+  if (afterReject.prompt !== loadedPrompt || !afterReject.hidden) throw new Error('Reject did not preserve the original prompt');
+
+  await evaluate(`document.querySelector('[data-enhance-brief]').click()`);
+  await until(`!document.querySelector('[data-enhance-apply]')?.disabled &&
+    !!document.querySelector('[data-enhance-output]')?.value`, 'second enhancer preview');
+  await evaluate(`document.querySelector('[data-enhance-apply]').click()`);
+  const accepted = await evaluate(`document.querySelector('[data-console-input]').value`);
+  if (!accepted.includes(loadedPrompt) || accepted.length <= loadedPrompt.length) {
+    throw new Error('Accept did not load a stronger brief while retaining the original');
+  }
+  await evaluate(`(() => {
+    document.querySelector('[data-console-input]').value = ${JSON.stringify(loadedPrompt)};
+    document.querySelector('[data-project-key]').value = '';
+    document.querySelector('[data-project-server]').value = '';
+    localStorage.removeItem('motion-master:agent');
+    return true;
+  })()`);
+
+
   await evaluate(`document.querySelector('[data-watch-demo]').click()`);
   await until(`document.querySelector('[data-clip="launch-title"] [data-clip-toggle]')?.getAttribute('aria-pressed') === 'true'`, 'watch demo starts real first clip');
 

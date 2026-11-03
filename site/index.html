@@ -359,12 +359,31 @@
                     placeholder="a title card and a product reveal for ACME coffee, 12 seconds"
                     data-console-input
                   ></textarea>
+                  <div class="prompt-review" data-enhance-review hidden aria-live="polite">
+                    <div class="prompt-review__heading">
+                      <strong data-i18n="enhanceTitle">Suggested motion brief</strong>
+                      <span data-enhance-provider></span>
+                    </div>
+                    <p data-i18n="enhanceDisclaimer">Review the suggestion before using it. Your original is unchanged.</p>
+                    <textarea data-enhance-output rows="6" aria-label="Suggested brief" data-i18n-aria="enhanceTitle"></textarea>
+                    <p data-enhance-assumptions class="prompt-review__notes"></p>
+                    <div class="prompt-review__actions">
+                      <button type="button" class="btn btn--primary btn--sm" data-enhance-apply data-i18n="enhanceUse">Use this brief</button>
+                      <button type="button" class="btn btn--ghost btn--sm" data-enhance-dismiss data-i18n="enhanceDismiss">Keep original</button>
+                    </div>
+                  </div>
                   <div class="console__controls">
                     <span class="console__status" data-console-status aria-live="polite"></span>
                     <label class="btn btn--ghost btn--sm console__attach">
                       Attach
                       <input type="file" multiple data-console-file class="visually-hidden" aria-label="Attach your own files" />
                     </label>
+                    <label class="visually-hidden" for="enhancer-provider" data-i18n="enhanceProviderLabel">Prompt enhancement provider</label>
+                    <select id="enhancer-provider" class="console__enhancer-provider" data-enhance-choice aria-label="Prompt enhancement provider">
+                      <option value="motion-master">Motion Master</option>
+                      <option value="hunyuan" data-i18n="hunyuanLocal">Hunyuan (local, opt-in)</option>
+                    </select>
+                    <button type="button" class="btn btn--ghost btn--sm" data-enhance-brief data-i18n="enhanceAction">Improve prompt</button>
                     <button type="button" class="btn btn--ghost btn--sm" data-console-cancel data-i18n="stop" hidden>Stop</button>
                     <button type="button" class="btn btn--ghost btn--sm" data-console-signout data-i18n="signOut" hidden>Sign out</button>
                     <button type="submit" class="btn btn--primary btn--sm" data-console-send data-i18n="create">Create</button>
