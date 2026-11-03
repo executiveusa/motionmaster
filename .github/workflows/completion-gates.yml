@@ -1,6 +1,9 @@
 name: Motion Master completion gates
 
 on:
+  push:
+    branches:
+      - "agent/**"
   pull_request:
     paths:
       - "site/**"
