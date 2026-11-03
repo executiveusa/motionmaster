@@ -378,6 +378,11 @@
                       Attach
                       <input type="file" multiple data-console-file class="visually-hidden" aria-label="Attach your own files" />
                     </label>
+                    <label class="visually-hidden" for="enhancer-provider" data-i18n="enhanceProviderLabel">Prompt enhancement provider</label>
+                    <select id="enhancer-provider" class="console__enhancer-provider" data-enhance-choice aria-label="Prompt enhancement provider">
+                      <option value="motion-master">Motion Master</option>
+                      <option value="hunyuan">Hunyuan (local, opt-in)</option>
+                    </select>
                     <button type="button" class="btn btn--ghost btn--sm" data-enhance-brief data-i18n="enhanceAction">Improve prompt</button>
                     <button type="button" class="btn btn--ghost btn--sm" data-console-cancel data-i18n="stop" hidden>Stop</button>
                     <button type="button" class="btn btn--ghost btn--sm" data-console-signout data-i18n="signOut" hidden>Sign out</button>
