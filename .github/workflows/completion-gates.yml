@@ -24,7 +24,8 @@ on:
       - "scripts/staging-live-smoke-smoke.mjs"
       - "scripts/gallery-media-smoke.mjs"
       - "scripts/capture-site.mjs"
-      - "scripts/locale-browser-smoke.mjs"\n      - "scripts/product-wireframe-contract.mjs"
+      - "scripts/locale-browser-smoke.mjs"
+      - "scripts/product-wireframe-contract.mjs"
       - "licence.json"
       - ".github/workflows/completion-gates.yml"
   workflow_dispatch:
@@ -71,7 +72,9 @@ jobs:
         run: node scripts/staging-live-smoke-smoke.mjs
       - name: Run completion quality gates
         run: node scripts/completion-gates.mjs
-      - name: Verify approved product wireframe contract\n        run: node scripts/product-wireframe-contract.mjs\n      - name: Capture approved product homepage (desktop and mobile)
+      - name: Verify approved product wireframe contract
+        run: node scripts/product-wireframe-contract.mjs
+      - name: Capture approved product homepage (desktop and mobile)
         run: node scripts/capture-site.mjs
       - name: Verify live English/Spanish selector and dynamic i18n in Chromium
         run: node scripts/locale-browser-smoke.mjs
