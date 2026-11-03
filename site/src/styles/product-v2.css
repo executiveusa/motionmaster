@@ -227,3 +227,53 @@ body { padding-left: 0 !important; background: #fff; }
   .hero--brand .hero__body { min-height:720px; padding-top:320px; }
   .hero--brand .display { font-size:clamp(40px,12vw,50px); }
 }
+
+
+/* Prompt improvement stays inside the existing composer: no new page or modal. */
+.console__enhancer-provider {
+  max-width: 180px;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #595962;
+  border-radius: 8px;
+  background: #222227;
+  color: #f5f5f8;
+  font: inherit;
+  font-size: 12px;
+}
+.console__enhancer-provider:focus-visible,
+.prompt-review textarea:focus-visible { outline: 2px solid #a1a6ff; outline-offset: 2px; }
+.prompt-review {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 16px;
+  border: 1px solid #4c4c5c;
+  border-radius: 12px;
+  background: #222227;
+  color: #f4f4f6;
+}
+.prompt-review[hidden] { display: none !important; }
+.prompt-review__heading,
+.prompt-review__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.prompt-review__heading { justify-content: space-between; }
+.prompt-review__heading strong { font-size: 15px; }
+.prompt-review__heading span { font: 12px var(--font-mono); color: #b7b7c2; }
+.prompt-review > p { margin: 0; font-size: 12px; line-height: 1.5; color: #c5c5cd; }
+.prompt-review textarea {
+  width: 100%;
+  min-height: 154px;
+  padding: 10px 12px;
+  border: 1px solid #51515c;
+  border-radius: 8px;
+  background: #111115;
+  color: #f6f6f8;
+  font: 12px/1.55 var(--font-mono);
+  resize: vertical;
+}
+.prompt-review .prompt-review__notes { overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .console__controls { flex-wrap: wrap; gap: 8px; }
+  .console__enhancer-provider { max-width: 160px; }
+  .prompt-review { padding: 12px; }
+}
