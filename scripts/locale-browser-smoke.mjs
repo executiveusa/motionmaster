@@ -117,6 +117,35 @@ try {
   const visibleHanEnglish = await evaluate('(/[\\u3400-\\u9fff]/u).test(document.body.innerText)');
   if (visibleHanEnglish) throw new Error('Visible untranslated Han content in English browser');
 
+  // Approved product shell: prove the new discovery controls and the path
+  // from a real example into the actual creation composer.
+  const navTargets = await evaluate(`[...document.querySelectorAll('.nav__link')].map((a) => a.getAttribute('href')).every((href) => href && document.querySelector(href))`);
+  if (!navTargets) throw new Error('A top-level navigation link has no real target');
+
+  const initialExamples = await evaluate(`[...document.querySelectorAll('[data-example-tags]')].filter((card) => !card.hidden).length`);
+  if (initialExamples !== 4) throw new Error('Expected 4 real examples, found ' + initialExamples);
+
+  await evaluate(`(() => { const input=document.querySelector('[data-example-search]'); input.value='kinetic'; input.dispatchEvent(new Event('input',{bubbles:true})); return true; })()`);
+  await until(`[...document.querySelectorAll('[data-example-tags]')].filter((card) => !card.hidden).length === 1`, 'example search filters real cards');
+  await evaluate(`(() => { const input=document.querySelector('[data-example-search]'); input.value=''; input.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-example-filter="product-ui"]').click(); return true; })()`);
+  await until(`[...document.querySelectorAll('[data-example-tags]')].filter((card) => !card.hidden).length === 2`, 'category filter');
+  await evaluate(`document.querySelector('[data-example-filter="all"]').click()`);
+
+  const firstPrompt = await evaluate(`document.querySelector('[data-clip="launch-title"] .prompt__text code')?.textContent?.trim()`);
+  await evaluate(`document.querySelector('[data-clip="launch-title"] [data-start-prompt]').click()`);
+  await until(`document.querySelector('[data-console-input]')?.value?.length > 20`, 'example loaded into creation composer');
+  const loadedPrompt = await evaluate(`document.querySelector('[data-console-input]').value`);
+  if (loadedPrompt !== firstPrompt) throw new Error('Start-from-example did not load the canonical prompt');
+
+  await evaluate(`document.querySelector('[data-watch-demo]').click()`);
+  await until(`document.querySelector('[data-clip="launch-title"] [data-clip-toggle]')?.getAttribute('aria-pressed') === 'true'`, 'watch demo starts real first clip');
+
+  await evaluate(`document.querySelector('[data-focus-signin]').click()`);
+  await sleep(450);
+  if (!await evaluate(`document.activeElement === document.querySelector('[data-console-signin]')`)) {
+    throw new Error('Sign-in navigation did not land on the real OpenRouter control');
+  }
+
   // MM-08: a human can use the private editor without writing JSON or code.
   // This uses the real authenticated local HTTP API, not a mocked fetch.
   const editorInitiallyClosed = await evaluate('(() => { const d = document.querySelector("[data-project-editor] details"); return !!d && !d.open; })()');
