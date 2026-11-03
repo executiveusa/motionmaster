@@ -159,6 +159,13 @@ body { padding-left: 0 !important; background: #fff; }
 /* Motion: restrained; HyperFrames/video are the spectacle. */
 @media (prefers-reduced-motion:no-preference) {
   .hero__card { transition:translate 240ms ease, box-shadow 240ms ease; }
+  .hero--brand:hover .hero__card,
+  .hero--brand:hover .hero__card--c1,
+  .hero--brand:hover .hero__card--c2,
+  .hero--brand:hover .hero__card--c3,
+  .hero--brand:hover .hero__card--c4,
+  .hero--brand:hover .hero__card--c5,
+  .hero--brand:hover .hero__card--c6 { transform:none; }
   .hero--brand:hover .hero__card:nth-child(odd) { translate:0 -3px; }
   .hero--brand:hover .hero__card:nth-child(even) { translate:0 3px; }
 }
