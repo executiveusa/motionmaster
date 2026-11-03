@@ -107,17 +107,24 @@ try {
       expression: `JSON.stringify((() => {
         const de = document.documentElement;
         const device = ${w};
-        const over = [...document.querySelectorAll('body *')]
-          .filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.right > device + 1; })
-          .filter(e => { for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) { if (/(auto|scroll|hidden)/.test(getComputedStyle(a).overflowX)) return false; } return true; })
-          .slice(0, 4)
-          .map(e => e.tagName + '.' + (typeof e.className === 'string' ? e.className.split(' ').slice(0,2).join('.') : '') + '@' + Math.round(e.getBoundingClientRect().right));
+        const all = [...document.querySelectorAll('body *')];
+        const label = (e) => e.tagName + '.' + (typeof e.className === 'string' ? e.className.split(' ').slice(0,3).join('.') : '');
+        const over = all
+          .filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && (b.right > device + 1 || b.left < -1); })
+          .sort((a,b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right)
+          .slice(0, 10)
+          .map(e => { const b=e.getBoundingClientRect(); return label(e) + '@' + Math.round(b.left) + '..' + Math.round(b.right) + ' overflow=' + getComputedStyle(e).overflowX; });
+        const scrollers = all
+          .filter(e => e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1)
+          .sort((a,b) => (b.scrollWidth-b.clientWidth) - (a.scrollWidth-a.clientWidth))
+          .slice(0, 10)
+          .map(e => label(e) + ' client=' + e.clientWidth + ' scroll=' + e.scrollWidth + ' overflow=' + getComputedStyle(e).overflowX);
         const small = [...document.querySelectorAll('a,button,[role=button]')]
           .filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && b.height < 44 && !e.closest('nav,ul,ol'); })
           .slice(0, 4)
           .map(e => e.tagName + '.' + (typeof e.className === 'string' ? e.className.split(' ').slice(0,2).join('.') : '') + '@' + Math.round(e.getBoundingClientRect().height));
         const vids = [...document.querySelectorAll('video')].map(v => ({ src: v.getAttribute('src'), poster: v.getAttribute('poster') }));
-        return { sw: de.scrollWidth, iw: window.innerWidth, over, small, vids };
+        return { sw: de.scrollWidth, iw: window.innerWidth, bodyScroll: document.body.scrollWidth, over, scrollers, small, vids };
       })())`,
       returnByValue: true,
     });
@@ -126,7 +133,8 @@ try {
     console.log(`${String(w).padStart(4)}px scroll=${String(v.sw).padStart(4)} ${ok ? 'OK ' : 'OVERFLOW'}`);
     if (!ok) {
       console.log('      overflowing:', v.over);
-      problems.push(`${w}px overflow: ${JSON.stringify(v.over)}`);
+      console.log('      wide scrollers:', v.scrollers);
+      problems.push(`${w}px overflow: ${JSON.stringify({over:v.over,scrollers:v.scrollers})}`);
     }
     if (v.small.length) {
       console.log('      small targets:', v.small);
@@ -136,6 +144,7 @@ try {
     if (noSrc) problems.push(`${w}px: ${noSrc} video elements without a src`);
   }
   console.log('\n' + (problems.length ? 'PROBLEMS:\n' + problems.map((p) => ' - ' + p).join('\n') : 'no layout problems'));
+  if (problems.length) process.exitCode = 1;
 } finally {
   try {
     ws?.close();
@@ -143,5 +152,6 @@ try {
     /* ignore */
   }
   chrome.kill('SIGKILL');
-  rmSync(profile, { recursive: true, force: true });
+  await sleep(250);
+  rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
