@@ -54,9 +54,22 @@ export function initPromptEnhancer(): void {
     pending = new AbortController();
     button.disabled = true;
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      // Reuse the owner-entered private editor key only when it belongs to the
+      // EXACT same configured API origin. Never forward it to a different agent.
+      const privateServer = node<HTMLInputElement>('[data-project-server]')?.value.trim() ?? '';
+      const privateKey = node<HTMLInputElement>('[data-project-key]')?.value.trim() ?? '';
+      try {
+        const target = new URL(agentBase());
+        const credentialOrigin = new URL(privateServer);
+        if (privateKey && target.origin === credentialOrigin.origin &&
+            (target.protocol === 'https:' || ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname))) {
+          headers.Authorization = `Bearer ${privateKey}`;
+        }
+      } catch { /* No private session; use the normal unauthenticated API path. */ }
       const response = await fetch(`${agentBase()}/api/v1/prompts/enhance`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ prompt, provider: choice?.value === "hunyuan" ? "hunyuan" : "motion-master" }),
         signal: pending.signal,
       });
