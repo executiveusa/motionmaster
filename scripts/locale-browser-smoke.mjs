@@ -140,6 +140,7 @@ try {
   // Prompt enhancer: real authenticated HTTP route, not a mocked suggestion.
   // It must never change the original until explicitly accepted.
   await evaluate(`(() => {
+    localStorage.setItem('motion-master:agent', location.origin);
     document.querySelector('[data-project-server]').value = location.origin;
     document.querySelector('[data-project-key]').value = 'mm-browser-fixture-key';
     document.querySelector('[data-enhance-brief]').click();
@@ -168,6 +169,7 @@ try {
     document.querySelector('[data-console-input]').value = ${JSON.stringify(loadedPrompt)};
     document.querySelector('[data-project-key]').value = '';
     document.querySelector('[data-project-server]').value = '';
+    localStorage.removeItem('motion-master:agent');
     return true;
   })()`);
 
