@@ -11,6 +11,7 @@ type Suggestion = {
   provider: string;
   assumptions?: string[];
   applied: boolean;
+  warning?: string;
 };
 const node = <T extends Element>(q: string) => document.querySelector<T>(q);
 let pending: AbortController | null = null;
@@ -24,6 +25,7 @@ export function initPromptEnhancer(): void {
   const dismiss = node<HTMLButtonElement>('[data-enhance-dismiss]');
   const note = node<HTMLElement>('[data-enhance-assumptions]');
   const provider = node<HTMLElement>('[data-enhance-provider]');
+  const choice = node<HTMLSelectElement>('[data-enhance-choice]');
   if (!input || !button || !panel || !output || !apply || !dismiss || !note || !provider) return;
 
   let original = '';
@@ -55,7 +57,7 @@ export function initPromptEnhancer(): void {
       const response = await fetch(`${agentBase()}/api/v1/prompts/enhance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, provider: choice?.value === "hunyuan" ? "hunyuan" : "motion-master" }),
         signal: pending.signal,
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -66,10 +68,12 @@ export function initPromptEnhancer(): void {
       suggestion = data;
       output.value = data.enhanced;
       provider.textContent = data.provider === 'motion-master' ? 'Motion Master' : data.provider;
+      const providerWarning = typeof data.warning === 'string' ? data.warning : '';
       const assumptions = Array.isArray(data.assumptions) ? data.assumptions : [];
-      status(assumptions.length
+      const reviewNote = assumptions.length
         ? (locale() ? 'Suposiciones (revísalas): ' : 'Assumptions (review these): ') + assumptions.join(' · ')
-        : (locale() ? 'Sin suposiciones adicionales.' : 'No additional assumptions.'));
+        : (locale() ? 'Sin suposiciones adicionales.' : 'No additional assumptions.');
+      status([providerWarning, reviewNote].filter(Boolean).join(' · '));
       apply.disabled = false;
     } catch {
       // Honest failure: original remains in the composer and rendering never starts.
