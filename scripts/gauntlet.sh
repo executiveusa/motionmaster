@@ -8,14 +8,24 @@
 #   - a blind A/B capture of both pages at the same viewport
 #
 # See docs/07-GAUNTLET-PLAN.md for the full bar, the reviewer council and the release gates.
-set -uo pipefail
+set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 EXTRACTOR="${EXTRACTOR:-$REPO/.research/the-extractor/extractor.mjs}"
-BAR="${BAR:-https://motionvideo.xyz/}"
+if [ ! -f "$EXTRACTOR" ]; then
+  EXTRACTOR="/tmp/motion-master-the-extractor/extractor.mjs"
+  rm -rf "/tmp/motion-master-the-extractor"
+  git clone --depth 1 https://github.com/executiveusa/the-extractor.git "/tmp/motion-master-the-extractor" >/dev/null 2>&1
+fi
+BAR="${BAR:-https://motionvideo.xyz/en}"
 PORT="${PORT:-4173}"
-CHROME="${CHROME:-/usr/local/bin/chrome-headless-shell}"
-OUT="$REPO/.review/gauntlet"
+if [ -z "${CHROME:-}" ]; then
+  for candidate in google-chrome chromium chromium-browser /usr/bin/google-chrome /usr/bin/chromium /usr/local/bin/chrome-headless-shell; do
+    if command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ]; then CHROME="$(command -v "$candidate" 2>/dev/null || echo "$candidate")"; break; fi
+  done
+fi
+: "${CHROME:?Chrome/Chromium is required for the visual gauntlet}"
+OUT="$REPO/.completion-proof/gauntlet"
 
 mkdir -p "$OUT"
 
@@ -42,14 +52,32 @@ echo "ours: http://127.0.0.1:$PORT/ (HTTP $code)"
 
 # ── 2. the measurable half: slop signals, same rules on both pages ─────────────
 log "the-extractor — ours"
-node "$EXTRACTOR" audit "http://127.0.0.1:$PORT/" --format json >"$OUT/ours.json" 2>"$OUT/ours.err" \
-  && node -e "const d=require('$OUT/ours.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))" \
-  || { echo "extractor could not reach our page:"; head -5 "$OUT/ours.err"; }
+node "$EXTRACTOR" audit "http://127.0.0.1:$PORT/" --format json >"$OUT/ours.json" 2>"$OUT/ours.err"
+node -e "const d=require('$OUT/ours.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
 
 log "the-extractor — the bar"
-node "$EXTRACTOR" audit "$BAR" --format json >"$OUT/bar.json" 2>"$OUT/bar.err" \
-  && node -e "const d=require('$OUT/bar.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))" \
-  || { echo "BAR NOT REACHABLE — the comparison for this surface is UNVERIFIED, not passed."; head -5 "$OUT/bar.err"; }
+node "$EXTRACTOR" audit "$BAR" --format json >"$OUT/bar.json" 2>"$OUT/bar.err"
+node -e "const d=require('$OUT/bar.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
+
+node - "$OUT/ours.json" "$OUT/bar.json" "$OUT/extractor-summary.json" <<'NODE'
+const fs = require('fs');
+const [oursPath, barPath, outPath] = process.argv.slice(2);
+const unpack = (p) => {
+  const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const f = d.findings || d.results || [];
+  return {
+    total: f.length,
+    high: f.filter(x => x.severity === 'high').length,
+    medium: f.filter(x => x.severity === 'medium').length,
+    low: f.filter(x => x.severity === 'low').length,
+  };
+};
+const ours = unpack(oursPath), bar = unpack(barPath);
+const result = { ours, bar, pass: ours.high === 0 && ours.medium < bar.medium };
+fs.writeFileSync(outPath, JSON.stringify(result, null, 2));
+console.log('Extractor comparison:', JSON.stringify(result));
+if (!result.pass) process.exit(1);
+NODE
 
 # ── 3. hard measurements ───────────────────────────────────────────────────────
 log "responsive + overflow (CDP)"
@@ -95,5 +123,5 @@ done
 log "summary"
 echo "ours: $OUT/ours.json  bar: $OUT/bar.json  overflow: $OUT/overflow.txt  shots: $OUT/*.png"
 echo "The taste verdict is NOT made by this script. A critic with fresh context puts"
-echo "ours-$w.png next to bar-$w.png with the labels stripped and says which is better."
+echo "ours-1440.png / bar-1440.png and ours-390.png / bar-390.png with labels stripped."
 echo "If ours does not win, it keeps going."
