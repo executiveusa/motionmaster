@@ -29,6 +29,7 @@ import { initPricing } from './modules/pricing';
 import { initLibrary } from './modules/library';
 import { initSound } from './modules/sound';
 import { initConsole } from './modules/chat';
+import { initPromptEnhancer } from './modules/prompt-enhancer';
 import { initLocale } from './modules/locale';
 import { initProjectEditor } from './modules/project-editor';
 import { initProductShell } from './modules/product-shell';
@@ -49,6 +50,7 @@ function boot(): void {
   initLibrary();
   initSound();
   initConsole();
+  initPromptEnhancer();
   initProjectEditor();
   initProductShell();
   initMobileBar();
