@@ -107,7 +107,7 @@ try {
   await until('document.readyState === "complete" && !!document.querySelector("[data-locale]")', 'initial page');
   await sleep(300);
   const initial = await state();
-  if (initial.lang !== 'en' || initial.selector !== 'en' || !initial.hero?.includes('Create the best videos')) {
+  if (initial.lang !== 'en' || initial.selector !== 'en' || !initial.hero?.includes('Create Motion Videos For Your Brand Today')) {
     throw new Error('Fresh browser did not default to English: ' + JSON.stringify(initial));
   }
 
