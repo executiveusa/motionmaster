@@ -505,7 +505,7 @@ export async function handleApi(
       if (suggestion.visual) {
         writeJson(res, 200, {
           ...result,
-          enhanced: result.enhanced + "\\n\\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\\n" + suggestion.visual,
+          enhanced: result.enhanced + "\n\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\n" + suggestion.visual,
           provider: "hunyuan + motion-master",
           applied: false,
           warning: "Image-prompt visual direction only; it does not render or override the original brief.",
