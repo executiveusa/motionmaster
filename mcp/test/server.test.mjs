@@ -295,3 +295,18 @@ test("the generated TSX parses as a TSX module", async () => {
     "the generated TSX does not parse",
   );
 });
+
+
+test("MCP Hunyuan option fails open to deterministic motion brief when disabled", async () => {
+  const prompt = "ACME launch title 15 seconds";
+  const result = await client.callTool({
+    name: "enhance_prompt",
+    arguments: { prompt, provider: "hunyuan" },
+  });
+  assert.notEqual(result.isError, true);
+  assert.equal(result.structuredContent.original, prompt);
+  assert.equal(result.structuredContent.provider, "motion-master");
+  assert.equal(result.structuredContent.applied, false);
+  assert.match(result.structuredContent.warning, /not enabled/i);
+  assert.ok(result.structuredContent.enhanced.includes(prompt));
+});
