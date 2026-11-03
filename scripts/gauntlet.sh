@@ -52,12 +52,12 @@ echo "ours: http://127.0.0.1:$PORT/ (HTTP $code)"
 
 # ── 2. the measurable half: slop signals, same rules on both pages ─────────────
 log "the-extractor — ours"
-node "$EXTRACTOR" audit "$REPO/site/dist/index.html" --format json >"$OUT/ours.json" 2>"$OUT/ours.err"
+timeout 30s node "$EXTRACTOR" audit "$REPO/site/dist/index.html" --format json >"$OUT/ours.json" 2>"$OUT/ours.err"
 node -e "const d=require('$OUT/ours.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
 
 log "the-extractor — the bar"
 curl --fail --location --silent --show-error --max-time 30 "$BAR" -o "$OUT/bar.html"
-node "$EXTRACTOR" audit "$OUT/bar.html" --format json >"$OUT/bar.json" 2>"$OUT/bar.err"
+timeout 30s node "$EXTRACTOR" audit "$OUT/bar.html" --format json >"$OUT/bar.json" 2>"$OUT/bar.err"
 node -e "const d=require('$OUT/bar.json');const f=d.findings||d.results||[];const h=f.filter(x=>x.severity==='high');console.log('signals:',f.length,'high:',h.length);h.forEach(x=>console.log('  [HIGH]',x.id,x.label))"
 
 node - "$OUT/ours.json" "$OUT/bar.json" "$OUT/extractor-summary.json" <<'NODE'
@@ -107,7 +107,7 @@ JS
 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --remote-debugging-port=9222 --user-data-dir="$OUT/chrome-profile" about:blank >"$OUT/chrome.log" 2>&1 &
 CHROME_PID=$!
 for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:9222/json/version && break; sleep 0.5; done
-node "$OUT/measure.mjs" "http://127.0.0.1:$PORT/" 2>&1 | tee "$OUT/overflow.txt"
+timeout 60s node "$OUT/measure.mjs" "http://127.0.0.1:$PORT/" 2>&1 | tee "$OUT/overflow.txt"
 kill $CHROME_PID 2>/dev/null
 
 # ── 4. blind A/B capture ───────────────────────────────────────────────────────
