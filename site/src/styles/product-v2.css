@@ -190,6 +190,12 @@ body { padding-left: 0 !important; background: #fff; }
 
 @media (max-width:767px) {
   :root { --margin:18px; }
+  .topbar {
+    background:rgba(255,255,255,.84);
+    border-bottom:1px solid rgba(17,17,19,.08);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
   .topbar__inner { gap:10px; }
   .brand { flex:0 1 auto; min-width:0; margin-right:auto; gap:7px; font-size:14px; white-space:nowrap; }
   .brand__name { white-space:nowrap; }
