@@ -99,7 +99,8 @@ try {
       width: w,
       height: w < 768 ? 844 : 900,
       deviceScaleFactor: 1,
-      mobile: w < 768,
+      // This script audits CSS layout width. Full mobile emulation is covered by locale-browser-smoke.mjs.
+      mobile: false,
     });
     await send('Page.navigate', { url });
     await sleep(2200);
@@ -130,7 +131,7 @@ try {
     });
     const v = JSON.parse(r.result.value);
     const ok = v.sw <= w + 1;
-    console.log(`${String(w).padStart(4)}px scroll=${String(v.sw).padStart(4)} ${ok ? 'OK ' : 'OVERFLOW'}`);
+    console.log(`${String(w).padStart(4)}px inner=${String(v.iw).padStart(4)} scroll=${String(v.sw).padStart(4)} ${ok ? 'OK ' : 'OVERFLOW'}`);
     if (!ok) {
       console.log('      overflowing:', v.over);
       console.log('      wide scrollers:', v.scrollers);
