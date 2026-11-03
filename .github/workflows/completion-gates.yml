@@ -26,6 +26,7 @@ on:
       - "scripts/capture-site.mjs"
       - "scripts/locale-browser-smoke.mjs"
       - "scripts/product-wireframe-contract.mjs"
+      - "scripts/gauntlet.sh"
       - "licence.json"
       - ".github/workflows/completion-gates.yml"
   workflow_dispatch:
@@ -74,6 +75,8 @@ jobs:
         run: node scripts/completion-gates.mjs
       - name: Verify approved product wireframe contract
         run: node scripts/product-wireframe-contract.mjs
+      - name: Run live MotionVideo benchmark gauntlet
+        run: bash scripts/gauntlet.sh
       - name: Capture approved product homepage (desktop and mobile)
         run: node scripts/capture-site.mjs
       - name: Verify live English/Spanish selector and dynamic i18n in Chromium
