@@ -46,8 +46,8 @@ try {
   // Execute the built JavaScript in a real headless browser for both locales.
   // This proves initial Spanish rendering, not the separate user click path.
   for (const [lang, expected] of [
-    ["en", ['lang="en"', "Make a video.", "Play clip", "Search prompts, styles, techniques"]],
-    ["es-MX", ['lang="es-MX"', "Crea un video.", "Reproducir video", "Buscar instrucciones, estilos y técnicas"]]
+    ["en", ['lang="en"', "Create Motion", "Start Creating", "Search motion examples, prompts, or skills"]],
+    ["es-MX", ['lang="es-MX"', "Crea videos de", "Empezar a crear", "Buscar ejemplos, prompts o skills de motion"]]
   ]) {
     const check = spawnSync(chrome, [
       "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
