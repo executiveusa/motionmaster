@@ -282,7 +282,8 @@ function translateDataNodes(lang: Locale): void {
       if (node.innerHTML !== next) node.innerHTML = next;
     }
     for (const node of document.querySelectorAll<HTMLInputElement>(`[data-i18n-placeholder="${key}"]`)) {
-      node.placeholder = lang === 'en' ? pair[0] : pair[1];
+      const next = lang === 'en' ? pair[0] : pair[1];
+      if (node.placeholder !== next) node.placeholder = next;
     }
   }
 }
