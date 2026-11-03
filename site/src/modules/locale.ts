@@ -2,11 +2,18 @@
    No remote translation services, no fabricated translated prompt content. */
 type Locale = 'en' | 'es-MX';
 const strings: Record<string, [string, string]> = {
-  examples: ['Watch videos', 'Ver videos'],
+  examples: ['Examples', 'Ejemplos'],
   makeVideo: ['Create a video', 'Crear un video'],
+  createNav: ['Create', 'Crear'],
+  agentsNav: ['MCP / Plugins', 'MCP / Plugins'],
+  docsNav: ['Docs', 'Guía'],
+  signInNav: ['Sign in', 'Iniciar sesión'],
+  startCreating: ['Start Creating', 'Empezar a crear'],
+  browseExamples: ['Browse Examples', 'Explorar ejemplos'],
+  watchDemo: ['Watch Demo', 'Ver demo'],
   library: ['Library', 'Biblioteca'],
-  hero: ['<span class="hero__line">Create the best </span><span class="hero__line">videos for your </span><span class="hero__line">brand</span>', '<span class="hero__line">Crea los mejores </span><span class="hero__line">videos para tu </span><span class="hero__line">marca</span>'],
-  lede: ['Describe the video you need. See real examples, then make your own.', 'Explora ejemplos reales de motion, empieza con uno y después edita y exporta el tuyo.'],
+  hero: ['<span class="hero__line">Create Motion </span><span class="hero__line">Videos For Your </span><span class="hero__line">Brand Today</span>', '<span class="hero__line">Crea videos de </span><span class="hero__line">motion para tu </span><span class="hero__line">marca hoy</span>'],
+  lede: ['Browse real motion examples, start from one, then edit and export your own.', 'Explora ejemplos reales de motion, empieza con uno y después edita y exporta el tuyo.'],
   proofTitle: ['Start with real motion.', 'Empieza con motion real.'],
   proofLede: ['Search the examples. Play one. Copy its prompt or use it as your starting point.', 'Busca entre los ejemplos. Reproduce uno. Copia su prompt o úsalo como punto de partida.'],
   fullFilm: ['Watch the full behind-the-scenes film (104 seconds)', 'Ver el video completo del proceso (104 segundos)'],
