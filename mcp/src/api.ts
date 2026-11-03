@@ -51,6 +51,7 @@ import {
 } from "./library.js";
 import { fillBlock, headlineFrom, matchBlocks, type MotionBlock } from "./blocks.js";
 import { enhance } from "./enhancer.js";
+import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxKinds } from "./sfx.js";
@@ -495,7 +496,26 @@ export async function handleApi(
       return true;
     }
     const result = enhance(raw, loadCatalogue(config.libraryPath), loadTokens(config.tokensPath), {});
-    writeJson(res, 200, { ...result, provider: "motion-master", applied: false });
+    const useHunyuan = body && typeof body === "object" && "provider" in body &&
+      (body as { provider?: unknown }).provider === "hunyuan";
+    // Hunyuan is trained for image prompts. Preserve the deterministic motion
+    // contract and append only a user-reviewable visual note if requested.
+    if (useHunyuan) {
+      const suggestion = await requestHunyuanVisual(raw);
+      if (suggestion.visual) {
+        writeJson(res, 200, {
+          ...result,
+          enhanced: result.enhanced + "\\n\\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\\n" + suggestion.visual,
+          provider: "hunyuan + motion-master",
+          applied: false,
+          warning: "Image-prompt visual direction only; it does not render or override the original brief.",
+        });
+      } else {
+        writeJson(res, 200, { ...result, provider: "motion-master", applied: false, warning: suggestion.warning });
+      }
+    } else {
+      writeJson(res, 200, { ...result, provider: "motion-master", applied: false });
+    }
     return true;
   }
 
