@@ -28,6 +28,7 @@ const strings: Record<string, [string, string]> = {
   create: ['Create', 'Crear'],
   enhanceAction: ['Improve prompt', 'Mejorar prompt'],
   enhanceProviderLabel: ['Prompt enhancement provider', 'Proveedor para mejorar prompts'],
+  hunyuanLocal: ['Hunyuan (local, opt-in)', 'Hunyuan (local, opcional)'],
   enhanceTitle: ['Suggested motion brief', 'Descripción de motion sugerida'],
   enhanceDisclaimer: ['Review the suggestion before using it. Your original is unchanged.', 'Revisa la sugerencia antes de usarla. Tu texto original no cambia.'],
   enhanceUse: ['Use this brief', 'Usar esta descripción'],
