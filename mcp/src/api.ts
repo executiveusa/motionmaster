@@ -50,7 +50,7 @@ import {
   loadCatalogue,
 } from "./library.js";
 import { fillBlock, headlineFrom, matchBlocks, type MotionBlock } from "./blocks.js";
-import { enhance } from "./enhancer.js";
+import { enhance, type TokenShape } from "./enhancer.js";
 import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
@@ -495,7 +495,7 @@ export async function handleApi(
       fail(res, 400, "prompt must contain 1–6000 characters.");
       return true;
     }
-    const result = enhance(raw, loadCatalogue(config.libraryPath), loadTokens(config.tokensPath), {});
+    const result = enhance(raw, loadCatalogue(config.libraryPath), loadTokens(config.tokensPath) as unknown as TokenShape, {});
     const useHunyuan = body && typeof body === "object" && "provider" in body &&
       (body as { provider?: unknown }).provider === "hunyuan";
     // Hunyuan is trained for image prompts. Preserve the deterministic motion
