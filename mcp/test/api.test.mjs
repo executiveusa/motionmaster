@@ -197,3 +197,71 @@ test("the public liveness endpoint is minimal and the MCP route remains separate
   const mcp = await get("/mcp");
   assert.notEqual(mcp.status, 404, "MCP route must not fall through to the API 404");
 });
+
+test("the shot vocabulary answers over HTTP", async () => {
+  const { status, body } = await get("/api/v1/shots?limit=5");
+  assert.equal(status, 200);
+  assert.ok(body.shots.length > 0, "no shots came back");
+  assert.ok(body.total > 100, `expected the full card set, got ${body.total}`);
+  assert.equal(body.licence, "Apache-2.0");
+  for (const shot of body.shots) {
+    assert.ok(shot.id.includes("/"), "a shot has no role");
+    assert.ok(shot.summary, "a shot has no summary");
+  }
+});
+
+test("one shot comes back in full", async () => {
+  const list = await get("/api/v1/shots?limit=1");
+  const id = list.body.shots[0].id;
+  const { status, body } = await get(`/api/v1/shots/${encodeURIComponent(id)}`);
+  assert.equal(status, 200);
+  assert.equal(body.id, id);
+  assert.ok(body.path, "the shot has no path to read");
+});
+
+test("a shot that does not exist is a 404, not a crash", async () => {
+  const { status } = await get("/api/v1/shots/not-a-real-shot");
+  assert.equal(status, 404);
+});
+
+test("planning shots over HTTP returns a plan with cards behind it", async () => {
+  const { status, body } = await post("/api/v1/shots/plan", {
+    brief: "a launch film for a developer tool dashboard",
+    durationSeconds: 20,
+  });
+  assert.equal(status, 200);
+  assert.ok(body.shots.length >= 3, "the plan is too short to be a film");
+  assert.equal(body.shots[0].role, "opening");
+  assert.equal(body.shots[body.shots.length - 1].role, "outro");
+  for (const shot of body.shots) {
+    assert.ok(shot.path, `${shot.id} has no path`);
+    assert.ok(shot.reason, `${shot.id} has no reason`);
+  }
+});
+
+test("planning shots without a brief is a 400, not a crash", async () => {
+  const { status } = await post("/api/v1/shots/plan", {});
+  assert.equal(status, 400);
+});
+
+test("the effect shelf answers over HTTP", async () => {
+  const { status, body } = await get("/api/v1/effects?limit=5");
+  assert.equal(status, 200);
+  assert.equal(body.total, 244);
+  assert.equal(body.licence, "MIT");
+  assert.ok(body.categories.length >= 20, "the categories are missing");
+});
+
+test("one effect comes back with the path to its source", async () => {
+  const list = await get("/api/v1/effects?limit=1");
+  const id = list.body.effects[0].id;
+  const { status, body } = await get(`/api/v1/effects/${encodeURIComponent(id)}`);
+  assert.equal(status, 200);
+  assert.equal(body.id, id);
+  assert.ok(body.path, "the effect has no path to its source");
+});
+
+test("an effect that does not exist is a 404, not a crash", async () => {
+  const { status } = await get("/api/v1/effects/not/a-real-effect");
+  assert.equal(status, 404);
+});

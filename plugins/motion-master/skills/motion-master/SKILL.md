@@ -142,6 +142,17 @@ before filling one.
 In this repository, `generator/render.sh <dir> <out.mp4>` wraps the render and finds
 the browser. The sample composition is `generator/compositions/library-map`.
 
+### Stage 5a — The shot plan
+
+Before any composition is written, the film needs a shape: where it opens, what
+the shots are, how it ends. MCP `plan_shots` builds that from the 124 shot
+cards in `shotcraft` — an opening that spends little energy, the shots the
+brief asks for, a transition, an outro — and returns the card each shot came
+from. Read the card; it carries the parameters and the traps.
+
+`enhance_prompt` with `plan_shots: true` does both in one call, and writes the
+plan into the brief so the enhancer stops guessing a shape of its own.
+
 ### Stage 6 — Review
 
 Run the quality checklist in `motion-design/reference/quality-checklist.md` and the
@@ -308,7 +319,10 @@ one-time**.
 | "render it to a file" | `remotion-create`, `remotion-markup`, `remotion-render` — or `hyperframes` if the composition is simpler as HTML |
 | "I want to see the technique" | `awesome-ai-motion` |
 | "I want a look / a style / a named visual" | MCP `browse_library` with `kind=style`, or `lemo-opuscar/styles/` |
-| "here is a one-line brief, make it good" | MCP `enhance_prompt` first, then plan the video |
+| "here is a one-line brief, make it good" | MCP `enhance_prompt` with `plan_shots: true` — it plans the shots from the cards and writes the plan into the brief |
+| "what shots does this need?" | MCP `plan_shots` — 124 authored shot cards; it returns the order, the length and the card each shot came from |
+| "show me the shot vocabulary" | `shotcraft` — the cards, by role |
+| "a wipe / a dissolve / a counter that ticks" | MCP `list_motion_effects` — 244 effects, each one a file of code |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
 | "check this composition before it renders" | MCP `check_hyperframes`, or `motion-master-api` for the same thing over HTTP |
 | "call this from a script, not from the agent" | `motion-master-api` — the HTTP API at `/api/v1` |

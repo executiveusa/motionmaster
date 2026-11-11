@@ -18,6 +18,7 @@ export type SkillGroup =
   | "production"
   | "web"
   | "catalogue"
+  | "shots"
   | "gsap"
   | "remotion"
   | "hyperframes";
@@ -171,6 +172,10 @@ const GROUP_BY_NAME: Record<string, SkillGroup> = {
   "claude-motion-web-sims": "web",
   // A technique catalogue to look things up in.
   "awesome-ai-motion": "catalogue",
+  // The shot vocabulary: what a shot is, when to reach for it, what it costs.
+  "shotcraft": "shots",
+  // The effect shelf: small reusable pieces of craft, each one a file of code.
+  "pixelfx": "styles",
   // The HTML-to-video generator: render pipeline, block registry, media.
   "hyperframes": "hyperframes",
   "hyperframes-cli": "hyperframes",
@@ -193,6 +198,7 @@ const UPSTREAM: Record<string, string> = {
   production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT)",
   web: "oil-motion (MIT), animate (MIT), claude-motion (MIT)",
   catalogue: "awesome-ai-motion (MIT)",
+  shots: "video-shotcraft (Apache-2.0)",
   hyperframes: "HyperFrames by HeyGen (Apache-2.0)",
 };
 

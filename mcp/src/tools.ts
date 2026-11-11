@@ -62,6 +62,20 @@ import { isAbsolute } from "node:path";
 import {
   BOARD_SYNC_ARTIFACTS, BoardSyncError, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
 } from "./board-sync.js";
+import {
+  getShot,
+  loadShots,
+  matchShots,
+  planShots,
+  SHOT_ROLES,
+  type ShotRole,
+} from "./shots.js";
+import {
+  getEffect,
+  loadEffectCategories,
+  loadEffects,
+  matchEffects,
+} from "./effects.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
 
 type TextContent = { type: "text"; text: string };
@@ -313,6 +327,183 @@ export function registerTools(server: McpServer, config: Config): void {
         renderedWith: clip.renderedWith,
         bridgeDemo: clip.bridgeDemo,
         source: gallery.source,
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_shots",
+    {
+      title: "List motion shots",
+      description:
+        "List the shot cards: the authored vocabulary of shots, what each one is for, how long it runs " +
+        "and how much energy it spends. Use this to choose the shape of a film before writing any code.",
+      inputSchema: {
+        role: z
+          .enum(SHOT_ROLES as [ShotRole, ...ShotRole[]])
+          .optional()
+          .describe("Only shots in this role."),
+        query: z.string().optional().describe("Match this against the shot's use-when line."),
+        limit: z.number().optional().describe("How many to return (default 12)."),
+      },
+    },
+    async ({ role, query, limit }) => {
+      const shots = loadShots(config.skillsDir);
+      if (shots.length === 0) {
+        return fail(
+          `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+        );
+      }
+      const matched = query
+        ? matchShots(shots, query, { limit: limit ?? 12 })
+        : shots
+            .filter((s) => !role || s.role === role)
+            .slice(0, limit ?? 12);
+      return ok({
+        count: matched.length,
+        total: shots.length,
+        roles: SHOT_ROLES,
+        source: {
+          skill: "shotcraft",
+          upstream: "github.com/Vincentwei1021/video-shotcraft",
+          licence: "Apache-2.0",
+          path: "plugins/motion-master/skills/shotcraft/references/shots",
+        },
+        note:
+          "Read the card at the path given before writing the shot. The card is the technique, not a summary of it.",
+        shots: matched.map((m) =>
+          "shot" in m ? m.shot : m,
+        ),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_shot",
+    {
+      title: "Get one shot card",
+      description:
+        "Return one shot card in full: its one-line description, when to use it, its duration, its energy " +
+        "and the path to the card itself.",
+      inputSchema: {
+        id: z.string().describe("The shot id, for example \"opening/brand-ink-open\"."),
+      },
+    },
+    async ({ id }) => {
+      const shots = loadShots(config.skillsDir);
+      const found = getShot(shots, id);
+      if (!found) {
+        return fail(
+          `No shot card with id "${id}". The ids are the role and the card name, for example "opening/brand-ink-open".`,
+        );
+      }
+      return ok({
+        shot: found,
+        note: `Read ${found.path} for the technique, its parameters and its known traps.`,
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_shots",
+    {
+      title: "Plan the shots of a film",
+      description:
+        "Build a shot plan from a brief: an opening, the shots the brief asks for, and an ending, each " +
+        "one an existing authored card. Use this before composing anything, so the film has a shape " +
+        "before it has code.",
+      inputSchema: {
+        brief: z.string().describe("What the film is about."),
+        durationSeconds: z
+          .number()
+          .optional()
+          .describe("How long the film should run. The plan is trimmed to fit."),
+        maxShots: z.number().optional().describe("How many shots at most (default 6)."),
+      },
+    },
+    async ({ brief, durationSeconds, maxShots }) => {
+      if (!brief || !brief.trim()) return fail("A brief is required.");
+      const shots = loadShots(config.skillsDir);
+      if (shots.length === 0) {
+        return fail(
+          `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+        );
+      }
+      const plan = planShots(shots, brief, { durationSeconds, maxShots });
+      return ok({
+        ...plan,
+        note:
+          "Every shot here is an authored card. Read the card before you write the shot — the card carries " +
+          "the parameters and the traps its author already hit.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_motion_effects",
+    {
+      title: "List motion effects",
+      description:
+        "List the effects on the shelf: small reusable pieces of craft — wipes, dissolves, impacts, counters, " +
+        "weather — each one a file of code with no dependencies.",
+      inputSchema: {
+        category: z.string().optional().describe("Only effects in this category, for example \"transitions\"."),
+        query: z.string().optional().describe("Match this against the effect's tags and description."),
+        limit: z.number().optional().describe("How many to return (default 12)."),
+      },
+    },
+    async ({ category, query, limit }) => {
+      const effects = loadEffects(config.skillsDir);
+      if (effects.length === 0) {
+        return fail(
+          `No effects were found under ${config.skillsDir}. The pixelfx skill may be missing.`,
+        );
+      }
+      const matched = query
+        ? matchEffects(effects, query, { limit: limit ?? 12 })
+        : effects
+            .filter((e) => !category || e.category === category)
+            .slice(0, limit ?? 12);
+      return ok({
+        count: matched.length,
+        total: effects.length,
+        categories: loadEffectCategories(config.skillsDir).map((c) => ({
+          id: c.id,
+          count: c.count,
+          summary: c.summary,
+        })),
+        source: {
+          skill: "pixelfx",
+          upstream: "github.com/patch-gg/pixelfx",
+          licence: "MIT",
+          path: "plugins/motion-master/skills/pixelfx/src",
+        },
+        note:
+          "An effect is code, not a description. Open its path and use it rather than drawing something like it.",
+        effects: matched.map((m) => ("effect" in m ? m.effect : m)),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_motion_effect",
+    {
+      title: "Get one effect",
+      description:
+        "Return one effect in full: what it does, how long it runs, its tags, and the path to its source.",
+      inputSchema: {
+        id: z.string().describe("The effect id, for example \"transitions/glitch-wipe\"."),
+      },
+    },
+    async ({ id }) => {
+      const effects = loadEffects(config.skillsDir);
+      const found = getEffect(effects, id);
+      if (!found) {
+        return fail(`No effect with id "${id}". The ids are the category and the name.`);
+      }
+      return ok({
+        effect: found,
+        note: `Open ${found.path} — the effect is the code there, with its options and its palette.`,
       });
     },
   );
@@ -1694,11 +1885,35 @@ server.registerTool(
           .optional()
           .describe("Extra constraint lines to append verbatim."),
         alternatives: z.number().int().positive().max(6).optional().describe("Alternative styles to offer."),
+        plan_shots: z
+          .boolean()
+          .optional()
+          .describe("Plan the shots from the shot cards first, and write that plan into the brief."),
+        max_shots: z.number().int().positive().max(10).optional().describe("How many shots to plan (default 6)."),
       },
     },
     async (args) => {
       const catalogue = loadCatalogue(config.libraryPath);
       const tokenFile = tokens() as unknown as TokenShape;
+
+      // A brief that already has a shape should not be given a second one.
+      let shotPlan: ReturnType<typeof planShots>["shots"] | undefined;
+      let shotSource: unknown;
+      if (args.plan_shots) {
+        const shots = loadShots(config.skillsDir);
+        if (shots.length === 0) {
+          return fail(
+            `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+          );
+        }
+        const plan = planShots(shots, args.prompt, {
+          durationSeconds: args.duration_seconds,
+          maxShots: args.max_shots,
+        });
+        shotPlan = plan.shots;
+        shotSource = { plan: plan.shots, unresolved: plan.unresolved, source: plan.source };
+      }
+
       const result = enhance(args.prompt, catalogue, tokenFile, {
         durationSeconds: args.duration_seconds,
         aspect: args.aspect,
@@ -1708,10 +1923,20 @@ server.registerTool(
         styleCollection: args.style_collection,
         extraConstraints: args.extra_constraints,
         alternatives: args.alternatives,
+        shotPlan: shotPlan?.map((s) => ({
+          id: s.id,
+          role: s.role,
+          summary: s.summary,
+          duration: s.duration,
+          durationSeconds: s.durationSeconds,
+          energy: s.energy,
+          reason: s.reason,
+        })),
       });
       return ok({
         source: config.libraryPath,
         tokens: config.tokensPath,
+        ...(shotSource ? { shotPlan: shotSource } : {}),
         ...result,
       });
     },

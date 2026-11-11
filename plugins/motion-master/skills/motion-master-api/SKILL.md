@@ -95,6 +95,44 @@ curl -X POST http://127.0.0.1:8787/api/v1/compositions/hyperframes \
 failed" and "this block failed". A block the gate blames is recorded in
 `library/block-verdicts.json` and is never used again.
 
+## The shot vocabulary and the effect shelf
+
+**124 shot cards** (Apache-2.0, from video-shotcraft) and **244 motion
+effects** (MIT, from pixelfx) are on the shelf beside the blocks.
+
+| | HTTP | MCP |
+|---|---|---|
+| the shot cards | `GET /api/v1/shots?role=&query=&limit=` | `list_shots` |
+| one card in full | `GET /api/v1/shots/{id}` | `get_shot` |
+| plan the shots of a film | `POST /api/v1/shots/plan` | `plan_shots` |
+| the effect shelf | `GET /api/v1/effects?category=&query=&limit=` | `list_motion_effects` |
+| one effect | `GET /api/v1/effects/{id}` | `get_motion_effect` |
+
+Plan the shots **before** you compose. A brief says what the film is about; a
+shot plan says what the film *is* — where it opens, how the words land, where
+the camera moves, how it ends.
+
+```sh
+curl -X POST http://127.0.0.1:8787/api/v1/shots/plan \
+  -H 'content-type: application/json' \
+  -d '{"brief":"a launch film for a developer tool dashboard","durationSeconds":20}'
+```
+
+Every shot in the plan cites the card it came from, with a `path`. **Read the
+card before you write the shot.** The card carries the parameters and the
+traps — "the brand hold is a full second" is the difference between a title
+card and a wordmark.
+
+Two rules the cards insist on, and the planner already enforces:
+
+- The **opening spends little energy**. A film that opens on its best trick
+  has nowhere to climb.
+- The **ending is not optional**. If the brief is too short for an opening
+  and an outro, the plan says so rather than cutting the ending.
+
+An effect is code, not a description: `get_motion_effect` gives you the path
+to the file. Open it and use it, rather than drawing something like it.
+
 ## The library and the sound
 
 | what | endpoint |

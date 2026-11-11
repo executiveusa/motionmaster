@@ -18,6 +18,11 @@
  *   GET  /api/v1/library/categories
  *   GET  /api/v1/library/items       ?query=&collection=&category=&kind=&limit=&offset=
  *   GET  /api/v1/library/items/:id
+ *   GET  /api/v1/shots               ?role=&query=&limit=
+ *   GET  /api/v1/shots/:id
+ *   POST /api/v1/shots/plan          { brief, durationSeconds?, maxShots? }
+ *   GET  /api/v1/effects             ?category=&query=&limit=
+ *   GET  /api/v1/effects/:id
  *   GET  /api/v1/blocks              ?tag=&query=&type=&limit=&offset=
  *   GET  /api/v1/blocks/:id
  *   POST /api/v1/blocks/fill         { brief, block?, values?, headline? }
@@ -76,6 +81,8 @@ import {
   BoardSyncError, boardSyncArtifactPath, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
 } from "./board-sync.js";
 import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
+import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } from "./shots.js";
+import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -238,6 +245,56 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       [`${API_PREFIX}/blocks/{id}`]: {
         get: {
           summary: "One motion block, in full: its variables, its files, its defaults.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/shots`]: {
+        get: {
+          summary: "The shot cards: the vocabulary a film is built from.",
+          parameters: [
+            { name: "role", in: "query", schema: str },
+            { name: "query", in: "query", schema: str },
+            { name: "limit", in: "query", schema: num },
+          ],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/shots/{id}`]: {
+        get: {
+          summary: "One shot card in full.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/shots/plan`]: {
+        post: {
+          summary: "Plan the shots of a film from a brief.",
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              properties: { brief: str, durationSeconds: num, maxShots: num },
+              required: ["brief"],
+            }),
+          },
+          responses: { 200: { description: "ok", content: json(obj) }, 400: { description: "no brief", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/effects`]: {
+        get: {
+          summary: "The effect shelf: small reusable pieces of craft, each one a file of code.",
+          parameters: [
+            { name: "category", in: "query", schema: str },
+            { name: "query", in: "query", schema: str },
+            { name: "limit", in: "query", schema: num },
+          ],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/effects/{id}`]: {
+        get: {
+          summary: "One effect, with the path to its source.",
           parameters: [{ name: "id", in: "path", required: true, schema: str }],
           responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
         },
@@ -442,6 +499,11 @@ export async function handleApi(
         "GET  /library/categories",
         "GET  /library/items",
         "GET  /library/items/{id}",
+        "GET  /shots",
+        "GET  /shots/{id}",
+        "POST /shots/plan",
+        "GET  /effects",
+        "GET  /effects/{id}",
         "GET  /blocks",
         "GET  /blocks/{id}",
         "POST /blocks/fill",
@@ -650,6 +712,88 @@ export async function handleApi(
   }
 
   // ── the sound ─────────────────────────────────────────────────────────────
+  if (route === "/shots" && method === "GET") {
+    const shots = loadShots(config.skillsDir);
+    const role = query.get("role");
+    const q = query.get("query")?.trim();
+    const limit = Math.min(num(query.get("limit"), 12), 200);
+    const matched = q
+      ? matchShots(shots, q, { limit }).map((m) => m.shot)
+      : shots.filter((s) => !role || s.role === role).slice(0, limit);
+    writeJson(res, 200, {
+      source: "plugins/motion-master/skills/shotcraft/references/shots",
+      upstream: "github.com/Vincentwei1021/video-shotcraft",
+      licence: "Apache-2.0",
+      total: shots.length,
+      roles: SHOT_ROLES,
+      shots: matched,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/shots/") && method === "GET" && !route.endsWith("/plan")) {
+    const id = decodeURIComponent(route.slice("/shots/".length));
+    const found = getShot(loadShots(config.skillsDir), id);
+    if (!found) {
+      fail(res, 404, `No shot card with id "${id}".`);
+      return true;
+    }
+    writeJson(res, 200, found);
+    return true;
+  }
+
+  if (route === "/shots/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      brief?: string;
+      durationSeconds?: number;
+      maxShots?: number;
+    };
+    if (!body?.brief) {
+      fail(res, 400, "A brief is required.");
+      return true;
+    }
+    const shots = loadShots(config.skillsDir);
+    if (shots.length === 0) {
+      fail(res, 500, "No shot cards are installed.");
+      return true;
+    }
+    writeJson(res, 200, planShots(shots, body.brief, {
+      durationSeconds: body.durationSeconds,
+      maxShots: body.maxShots,
+    }));
+    return true;
+  }
+
+  if (route === "/effects" && method === "GET") {
+    const effects = loadEffects(config.skillsDir);
+    const category = query.get("category");
+    const q = query.get("query")?.trim();
+    const limit = Math.min(num(query.get("limit"), 12), 250);
+    const matched = q
+      ? matchEffects(effects, q, { limit }).map((m) => m.effect)
+      : effects.filter((e) => !category || e.category === category).slice(0, limit);
+    writeJson(res, 200, {
+      source: "plugins/motion-master/skills/pixelfx/src",
+      upstream: "github.com/patch-gg/pixelfx",
+      licence: "MIT",
+      total: effects.length,
+      categories: loadEffectCategories(config.skillsDir),
+      effects: matched,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/effects/") && method === "GET") {
+    const id = decodeURIComponent(route.slice("/effects/".length));
+    const found = getEffect(loadEffects(config.skillsDir), id);
+    if (!found) {
+      fail(res, 404, `No effect with id "${id}".`);
+      return true;
+    }
+    writeJson(res, 200, found);
+    return true;
+  }
+
   if (route === "/sfx/kinds" && method === "GET") {
     const catalogue = loadSfx(config.sfxPath);
     writeJson(res, 200, sfxKinds(catalogue));

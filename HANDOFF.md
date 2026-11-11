@@ -88,15 +88,29 @@ Read these before changing anything. They are not advice; they are the brief.
 - **Plug-in**: 39 skills (the new one is `motion-master-api`), with the Claude,
   Codex and Cursor marketplaces updated.
 
+### The shot vocabulary and the effect shelf (2026-11-10)
+
+Motion Master can now pick a **shot**, not just a block. 124 authored shot
+cards (Apache-2.0, from video-shotcraft) and 244 motion effects (MIT, from
+pixelfx) are vendored into the plugin, exposed over MCP and HTTP, and the
+enhancer takes a shot plan instead of guessing a shape. See
+[`docs/20-THE-VIDEO-REPOS.md`](docs/20-THE-VIDEO-REPOS.md) for the reasoning
+and for what was deliberately left out.
+
+New tools: `list_shots`, `get_shot`, `plan_shots`, `list_motion_effects`,
+`get_motion_effect`. New routes: `/api/v1/shots`, `/api/v1/shots/{id}`,
+`/api/v1/shots/plan`, `/api/v1/effects`, `/api/v1/effects/{id}`.
+
 ### Verification — all green as of `65af542`
 
 | check | result |
 |---|---|
 | `site: npm run build` | green — tsc, vite, and the content rules |
 | overflow at 320/360/375/390/414/430/768/1024/1280/1440 | **0** |
-| `mcp: npm test` | **81/81** |
-| `mcp: node scripts/verify-tools.mjs` | **44/44** |
+| `mcp: npm test` | **169/169** |
+| `mcp: node scripts/verify-tools.mjs` | **46/46** |
 | `mcp: npm run typecheck` | clean |
+| `node scripts/completion-gates.mjs` | 7/7 |
 | external requests | **0** |
 
 ## 5. The commands
@@ -159,7 +173,10 @@ These cost hours. Read them once.
    only ever choose a block that passes. This is the highest-value hour left.
 2. **Give `enhance_prompt` a shot plan**, so the matcher chooses instead of
    guessing.
-3. **Run the gauntlet blind.** The bars were fetched and compared by eye, but
+3. **Qualify the 448 blocks against the gate, by role.** The shot cards now
+   name the roles, so the blocks can be qualified per role and the matcher
+   can choose a block that fits the *shot*, not just the words.
+4. **Run the gauntlet blind.** The bars were fetched and compared by eye, but
    the exit condition is that a critic, blind, picks ours. That has not been
    run with a fresh critic. The loop is `gauntlet-loop-main` — builder, harsh
    critic, blind comparison, repeat until ours wins.
