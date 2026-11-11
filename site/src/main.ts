@@ -17,9 +17,10 @@ import './styles/components.css';
 import './styles/sections.css';
 import './styles/scenes.css';
 import './styles/responsive.css';
+import './styles/film.css';
 
 import { initClips } from './modules/clips';
-import { initFilm } from './modules/film';
+import { initFilm, initHeroFilms, initFilmSound } from './modules/film';
 import { initTree } from './modules/tree';
 import { initMenu, initMobileBar } from './modules/nav';
 import { initRail } from './modules/rail';
@@ -42,6 +43,8 @@ function boot(): void {
   initMotion();
   initScenes();
   initFilm();
+  initHeroFilms();
+  initFilmSound();
   initClips();
   initTree();
   initMenu();

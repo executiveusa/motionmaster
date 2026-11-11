@@ -227,6 +227,7 @@ if (/rel="canonical"/.test(html)) fail('canonical link present — the domain is
 
 const FILMS = [
   ['film/motion-master-hero.mp4', 'the hero film'],
+  ['film/motion-master-vox-promo.mp4', 'the engine film'],
   ['demos/blueprint.mp4', 'the blueprint demo'],
   ['demos/ink.mp4', 'the ink demo'],
   ['demos/whiteboard.mp4', 'the whiteboard demo'],

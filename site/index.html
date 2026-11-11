@@ -102,13 +102,17 @@
            the composition and the file — made with the skills this product
            ships. Everything else on this page is a caption for it. -->
       <section class="hero hero--brand" id="top" aria-labelledby="hero-title">
+        <!-- The collage is made of the real renders, not stills. Each card
+             carries the footage itself; the poster is a frame of it, so the
+             picture is already there before anything is played. On a pointer
+             device the card plays on hover. -->
         <div class="hero__stack" aria-hidden="true">
-            <a class="hero__card hero__card--c1" href="#proof" tabindex="-1" aria-hidden="true"><img src="/demos/blueprint.jpg" alt="" width="520" height="293" loading="eager" decoding="async" /></a>
-            <a class="hero__card hero__card--c2" href="#proof" tabindex="-1" aria-hidden="true"><img src="/demos/ink.jpg" alt="" width="520" height="293" loading="eager" decoding="async" /></a>
-            <a class="hero__card hero__card--c3" href="#proof" tabindex="-1" aria-hidden="true"><img src="/clips/launch-title.jpg" alt="" width="520" height="293" loading="eager" decoding="async" /></a>
-            <a class="hero__card hero__card--c4" href="#proof" tabindex="-1" aria-hidden="true"><img src="/demos/whiteboard.jpg" alt="" width="520" height="293" loading="lazy" decoding="async" /></a>
-            <a class="hero__card hero__card--c5" href="#proof" tabindex="-1" aria-hidden="true"><img src="/hero-card-kinetic.jpg" alt="" width="520" height="293" loading="lazy" decoding="async" /></a>
-            <a class="hero__card hero__card--c6" href="#proof" tabindex="-1" aria-hidden="true"><img src="/clips/footage-title.jpg" alt="" width="520" height="293" loading="lazy" decoding="async" /></a>
+            <a class="hero__card hero__card--c1" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/demos/blueprint.jpg" src="/demos/blueprint.mp4" aria-label="A blueprint drawn on a drafting table, one shot at a time."></video></a>
+            <a class="hero__card hero__card--c2" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/demos/ink.jpg" src="/demos/ink.mp4" aria-label="Ink brush strokes drawing a title on paper."></video></a>
+            <a class="hero__card hero__card--c3" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/clips/launch-title.jpg" src="/clips/launch-title.mp4" aria-label="A wordmark rising into a masked reveal on a white card."></video></a>
+            <a class="hero__card hero__card--c4" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/demos/whiteboard.jpg" src="/demos/whiteboard.mp4" aria-label="A marker drawing a diagram on a whiteboard."></video></a>
+            <a class="hero__card hero__card--c5" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/hero-card-kinetic.jpg" src="/clips/kinetic-type.mp4" aria-label="A brief arriving one line at a time on black."></video></a>
+            <a class="hero__card hero__card--c6" href="#proof" tabindex="-1" aria-hidden="true"><video class="hero__clip" data-hero-film muted loop playsinline preload="none" poster="/clips/footage-title.jpg" src="/clips/footage-title.mp4" aria-label="A dark moving source clip with a title burned in over it."></video></a>
         </div>
         <div class="shell hero__body">
           <h1 class="display" id="hero-title" data-i18n="hero"><span class="hero__line">Create Motion </span><span class="hero__line">Videos For Your </span><span class="hero__line">Brand Today</span></h1>
@@ -120,6 +124,44 @@
               <button class="btn btn--link hero__demo" type="button" data-watch-demo data-i18n="watchDemo">Watch Demo</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- ================= THE FILM ================= -->
+      <!-- The work, before the explanation. A complete twenty-second render
+           made by the skills in this pack — nothing on screen is a
+           placeholder, and every number under the film is a real one. -->
+      <section class="section section--film" id="film" aria-labelledby="film-title">
+        <div class="shell">
+          <header class="section__head showcase__head">
+            <h2 class="h2" id="film-title" data-i18n="filmTitle">The engine, in twenty seconds.</h2>
+            <p class="section__lede" data-i18n="filmLede">A complete render, made by the skills in this pack. Nothing on screen is a placeholder.</p>
+          </header>
+
+          <figure class="showcase">
+            <div class="showcase__frame">
+              <video
+                class="showcase__video"
+                data-film
+                src="/film/motion-master-vox-promo.mp4"
+                poster="/film/motion-master-vox-promo.jpg"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                aria-label="A twenty-second title sequence: a torn paper strip carries the words THE FILE IS YOURS, a code panel writes itself, shot cards fan out, a map draws a route from New York to Lisbon, and the last line lands."
+              ></video>
+              <button class="showcase__sound" type="button" data-film-sound aria-pressed="false">
+                <span class="showcase__sound-dot" aria-hidden="true"></span>
+                <span data-film-sound-label>Sound</span>
+              </button>
+            </div>
+            <figcaption class="showcase__caption">
+              <p class="showcase__made" data-i18n="filmMade">Made with</p>
+              <p class="showcase__tools">analog-motion · vector-map · shotcraft · remotion-markup</p>
+              <p class="showcase__values">1920×1080 · 24 fps · 124 shots · 12 fps step</p>
+            </figcaption>
+          </figure>
         </div>
       </section>
 

@@ -38,7 +38,8 @@
   transform-origin: 50% 50%;
 }
 
-.hero__card img {
+.hero__card img,
+.hero__card .hero__clip {
   display: block;
   width: 100%;
   height: 100%;
