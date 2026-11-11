@@ -77,10 +77,10 @@ body { padding-left: 0 !important; background: #fff; }
 .hero__card img, .hero__card .hero__clip { width:100%; height:100%; object-fit:cover; }
 .hero__card--c1 { left:-2%; top:0; width:clamp(210px,24vw,390px); transform:none; }
 .hero__card--c2 { left:15%; top:8%; width:clamp(260px,29vw,470px); transform:none; z-index:2; }
-.hero__card--c3 { left:37%; top:18%; width:clamp(300px,33vw,520px); transform:none; z-index:4; }
-.hero__card--c4 { left:59%; top:30%; width:clamp(260px,31vw,500px); transform:none; z-index:5; }
+.hero__card--c3 { left:42%; top:12%; width:clamp(300px,33vw,520px); transform:none; z-index:4; }
+.hero__card--c4 { left:62%; top:30%; width:clamp(260px,31vw,500px); transform:none; z-index:5; }
 .hero__card--c5 { left:75%; top:60%; width:clamp(230px,27vw,420px); transform:none; z-index:6; }
-.hero__card--c6 { left:88%; top:40%; width:clamp(170px,18vw,290px); transform:none; z-index:7; }
+.hero__card--c6 { left:88%; top:82%; width:clamp(170px,18vw,290px); transform:none; z-index:7; }
 
 .hero--brand .hero__body {
   position: relative; z-index: 10; display:flex; flex-direction:column; align-items:flex-start;
@@ -93,7 +93,10 @@ body { padding-left: 0 !important; background: #fff; }
 }
 .hero--brand .hero__line { display:block; white-space:nowrap; }
 .hero--brand .hero__aside {
-  position:static; width:min(100%,720px); max-width:none; border:0; padding:0;
+  /* Aligned to the headline's left edge. A headline on the left and a caption
+     floating on the right reads as two pages that were not designed together. */
+  position:static; align-self:flex-start; width:min(100%,720px); max-width:none;
+  border:0; padding:0;
 }
 .hero--brand .hero__lede { max-width:58ch; margin:0 0 16px; font-size:16px; color:#363641; }
 .hero--brand .hero__actions { display:flex; flex-wrap:wrap; gap:10px; }

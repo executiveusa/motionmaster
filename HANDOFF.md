@@ -200,22 +200,21 @@ New tools: `list_shots`, `get_shot`, `plan_shots`, `list_motion_effects`,
 `get_motion_effect`. New routes: `/api/v1/shots`, `/api/v1/shots/{id}`,
 `/api/v1/shots/plan`, `/api/v1/effects`, `/api/v1/effects/{id}`.
 
-### Verification — all green as of `65af542`
+### Verification — all green as of `f2f9177`
 
 | check | result |
 |---|---|
 | `site: npm run build` | green — tsc, vite, and the content rules |
-| overflow at 320/360/375/390/414/430/768/1024/1280/1440 | **0** |
-| `mcp: npm test` | **169/169** |
+| overflow at 320/375/390/430/768/1024/1440 | **0** |
+| `mcp: npm test` | **186/186** |
 | `clips: npm test` | **20/20** |
 | plugin skills | **47** |
-| `clips: npm test` | **20/20** |
-| plugin skills | **47** |
-| `mcp: node scripts/verify-tools.mjs` | **46/46** |
-| `clips: npm run typecheck` | clean |
+| `mcp: node scripts/verify-tools.mjs` | **47/47** |
 | `clips: npm run typecheck` | clean |
 | `mcp: npm run typecheck` | clean |
-| `node scripts/completion-gates.mjs` | 9/9 |
+| `node scripts/completion-gates.mjs` | **10/10** |
+| hero film | 55.4 s, 1920×1080, 30 fps, h264 + AAC 48 kHz stereo, −18.5 LUFS, −1.5 dBTP |
+| blind gauntlet | measurable half ours (1 signal vs 5); taste half **lost round one**, fixes in |
 | external requests | **0** |
 
 ## 5. The commands
@@ -292,21 +291,42 @@ These cost hours. Read them once.
    can be argued with. The pool is uneven — 54 blocks can serve
    `ui-entrance`, only 6 can serve `opening` — so the roles that are scarce
    are where the next work is.
-4. **Run the gauntlet blind.** The bars were fetched and compared by eye, but
-   the exit condition is that a critic, blind, picks ours. That has not been
-   run with a fresh critic. The loop is `gauntlet-loop-main` — builder, harsh
-   critic, blind comparison, repeat until ours wins.
-4. **Close the visual half of the motionvideo.xyz gauntlet** on a machine that
-   can load their site.
-5. **Shorten the hero film.** 104 s is a long thing to put on a front page. A
-   45–60 s cut would be better and costs one render. Note that the front page
-   now carries the twenty-second engine film instead, so this is about the
-   film asset itself, not the page.
-6. **Redeploy the site.** The live URL still serves the old structure, which
+4. ~~**Run the gauntlet blind.**~~ **Done — and we lost the first round.**
+   (2026-11-11). `motionvideo.xyz` resolves from this sandbox now, so the
+   visual half ran for the first time. `scripts/blind-capture.mjs` captures both
+   pages at 1440 and 390, **hides the brand on both**, and assigns `A`/`B` at
+   random; a fresh agent session with no history of this project judged them.
+   The measurable half is ours (1 signal against 5, 0 high on both). The taste
+   half went to the bar, and three of the critic's findings were true of our
+   page: title cards cut mid-word in the hero, a phone hero that was a shrunk
+   desktop with a card cutting the headline, and a collage whose cards cropped
+   the footage. All three are fixed. See `docs/24-THE-BLIND-GAUNTLET.md`.
+   **Round two: WE WON.** A second fresh critic, blind, picked ours at medium
+   confidence — on hierarchy, on craft and taste, and on the phone being its own
+   composition rather than a shrink. Its complaints about our hero (a card
+   covering another's thumbnail, a crowded wordmark, the same artwork twice, a
+   caption block that did not line up with the headline) were all true and all
+   fixed; the whiteboard demo's copy changed to "Shot by shot." so the two films
+   no longer say the same thing. See `docs/26-THE-ROUND-TWO-VERDICT.md`.
+5. ~~**Close the visual half of the motionvideo.xyz gauntlet.**~~ **Done.**
+   Same run as item 4. The bar is fetched live; the reconstruction script was
+   not needed.
+6. ~~**Shorten the hero film.**~~ **Done.**
+   (2026-11-11). **55.4 seconds**, cut with an edit decision list — a slow
+   opening, a fast middle, a held ending — and the footage clock runs at real
+   speed so a clip is never seen sped up. It now has a **score**: sixteen cues
+   and a bed, every sound from our own shelf, written down with a role and a
+   reason. −18.5 LUFS integrated, −1.5 dBTP. The cut also exposed that the
+   film had been showing the empty opening of two clips, and that a frame index
+   was resolved twice. See `docs/25-THE-HERO-FILM.md`.
+7. **Redeploy the site.** The live URL still serves the old structure, which
    includes a Pricing section — forbidden while the offer is not on sale.
-   The current build is ready and measured; it needs the founder's word
-   because the deployment is public.
-7. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a server
+   The current build is ready, measured and 10/10 gated; it needs the founder's
+   word because the deployment is public.
+8. **Push local `main` to `executiveusa/motionmaster`.** Local `main` is ahead
+   of the remote by ten commits and the push is a clean fast-forward. It needs
+   the founder's browser for the device-flow code — see §8.
+9. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a server
    fallback), the public surface, popebot fork-vs-configure (Phase 2 — ships
    labelled unverified, no Docker here), a render machine, and whether to keep
    the old remote.
@@ -328,6 +348,17 @@ These cost hours. Read them once.
   `film` picked up the console's `max-width: 720px` and its dark stage, and
   the film came out as a small panel on black. The new section is
   `showcase__*`.
+- **do not let two stylesheets own the same classes.** `hero-brand.css` and
+  `product-v2.css` both declared `.hero__card--c1` … `--c6`, `.hero--brand`,
+  `.hero__body` and `.display`. The later import won, so the designed collage
+  was dead weight for several rounds and every screenshot still looked
+  plausible. One file owns the hero now. When something looks right and
+  something is still wrong, read `getComputedStyle` on the live DOM — a
+  screenshot proves what the page looks like, not which CSS is styling it.
+- **do not crop a frame of our own work.** Every render we ship is 16:9, so
+  every card that holds a render is 16:9. A title card cut mid-word reads as a
+  broken render, not as a crop. The same goes for cards covering cards: the
+  overlap has to fall on a margin, never on a word.
 - **do not publish a URL or a TLD.** The domain word `motionmaster` is recorded
   in `licence.json`; its TLD is not chosen. The build checks for a canonical
   link and fails if one appears.
