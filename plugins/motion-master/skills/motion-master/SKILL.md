@@ -336,6 +336,7 @@ one-time**.
 | "a wipe / a dissolve / a counter that ticks" | MCP `list_motion_effects` — 244 effects, each one a file of code |
 | "make it look filmic / printed / shot" | `analog-motion` — the stepped clock, the posterised colour and the paper |
 | "a map / a route / a callout / highlight a region" | `vector-map` — the camera, the route, the pin, the callout and the vignette |
+| "cut this talking-head recording into a reel" | `talking-head-reels` — the pause cuts, the transcript, the EDL and the render |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
 | "check this composition before it renders" | MCP `check_hyperframes`, or `motion-master-api` for the same thing over HTTP |
 | "call this from a script, not from the agent" | `motion-master-api` — the HTTP API at `/api/v1` |

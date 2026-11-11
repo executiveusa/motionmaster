@@ -88,6 +88,22 @@ Read these before changing anything. They are not advice; they are the brief.
 - **Plug-in**: 39 skills (the new one is `motion-master-api`), with the Claude,
   Codex and Cursor marketplaces updated.
 
+### The talking-head reel skill (2026-11-10)
+
+The founder supplied `talking-head-reels` directly — a complete skill that
+turns a talking-head recording into a finished vertical reel: pause cuts,
+a whisper transcript, an EDL, kinetic typography, B-roll inserts, mattes,
+film grain, and a voice mastered to −14 LUFS.
+
+It is vendored at `plugins/motion-master/skills/talking-head-reels/` with
+`UPSTREAM.md` recording that it came from the founder and declares no
+upstream licence. The Anton font keeps its OFL.
+
+**The platform constraint is real:** the Apple Vision mattes need macOS and
+`swiftc`. Everything else — the pause cuts, the transcript, the EDL, the
+renderer — is Python and ffmpeg, and runs anywhere. The vision parts ship
+labelled as macOS-only.
+
 ### The vox engine (2026-11-10)
 
 Three Vox-style repositories were cloned and read before any of our code
@@ -110,6 +126,22 @@ set of imports.
 See [`docs/21-THE-VOX-ENGINE.md`](docs/21-THE-VOX-ENGINE.md) for the audit,
 including where the mandate's description of the reference repositories was
 wrong.
+
+### The talking-head reel skill (2026-11-10)
+
+The founder supplied `talking-head-reels` directly — a complete skill that
+turns a talking-head recording into a finished vertical reel: pause cuts,
+a whisper transcript, an EDL, kinetic typography, B-roll inserts, mattes,
+film grain, and a voice mastered to −14 LUFS.
+
+It is vendored at `plugins/motion-master/skills/talking-head-reels/` with
+`UPSTREAM.md` recording that it came from the founder and declares no
+upstream licence. The Anton font keeps its OFL.
+
+**The platform constraint is real:** the Apple Vision mattes need macOS and
+`swiftc`. Everything else — the pause cuts, the transcript, the EDL, the
+renderer — is Python and ffmpeg, and runs anywhere. The vision parts ship
+labelled as macOS-only.
 
 ### The vox engine (2026-11-10)
 
@@ -155,7 +187,9 @@ New tools: `list_shots`, `get_shot`, `plan_shots`, `list_motion_effects`,
 | overflow at 320/360/375/390/414/430/768/1024/1280/1440 | **0** |
 | `mcp: npm test` | **169/169** |
 | `clips: npm test` | **20/20** |
+| plugin skills | **47** |
 | `clips: npm test` | **20/20** |
+| plugin skills | **47** |
 | `mcp: node scripts/verify-tools.mjs` | **46/46** |
 | `clips: npm run typecheck` | clean |
 | `clips: npm run typecheck` | clean |
