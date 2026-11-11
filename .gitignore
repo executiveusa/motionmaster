@@ -31,6 +31,10 @@ hero/.chrome-profile/
 # HyperFrames check artefacts: lint reports, snapshots and layout probes.
 # The composition and the finished MP4 are committed; the reports are not.
 .hyperframes/
+# The block-qualification work tree: one installed block per block, rebuilt on
+# every run. Never committed — it is a few hundred megabytes of scratch.
+generator/qualify/
+
 generator/compositions/*/.hyperframes/
 
 # The sample film is committed; its frame sequences are not.

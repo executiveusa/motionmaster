@@ -16,6 +16,7 @@
  * from the brief keeps its default, and every value carries a reason.
  */
 import type { TokenShape } from "./enhancer.js";
+import type { VerdictMap } from "./verdicts.js";
 
 /**
  * The headline a card carries, and a short label for the small slots.
@@ -97,14 +98,27 @@ function tokenize(text: string): string[] {
  *
  * A block's tags are the best signal — they are curated and consistent — so
  * they carry most of the weight. The title and description are the tiebreak.
+ *
+ * The gate's verdicts cut in above the wording. A block the gate has already
+ * rejected is not offered at all, and a block it has already passed is
+ * preferred over one nobody has measured — because the gate finds the real
+ * failures (text clipped by its own box, a label under the contrast floor,
+ * an occluded line), and a film built on one of those is a broken film.
  */
 export function matchBlocks(
   file: BlockFile,
   brief: string,
-  options: { limit?: number; types?: string[]; requireVariables?: boolean } = {},
+  options: {
+    limit?: number;
+    types?: string[];
+    requireVariables?: boolean;
+    /** What the gate said about each block. */
+    verdicts?: VerdictMap;
+  } = {},
 ): { block: MotionBlock; score: number; matchedTags: string[] }[] {
   const words = new Set(tokenize(brief));
   const lower = brief.toLowerCase();
+  const verdicts = options.verdicts ?? {};
   // A brief that never mentions pictures should not be answered with a block
   // that needs twelve of them.
   const wantsImages = /\b(image|images|photo|photos|picture|pictures|gallery|carousel|album|artwork|screenshots?)\b/.test(
@@ -114,6 +128,9 @@ export function matchBlocks(
   const pool = file.blocks.filter((b) => {
     if (options.types && !options.types.includes(b.type)) return false;
     if (options.requireVariables && b.variables.length === 0) return false;
+    // The gate has already measured this block and rejected it. It is not
+    // offered again.
+    if (verdicts[b.id] && !verdicts[b.id].ok) return false;
     return true;
   });
 
@@ -159,9 +176,20 @@ export function matchBlocks(
     if (!held || entry.score > held.score) families.set(key, entry);
   }
 
-  return [...families.values()]
-    .sort((a, b) => b.score - a.score || a.block.id.localeCompare(b.block.id))
-    .slice(0, options.limit ?? 8);
+  const ordered = [...families.values()].sort(
+    (a, b) => b.score - a.score || a.block.id.localeCompare(b.block.id),
+  );
+
+  /*
+   * Two tiers. The blocks the gate has passed come first, whatever their
+   * wording matched; the blocks nobody has measured come after. A brief is
+   * answered from the measured pool whenever the measured pool has something
+   * that matched, and falls back to the unmeasured only when it does not.
+   */
+  const measured = ordered.filter((entry) => verdicts[entry.block.id]?.ok);
+  const unmeasured = ordered.filter((entry) => !verdicts[entry.block.id]?.ok);
+
+  return [...measured, ...unmeasured].slice(0, options.limit ?? 8);
 }
 
 /**

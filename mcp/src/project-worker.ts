@@ -45,6 +45,7 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
   const edits = revision.shots;
   const plan = planFilm(revision.brief, {
     blocks, tokens, count: edits.length || 3,
+    verdicts,
     exclude: Object.entries(verdicts).filter(([, verdict]) => !verdict.ok).map(([id]) => id),
     ...(edits.length > 0 ? { selectedIds: edits.map((shot) => shot.id) } : {}),
   });

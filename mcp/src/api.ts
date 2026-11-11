@@ -668,7 +668,11 @@ export async function handleApi(
         return true;
       }
     } else {
-      matched = matchBlocks(file, body.brief, { limit: 5, requireVariables: true });
+      matched = matchBlocks(file, body.brief, {
+        limit: 5,
+        requireVariables: true,
+        verdicts: loadVerdicts(config.repoRoot),
+      });
       if (matched.length === 0) {
         fail(res, 400, "No motion block matched that brief.", {
           hint: "Name a look: title card, kinetic type, transition, product demo, data.",
@@ -1121,6 +1125,7 @@ export async function handleApi(
       tokens: tokenFile,
       count: body.shots ?? 3,
       tags: body.tags,
+      verdicts: known,
       exclude: Object.entries(known)
         .filter(([, verdict]) => !verdict.ok)
         .map(([id]) => id),

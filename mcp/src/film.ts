@@ -16,6 +16,7 @@ import { join, resolve } from "node:path";
 
 import { fillBlock, headlineFrom, matchBlocks, type BlockFile, type MotionBlock } from "./blocks.js";
 import type { TokenShape } from "./enhancer.js";
+import type { VerdictMap } from "./verdicts.js";
 
 export const HYPERFRAMES_VERSION = "0.8.186";
 
@@ -82,6 +83,8 @@ export function planFilm(
     tags?: string[];
     /** Blocks the gate has already rejected. They are not tried again. */
     exclude?: string[];
+    /** What the gate said about each block, so a measured one is preferred. */
+    verdicts?: VerdictMap;
     /** Ordered block IDs from an editable project revision, not a free-form match. */
     selectedIds?: string[];
   },
@@ -103,6 +106,7 @@ export function planFilm(
   const matched = matchBlocks(options.blocks, query, {
     limit: count * 8,
     requireVariables: true,
+    verdicts: options.verdicts,
   })
     .filter((candidate) => !excluded.has(candidate.block.id) && !craftQuarantine.has(candidate.block.id))
     // The registry marks a handful of entries as ports: markup to paste into

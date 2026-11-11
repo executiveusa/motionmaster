@@ -273,14 +273,19 @@ These cost hours. Read them once.
 
 ## 7. What is open, and the order I would do it in
 
-1. **Qualify the whole 448-block pool against the gate.** ≈8 s a block, no new
-   code. The matcher currently picks on tags; once the pool is qualified it can
-   only ever choose a block that passes. This is the highest-value hour left.
+1. ~~**Qualify the whole 448-block pool against the gate.**~~ **Done**
+   (2026-11-11). Every block was installed, mounted and checked: **75 of the
+   210 mountable compositions pass; 135 fail; the other 238 are snippets,
+   not compositions, and are never mounted.** The matcher now refuses a
+   rejected block and prefers a passed one over an unmeasured one, and
+   `fill_block` refuses a rejected block even when it is named. See
+   `docs/23-THE-QUALIFIED-POOL.md`.
 2. **Give `enhance_prompt` a shot plan**, so the matcher chooses instead of
-   guessing.
-3. **Qualify the 448 blocks against the gate, by role.** The shot cards now
-   name the roles, so the blocks can be qualified per role and the matcher
-   can choose a block that fits the *shot*, not just the words.
+   guessing. (`enhance_prompt` now takes `plan_shots` and `max_shots`, so the
+   enhancer writes a plan into the brief instead of guessing a shape.)
+3. **Qualify the blocks against the gate, by role.** The pool is measured;
+   what is left is to make the *choice* role-aware, so the block that fits
+   the shot is chosen, not just the words.
 4. **Run the gauntlet blind.** The bars were fetched and compared by eye, but
    the exit condition is that a critic, blind, picks ours. That has not been
    run with a fresh critic. The loop is `gauntlet-loop-main` — builder, harsh

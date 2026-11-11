@@ -1266,6 +1266,7 @@ server.registerTool(
 
       let chosen: MotionBlock | undefined;
       let matched: { block: MotionBlock; score: number; matchedTags: string[] }[] = [];
+      const known = loadVerdicts(config.repoRoot);
       if (block) {
         chosen = file.blocks.find((b) => b.id === block);
         if (!chosen) {
@@ -1273,8 +1274,24 @@ server.registerTool(
             hint: "Call list_motion_blocks to find one.",
           });
         }
+        /*
+         * Asking for a block by name does not make it safe. The gate has
+         * measured it and found it broken, so it is refused here too — with
+         * the reason, so the caller can pick something else and know why.
+         */
+        const verdict = known[chosen.id];
+        if (verdict && !verdict.ok) {
+          return fail(`The gate rejected "${chosen.id}": ${verdict.reasons[0] ?? "it did not pass."}`, {
+            hint: "Call list_motion_blocks for the blocks that passed.",
+            block: chosen.id,
+          });
+        }
       } else {
-        matched = matchBlocks(file, `${brief} ${tag ?? ""}`, { limit: 5, requireVariables: true });
+        matched = matchBlocks(file, `${brief} ${tag ?? ""}`, {
+          limit: 5,
+          requireVariables: true,
+          verdicts: known,
+        });
         chosen = matched[0]?.block;
         if (!chosen) {
           return fail("No block matched that brief.", {
@@ -1447,6 +1464,7 @@ server.registerTool(
         tokens: tokenFile,
         count: shots ?? 3,
         tags,
+        verdicts: known,
         exclude: Object.entries(known)
           .filter(([, verdict]) => !verdict.ok)
           .map(([id]) => id),

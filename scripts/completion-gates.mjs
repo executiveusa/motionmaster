@@ -19,6 +19,7 @@ const checks = [
   { name: "mcp-typecheck", cwd: "mcp", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "mcp-tests", cwd: "mcp", command: "npm", args: ["test"], timeoutMs: 600_000 },
   { name: "mcp-tool-policy", cwd: "mcp", command: "node", args: ["scripts/verify-tools.mjs"], timeoutMs: 240_000 },
+  { name: "mcp-qualified-pool", cwd: "mcp", command: "node", args: ["scripts/proof-qualified-pool.mjs"], timeoutMs: 240_000 },
   { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   { name: "clips-typecheck", cwd: "clips", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "clips-tests", cwd: "clips", command: "npm", args: ["test"], timeoutMs: 240_000 },
