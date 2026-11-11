@@ -14,7 +14,7 @@
  */
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -119,6 +119,37 @@ const main = async () => {
       "the tool names are unique",
       new Set(tools.map((tool) => tool.name)).size === tools.length,
       `${new Set(tools.map((tool) => tool.name)).size} unique names`,
+    );
+
+    /*
+     * The startup banner lists the tool names for the operator. It used to
+     * fall behind the server — eleven tools were registered but never named,
+     * so the banner said 24 while the server exposed 35. The banner is now
+     * checked against the same list the live server is checked against, so
+     * the two cannot drift apart again.
+     */
+    const serverSource = await readFile(
+      new URL("../src/index.ts", import.meta.url),
+      "utf8",
+    );
+    const bannerMatch = serverSource.match(/const TOOL_NAMES = \[([\s\S]*?)\]/);
+    const bannerNames = bannerMatch
+      ? [...bannerMatch[1].matchAll(/"([a-z_0-9]+)"/g)].map((match) => match[1])
+      : [];
+    const missingFromBanner = REQUIRED_TOOLS.filter(
+      (name) => !bannerNames.includes(name),
+    );
+    const extraInBanner = bannerNames.filter(
+      (name) => !REQUIRED_TOOLS.includes(name),
+    );
+    check(
+      "the startup banner names every tool",
+      bannerNames.length === REQUIRED_TOOLS.length &&
+        missingFromBanner.length === 0 &&
+        extraInBanner.length === 0,
+      missingFromBanner.length || extraInBanner.length
+        ? `missing: ${missingFromBanner.join(", ")}; unknown: ${extraInBanner.join(", ")}`
+        : `${bannerNames.length} names`,
     );
 
     section("list_skills");

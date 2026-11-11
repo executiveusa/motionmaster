@@ -64,14 +64,31 @@ Read these before changing anything. They are not advice; they are the brief.
 
 ## 4. The state of every workstream
 
-### The site — rebuilt 2026-10-24
+### The site — the approved wireframe, plus the work put back on it
 
-- The hero leads with the headline; the film runs full-bleed beneath it and
-  opens on the work, not on black.
-- Two scroll scenes on a GSAP stage (`site/src/modules/stage.ts`,
-  `site/src/modules/scenes.ts`): the three demo films fly through; the clip
-  grows from a window while the source that made it reads itself in.
-- The copy is cut: 10 sections, 1,742 words, no eyebrow kickers, no tricolons.
+The page is the wireframe from PR #8 (merged as `50c0a97`): a hero that leads
+with the headline, a searchable sheet of four real clips each carrying its
+exact prompt, the console, the library, the agents and the quickstart. Six
+sections, 706 visible words, one h1, no eyebrow kickers, no tricolons.
+
+What changed on 2026-11-11: **the page had no motion above the fold.** The
+hero film, the three demo films and the twenty-second engine film were all on
+disk and appeared nowhere.
+
+- **The hero collage carries the real renders.** Six cards, each with its
+  footage and a poster that is a frame of it, so the picture is right before
+  anything plays. The card under the pointer runs and rewinds; one video
+  decodes at a time. The cards sit *behind* the headline
+  (`z-index: 10` on `.hero__body`), so the hero listens for the pointer and
+  works out which card it is over rather than expecting the card to get the
+  event.
+- **The engine film has a home** — a complete twenty-second render, mounted
+  like a print between the hero and the examples, because the work comes
+  before the explanation. Muted, looping, plays when scrolled to and stops
+  when it is not. The one control is the sound, in the corner, clear of the
+  film's own caption line; the stock control bar would sit on top of it.
+- The section's classes are **`showcase__*`**. The console already owns
+  `.film__*` for the film it renders — see §8.
 - GSAP 3.15.0 is bundled from npm into its own chunk (`gsap-*.js`), so the
   content check can tell vendor bytes from ours. **There are still zero
   external requests.**
@@ -80,13 +97,17 @@ Read these before changing anything. They are not advice; they are the brief.
 
 ### The agent surfaces
 
-- **MCP**: 26 tools. New this round: `get_motion_block` (one block's variables
-  in full) and `check_hyperframes` (run the gate, get the findings **with the
-  file each one came from**).
+- **MCP**: 35 tools — the shot vocabulary (`list_shots`, `get_shot`,
+  `plan_shots`), the effect shelf (`list_motion_effects`,
+  `get_motion_effect`), the block inspector and the gate
+  (`get_motion_block`, `check_hyperframes`), and the board sync.
+- The startup banner names all 35, and `scripts/verify-tools.mjs` checks the
+  banner against the same list it checks the live server against, so the two
+  cannot drift apart again.
 - **HTTP API**: `/api/v1` with an OpenAPI document at `/api/v1/openapi.json`.
   Optional bearer auth via `MOTION_MASTER_API_KEY`.
-- **Plug-in**: 39 skills (the new one is `motion-master-api`), with the Claude,
-  Codex and Cursor marketplaces updated.
+- **Plug-in**: 47 skills, with the Claude, Codex and Cursor marketplaces
+  updated.
 
 ### The talking-head reel skill (2026-11-10)
 
@@ -267,8 +288,14 @@ These cost hours. Read them once.
 4. **Close the visual half of the motionvideo.xyz gauntlet** on a machine that
    can load their site.
 5. **Shorten the hero film.** 104 s is a long thing to put on a front page. A
-   45–60 s cut would be better and costs one render.
-6. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a server
+   45–60 s cut would be better and costs one render. Note that the front page
+   now carries the twenty-second engine film instead, so this is about the
+   film asset itself, not the page.
+6. **Redeploy the site.** The live URL still serves the old structure, which
+   includes a Pricing section — forbidden while the offer is not on sale.
+   The current build is ready and measured; it needs the founder's word
+   because the deployment is public.
+7. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a server
    fallback), the public surface, popebot fork-vs-configure (Phase 2 — ships
    labelled unverified, no Docker here), a render machine, and whether to keep
    the old remote.
