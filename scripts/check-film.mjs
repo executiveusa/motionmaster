@@ -37,7 +37,7 @@ const check = (ok, label) => {
 };
 
 await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-await send('Page.navigate', { url: 'http://127.0.0.1:4173/' });
+await send('Page.navigate', { url: process.argv[2] ?? 'http://127.0.0.1:4173/' });
 await sleep(3200);
 
 /* 1 — the film plays when it is scrolled to (it must not decode while it is
@@ -98,7 +98,7 @@ if (card.exists) {
 
 /* 4 — reduced motion is a real experience */
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-await send('Page.navigate', { url: 'http://127.0.0.1:4173/' });
+await send('Page.navigate', { url: process.argv[2] ?? 'http://127.0.0.1:4173/' });
 await sleep(3200);
 await evaluate(`document.querySelector('#film').scrollIntoView({behavior:'instant', block:'center'})`);
 await sleep(1400);
@@ -136,7 +136,8 @@ check(more.href === '/film/motion-master-hero.mp4', `the link points at the hero
 check(more.target === '_blank' && /noopener/.test(more.rel || ''), 'the link opens safely in a new tab');
 check(more.height >= 24, `the link is big enough to hit (${more.height}px)`);
 
-const head = await fetch('http://127.0.0.1:4173/film/motion-master-hero.mp4', { method: 'HEAD' });
+const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
+const head = await fetch(base.replace(/\/$/, '') + '/film/motion-master-hero.mp4', { method: 'HEAD' });
 check(head.ok, `the file behind the link is served (${head.status}, ${head.headers.get('content-length')} bytes)`);
 
 /* and it speaks Spanish */
@@ -148,7 +149,7 @@ const spanish = await evaluate(`(() => {
   const sound = document.querySelector('[data-film-sound-label]');
   return { link: a.textContent.trim(), head: h.textContent.trim(), sound: sound.textContent.trim() };
 })()`);
-check(/104/.test(spanish.link), `the long-film link is translated (${spanish.link})`);
+check(/55/.test(spanish.link), `the long-film link is translated (${spanish.link})`);
 check(/segundos/.test(spanish.head), `the heading is translated (${spanish.head})`);
 
 console.log(failures.length ? `\nFAILED ${failures.length}` : '\nALL PASS');
