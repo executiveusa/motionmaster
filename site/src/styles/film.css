@@ -125,3 +125,26 @@
     gap: 4px 16px;
   }
 }
+
+/* The long film. A quiet link under the frame, not a player bolted to it.
+   The underline is a text decoration rather than a border, so the padding
+   that gives the link a 44px target does not detach it from the words. */
+.showcase__more {
+  margin-top: 4px;
+}
+
+.showcase__more a {
+  display: inline-block;
+  padding: 13px 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-ink);
+  text-underline-offset: 4px;
+}
+
+.showcase__more a:hover,
+.showcase__more a:focus-visible {
+  color: var(--accent-ink);
+}

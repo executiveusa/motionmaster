@@ -120,5 +120,36 @@ check(reduced.cardPaused === true, 'reduced motion: the hero cards do not move')
 check(Number(reduced.headingVisible) === 1, 'reduced motion: the writing is all there');
 check(reduced.frameVisible > 200, `reduced motion: the frame is still there (${reduced.frameVisible}px)`);
 
+/* 5 — the long film is a link, and the link is real */
+const more = await evaluate(`(() => {
+  const a = document.querySelector('.showcase__more a');
+  if (!a) return { exists: false };
+  const r = a.getBoundingClientRect();
+  return {
+    exists: true, href: a.getAttribute('href'), target: a.getAttribute('target'),
+    rel: a.getAttribute('rel'), text: a.textContent.trim(),
+    height: Math.round(r.height),
+  };
+})()`);
+check(more.exists, 'the long film has a link');
+check(more.href === '/film/motion-master-hero.mp4', `the link points at the hero film (${more.href})`);
+check(more.target === '_blank' && /noopener/.test(more.rel || ''), 'the link opens safely in a new tab');
+check(more.height >= 24, `the link is big enough to hit (${more.height}px)`);
+
+const head = await fetch('http://127.0.0.1:4173/film/motion-master-hero.mp4', { method: 'HEAD' });
+check(head.ok, `the file behind the link is served (${head.status}, ${head.headers.get('content-length')} bytes)`);
+
+/* and it speaks Spanish */
+await evaluate(`(() => { const s = document.querySelector('[data-locale]'); s.value = 'es-MX'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+await sleep(900);
+const spanish = await evaluate(`(() => {
+  const a = document.querySelector('.showcase__more a');
+  const h = document.querySelector('#film-title');
+  const sound = document.querySelector('[data-film-sound-label]');
+  return { link: a.textContent.trim(), head: h.textContent.trim(), sound: sound.textContent.trim() };
+})()`);
+check(/104/.test(spanish.link), `the long-film link is translated (${spanish.link})`);
+check(/segundos/.test(spanish.head), `the heading is translated (${spanish.head})`);
+
 console.log(failures.length ? `\nFAILED ${failures.length}` : '\nALL PASS');
 process.exit(failures.length ? 1 : 0);
