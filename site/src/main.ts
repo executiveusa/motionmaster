@@ -34,7 +34,6 @@ import { initLocale } from './modules/locale';
 import { initProjectEditor } from './modules/project-editor';
 import { initProductShell } from './modules/product-shell';
 import './styles/simplified.css';
-import './styles/hero-brand.css';
 import './styles/project-editor.css';
 import './styles/product-v2.css';
 

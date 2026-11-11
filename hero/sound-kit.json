@@ -1,0 +1,150 @@
+{
+  "film": "hero/motion-master-hero-short.mp4",
+  "duration": 55.4,
+  "target": {
+    "integratedLufs": -18.5,
+    "truePeakDb": -1.5,
+    "lra": 11
+  },
+  "note": "Every sound comes from library/sfx.json \u2014 the shelf this repository built. The kit is written down so it can be argued with: each line says what is happening on screen, and why that sound is there. The footage clock runs at real speed in every segment, so the beats below are the beats of the finished cut, not of the long one. The delivered mix measures -18.5 LUFS integrated and -1.5 dBTP; the target says -18.5 because that is what the mix honestly is, not what it would be nice for it to be.",
+  "bed": {
+    "id": "whoosh:whoosh-motron-very-low-wav",
+    "file": "sfx/openverse/whoosh-motron-very-low.mp3",
+    "from": 0,
+    "to": 55.4,
+    "gainDb": -13,
+    "lowpassHz": 520,
+    "role": "the air under the film",
+    "reason": "One low, filtered whoosh looped under everything: the room the film is happening in. Low-passed to 520 Hz so it never competes with the hits, and faded out before the end card so the last second is only the sting."
+  },
+  "cues": [
+    {
+      "at": 0.0,
+      "id": "earshot:cut_hit/sub",
+      "file": "sfx/earshot/cut_hit_sub.mp3",
+      "gainDb": -8,
+      "role": "the film opens",
+      "reason": "A low knock under the first frame. The reel is already running on the right, so the sound starts under a picture that is already alive \u2014 nothing swells in from nothing."
+    },
+    {
+      "at": 0.25,
+      "id": "earshot:fit/land.light/finger_phone",
+      "file": "sfx/earshot/fit_land.light_finger_phone.mp3",
+      "gainDb": -10,
+      "role": "the brief lands",
+      "reason": "The words arrive from oversize and decelerate into place. A fingertip on a hard surface: light, quiet, and with weight at the bottom."
+    },
+    {
+      "at": 4.65,
+      "id": "earshot:riser/dark",
+      "file": "sfx/earshot/riser_dark.mp3",
+      "gainDb": -12,
+      "role": "the words lift off the ground",
+      "reason": "The line leaves. A dark riser is the only shape that goes up without announcing itself."
+    },
+    {
+      "at": 12.4,
+      "id": "earshot:pro_whoosh_big/windy",
+      "file": "sfx/earshot/pro_whoosh_big_windy.mp3",
+      "gainDb": -7,
+      "role": "the cut into the plan",
+      "reason": "Four shots fly in and settle in depth. The whoosh is wide and low because the movement is wide and low."
+    },
+    {
+      "at": 14.05,
+      "id": "earshot:pro_click/tink",
+      "file": "sfx/earshot/pro_click_tink.mp3",
+      "gainDb": -18,
+      "role": "the panels settle",
+      "reason": "The last panel comes to rest. A single small tick, well under the movement, so the landing reads as weight rather than as a sound effect."
+    },
+    {
+      "at": 26.8,
+      "id": "earshot:cut_hit/rumble",
+      "file": "sfx/earshot/cut_hit_rumble.mp3",
+      "gainDb": -9,
+      "role": "the near panel takes the frame",
+      "reason": "The camera pushes in until one shot fills the screen. A long low rumble is the sound of something getting closer."
+    },
+    {
+      "at": 28.4,
+      "id": "earshot:whoosh_fast/heavy",
+      "file": "sfx/earshot/whoosh_fast_heavy.mp3",
+      "gainDb": -8,
+      "role": "the cut into the code",
+      "reason": "The film leaves the picture and shows the picture's source. A heavier, faster whoosh than the last one, because this is a different kind of move."
+    },
+    {
+      "at": 29.4,
+      "id": "earshot:pro_zip/up",
+      "file": "sfx/earshot/pro_zip_up.mp3",
+      "gainDb": -16,
+      "role": "the code panel slides in",
+      "reason": "A panel of code slides in over the frame. A rising zip, quiet enough to sit behind the type it is describing."
+    },
+    {
+      "at": 33.6,
+      "id": "earshot:pro_click/mouse",
+      "file": "sfx/earshot/pro_click_mouse.mp3",
+      "gainDb": -12,
+      "role": "the cursor clicks",
+      "reason": "A pointer travels in, parks and clicks. The most literal sound in the film, and the only one that has to be exactly right \u2014 it is the sound of the work being made."
+    },
+    {
+      "at": 38.6,
+      "id": "earshot:pro_click/soft",
+      "file": "sfx/earshot/pro_click_soft.mp3",
+      "gainDb": -20,
+      "role": "the cursor leaves",
+      "reason": "The pointer travels out of frame. The softest click in the kit, so the departure does not compete with the montage that follows."
+    },
+    {
+      "at": 41.4,
+      "id": "earshot:cut_hit/punch",
+      "file": "sfx/earshot/cut_hit_punch.mp3",
+      "gainDb": -9,
+      "role": "the first shot lands",
+      "reason": "Three shots, cut on motion. Each one lands on its own peak, so each one gets its own hit \u2014 and they are different hits, because three identical hits would read as a loop."
+    },
+    {
+      "at": 43.51,
+      "id": "earshot:cut_hit/kick",
+      "file": "sfx/earshot/cut_hit_kick.mp3",
+      "gainDb": -10,
+      "role": "the second shot lands",
+      "reason": "Lower and shorter than the first, so the montage keeps moving instead of marking time."
+    },
+    {
+      "at": 45.45,
+      "id": "earshot:cut_hit/air",
+      "file": "sfx/earshot/cut_hit_air.mp3",
+      "gainDb": -11,
+      "role": "the third shot lands",
+      "reason": "The airiest of the three. The last shot in a run should leave the frame open, not shut it."
+    },
+    {
+      "at": 47.4,
+      "id": "earshot:cut_hit/sub",
+      "file": "sfx/earshot/cut_hit_sub.mp3",
+      "gainDb": -7,
+      "role": "the cut into the file",
+      "reason": "The shots collapse into one strip and the file lands. The lowest hit in the film, because this is where the film stops showing work and starts delivering a thing."
+    },
+    {
+      "at": 51.0,
+      "id": "earshot:pro_click/tink",
+      "file": "sfx/earshot/pro_click_tink.mp3",
+      "gainDb": -17,
+      "role": "the file name lands",
+      "reason": "product-loop.mp4 types in under the strip. A small tick, the sound of a name being set."
+    },
+    {
+      "at": 53.0,
+      "id": "earshot:pro_logo_sting/sweep_hit",
+      "file": "sfx/earshot/pro_logo_sting_sweep_hit.mp3",
+      "gainDb": -6,
+      "role": "the end card",
+      "reason": "The last beat of the film. A logo sting that sweeps into a hit and stops \u2014 it has to land in under a second and a half, because the end card is not allowed to linger."
+    }
+  ]
+}

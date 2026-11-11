@@ -116,6 +116,22 @@ export function initHeroFilms(): void {
   const hero = qs<HTMLElement>('.hero--brand') ?? qs<HTMLElement>('#top');
   if (!hero) return;
 
+  // On a phone there is no pointer, so no card is ever hovered and the
+  // collage would sit there as a still. The first card runs instead: one
+  // clip, muted, looping, at the top of the screen.
+  const coarse =
+    typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  if (coarse && cards[0]) {
+    const video = cards[0];
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.preload = 'auto';
+    video.play().catch(() => {
+      /* the poster stays. nothing to fix. */
+    });
+  }
+
   let current: HTMLVideoElement | null = null;
 
   const wake = (video: HTMLVideoElement | null) => {

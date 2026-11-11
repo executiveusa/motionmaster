@@ -19,7 +19,7 @@ const strings: Record<string, [string, string]> = {
   filmTitle: ['The engine, in twenty seconds.', 'El motor, en veinte segundos.'],
   filmLede: ['A complete render, made by the skills in this pack. Nothing on screen is a placeholder.', 'Un render completo, hecho con las skills de este paquete. Nada en pantalla es un placeholder.'],
   filmMade: ['Made with', 'Hecho con'],
-  fullFilm: ['Watch the full behind-the-scenes film (104 seconds)', 'Ver el video completo del proceso (104 segundos)'],
+  fullFilm: ['Watch the behind-the-scenes film (55 seconds)', 'Ver el video del proceso (55 segundos)'],
   footerLine: ['Make a video. Keep the source.', 'Crea un video. Conserva el proyecto.'],
   privateSale: ['Private preview · Not on sale.', 'Vista previa privada · No está a la venta.'],
   consoleTitle: ['Create from an example or a brief.', 'Crea desde un ejemplo o una descripción.'],

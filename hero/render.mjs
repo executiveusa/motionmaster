@@ -24,7 +24,13 @@ const argOf = (name, fallback) => {
 };
 const OUT = argOf('--out', join(here, 'motion-master-hero.mp4'));
 const FPS = Number(argOf('--fps', 30));
-const DUR = Number(argOf('--duration', 104));
+const DUR_ARG = argOf('--duration', null);
+let DUR = DUR_ARG ? Number(DUR_ARG) : null;
+// A long render is rendered in chunks: each chunk writes its own file and the
+// chunks are joined afterwards. A render that dies at minute forty is worth
+// nothing; a chunk that dies at minute nine only costs nine minutes.
+const FROM = Number(argOf('--from', 0));
+const TO = Number(argOf('--to', DUR));
 // The film directory: --dir points at a folder with index.html, film.js and
 // whatever it needs. Defaults to this folder (the hero film).
 const DIR = argOf('--dir', here);
@@ -204,9 +210,18 @@ try {
     returnByValue: true,
   });
 
+  // The film knows how long its own cut is. Ask it, unless the caller said.
+  if (DUR === null) {
+    const d = await send('Runtime.evaluate', { expression: 'window.DUR', returnByValue: true });
+    DUR = (d.result && d.result.value) || 104;
+    console.log(`  duration ${DUR}s (from the film)`);
+  }
+
   const total = Math.round(DUR * FPS);
   const started = Date.now();
-  for (let f = 0; f < total; f++) {
+  const firstFrame = Math.round(FROM * FPS);
+  const lastFrame = Math.round(TO * FPS);
+  for (let f = firstFrame; f < lastFrame; f++) {
     const t = f / FPS;
     const r = await send('Runtime.evaluate', {
       expression: `window.render(${t})`,
@@ -220,12 +235,13 @@ try {
     const shot = await send('Page.captureScreenshot', { format: 'jpeg', quality: 94 });
     await writeFrame(Buffer.from(shot.data, 'base64'));
 
-    if (f % 60 === 0) {
-      const done = f + 1;
+    const done = f - firstFrame + 1;
+    const span = lastFrame - firstFrame;
+    if (done % 60 === 0) {
       const rate = done / ((Date.now() - started) / 1000);
-      const left = (total - done) / rate;
+      const left = (span - done) / rate;
       process.stdout.write(
-        `\r  ${done}/${total} frames  ${rate.toFixed(1)} fps  ${Math.round(left)}s left   `,
+        `\r  ${done}/${span} frames  ${rate.toFixed(1)} fps  ${Math.round(left)}s left   `,
       );
     }
   }
