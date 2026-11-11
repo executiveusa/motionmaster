@@ -88,6 +88,52 @@ Read these before changing anything. They are not advice; they are the brief.
 - **Plug-in**: 39 skills (the new one is `motion-master-api`), with the Claude,
   Codex and Cursor marketplaces updated.
 
+### The vox engine (2026-11-10)
+
+Three Vox-style repositories were cloned and read before any of our code
+changed: `alisa0808/vox-director`, `santmun/video-vox` and
+`iart-ai/motion-skills`. What came out of them is a rendering upgrade, not a
+set of imports.
+
+- **The analog layer** (`clips/src/vox/`) — the 12fps stepped clock for the
+  graphic layer, posterised colour, paper grain, a halftone screen, a
+  vignette, the boiling paper, and word-synced captions. Shipped as the new
+  `analog-motion` skill.
+- **The vector map** (`clips/src/vox/VectorMap.tsx` + `geo.ts`) — a camera
+  over Natural Earth boundaries, a route that draws itself, a pin that drops,
+  a callout whose arrow is drawn in screen space, and a region vignette.
+  Shipped as the new `vector-map` skill.
+- **The twenty-second promo** — `clips/src/vox/VoxPromo.tsx`, with its script
+  in `clips/src/vox/script.ts` and the readable version in
+  `docs/22-VOX-PROMO-SCRIPT.md`.
+
+See [`docs/21-THE-VOX-ENGINE.md`](docs/21-THE-VOX-ENGINE.md) for the audit,
+including where the mandate's description of the reference repositories was
+wrong.
+
+### The vox engine (2026-11-10)
+
+Three Vox-style repositories were cloned and read before any of our code
+changed: `alisa0808/vox-director`, `santmun/video-vox` and
+`iart-ai/motion-skills`. What came out of them is a rendering upgrade, not a
+set of imports.
+
+- **The analog layer** (`clips/src/vox/`) — the 12fps stepped clock for the
+  graphic layer, posterised colour, paper grain, a halftone screen, a
+  vignette, the boiling paper, and word-synced captions. Shipped as the new
+  `analog-motion` skill.
+- **The vector map** (`clips/src/vox/VectorMap.tsx` + `geo.ts`) — a camera
+  over Natural Earth boundaries, a route that draws itself, a pin that drops,
+  a callout whose arrow is drawn in screen space, and a region vignette.
+  Shipped as the new `vector-map` skill.
+- **The twenty-second promo** — `clips/src/vox/VoxPromo.tsx`, with its script
+  in `clips/src/vox/script.ts` and the readable version in
+  `docs/22-VOX-PROMO-SCRIPT.md`.
+
+See [`docs/21-THE-VOX-ENGINE.md`](docs/21-THE-VOX-ENGINE.md) for the audit,
+including where the mandate's description of the reference repositories was
+wrong.
+
 ### The shot vocabulary and the effect shelf (2026-11-10)
 
 Motion Master can now pick a **shot**, not just a block. 124 authored shot
@@ -108,9 +154,13 @@ New tools: `list_shots`, `get_shot`, `plan_shots`, `list_motion_effects`,
 | `site: npm run build` | green — tsc, vite, and the content rules |
 | overflow at 320/360/375/390/414/430/768/1024/1280/1440 | **0** |
 | `mcp: npm test` | **169/169** |
+| `clips: npm test` | **20/20** |
+| `clips: npm test` | **20/20** |
 | `mcp: node scripts/verify-tools.mjs` | **46/46** |
+| `clips: npm run typecheck` | clean |
+| `clips: npm run typecheck` | clean |
 | `mcp: npm run typecheck` | clean |
-| `node scripts/completion-gates.mjs` | 7/7 |
+| `node scripts/completion-gates.mjs` | 9/9 |
 | external requests | **0** |
 
 ## 5. The commands

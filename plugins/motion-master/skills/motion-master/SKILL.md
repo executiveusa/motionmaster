@@ -142,6 +142,17 @@ before filling one.
 In this repository, `generator/render.sh <dir> <out.mp4>` wraps the render and finds
 the browser. The sample composition is `generator/compositions/library-map`.
 
+### Stage 4a — The analog layer
+
+Two filters and one clock make a clean digital animation read as printed and
+shot. `analog-motion` has all three: the 12fps stepped clock for the graphic
+layer, the posterised colour, and the paper — grain, halftone, vignette — with
+the boiling paper that keeps it from sitting still.
+
+`vector-map` is the editorial map: a camera over the land, a route that draws
+itself, a pin that drops, a callout that arrows in, and a vignette that says
+*here*. The projection is self-contained, so it needs no install.
+
 ### Stage 5a — The shot plan
 
 Before any composition is written, the film needs a shape: where it opens, what
@@ -323,6 +334,8 @@ one-time**.
 | "what shots does this need?" | MCP `plan_shots` — 124 authored shot cards; it returns the order, the length and the card each shot came from |
 | "show me the shot vocabulary" | `shotcraft` — the cards, by role |
 | "a wipe / a dissolve / a counter that ticks" | MCP `list_motion_effects` — 244 effects, each one a file of code |
+| "make it look filmic / printed / shot" | `analog-motion` — the stepped clock, the posterised colour and the paper |
+| "a map / a route / a callout / highlight a region" | `vector-map` — the camera, the route, the pin, the callout and the vignette |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
 | "check this composition before it renders" | MCP `check_hyperframes`, or `motion-master-api` for the same thing over HTTP |
 | "call this from a script, not from the agent" | `motion-master-api` — the HTTP API at `/api/v1` |

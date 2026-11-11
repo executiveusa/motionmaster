@@ -25,17 +25,17 @@ FRAMES="$ROOT/hero/frames"
 
 step () { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 
-step "1/4  the two clips whose words changed"
+step "1/5  the two clips whose words changed"
 cd "$ROOT/clips"
 BROWSER_FLAGS=(--browser-executable="$CHROME" --ignore-certificate-errors --gl=swangle --concurrency=1)
 npx remotion render KineticType  "$CLIPS/kinetic-type.mp4"  "${BROWSER_FLAGS[@]}"
 npx remotion render ProductLoop "$CLIPS/product-loop.mp4" "${BROWSER_FLAGS[@]}"
 
-step "2/4  posters for the two changed clips"
+step "2/5  posters for the two changed clips"
 ffmpeg -v error -nostdin -y -ss 3.4 -i "$CLIPS/kinetic-type.mp4" -vframes 1 -q:v 3 "$CLIPS/kinetic-type.jpg"
 ffmpeg -v error -nostdin -y -ss 10.5 -i "$CLIPS/product-loop.mp4" -vframes 1 -q:v 3 "$CLIPS/product-loop.jpg"
 
-step "3/4  the film's frame sequences"
+step "3/5  the film's frame sequences"
 rm -rf "$FRAMES"
 mkdir -p "$FRAMES"
 extract () {
@@ -49,9 +49,14 @@ extract "$CLIPS/kinetic-type.mp4"  kinetic-type-full
 extract "$CLIPS/product-loop.mp4"  product-loop
 extract "$CLIPS/footage-title.mp4" footage-title
 
-step "4/4  the hero film"
+step "4/5  the hero film"
 cd "$ROOT/hero"
 node render.mjs --out "$ROOT/hero/motion-master-hero.mp4" --fps 30 --duration 104
+
+step "5/5  the twenty-second Vox promo"
+cd "$ROOT/clips"
+npx remotion render VoxPromo "$ROOT/site/public/film/motion-master-vox-promo.mp4" "${BROWSER_FLAGS[@]}" --codec=h264 --crf=18
+ffmpeg -v error -nostdin -y -ss 17.2 -i "$ROOT/site/public/film/motion-master-vox-promo.mp4" -vframes 1 -q:v 3 "$ROOT/site/public/film/motion-master-vox-promo.jpg"
 
 # The film is served from the site.
 cp "$ROOT/hero/motion-master-hero.mp4" "$CLIPS/../film/motion-master-hero.mp4"

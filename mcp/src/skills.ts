@@ -176,6 +176,10 @@ const GROUP_BY_NAME: Record<string, SkillGroup> = {
   "shotcraft": "shots",
   // The effect shelf: small reusable pieces of craft, each one a file of code.
   "pixelfx": "styles",
+  // The analog layer: the stepped clock, the posterised colour and the paper.
+  "analog-motion": "web",
+  // The editorial map: camera, route, pin, callout, vignette.
+  "vector-map": "web",
   // The HTML-to-video generator: render pipeline, block registry, media.
   "hyperframes": "hyperframes",
   "hyperframes-cli": "hyperframes",
@@ -196,7 +200,7 @@ const UPSTREAM: Record<string, string> = {
   craft: "motionmaxxing (Apache-2.0)",
   styles: "lemo-opuscar (MIT + CC BY 4.0), huashu-art-motion (MIT)",
   production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT)",
-  web: "oil-motion (MIT), animate (MIT), claude-motion (MIT)",
+  web: "oil-motion (MIT), animate (MIT), claude-motion (MIT), analog-motion (MIT), vector-map (MIT)",
   catalogue: "awesome-ai-motion (MIT)",
   shots: "video-shotcraft (Apache-2.0)",
   hyperframes: "HyperFrames by HeyGen (Apache-2.0)",
