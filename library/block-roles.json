@@ -1,0 +1,385 @@
+{
+  "generated": "scripts/map-block-roles.mjs",
+  "note": "Which shot roles each gate-passing block can serve, read from its registry tags. The matcher prefers a block that fits the role of the shot it is filling. A block that failed the gate is not here.",
+  "roles": {
+    "ai-answer-rank": [
+      "data",
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "ai-chat-reveal": [
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "bar-chart-race": [
+      "data"
+    ],
+    "beat-freeze-cut": [
+      "rhythm",
+      "transition"
+    ],
+    "blue-sweater-intro-video": [
+      "interaction",
+      "outro"
+    ],
+    "camcorder-hud": [
+      "camera",
+      "interaction",
+      "ui-entrance"
+    ],
+    "camera-dolly-zoom": [
+      "camera"
+    ],
+    "carousel-circle-1": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-circle-2": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-circle-3": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-circle-4": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-circle-5": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-orbit-1": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-orbit-2": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-orbit-3": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-orbit-4": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-orbit-5": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-path-1": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-path-2": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-path-3": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-path-4": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-path-5": [
+      "camera",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-text-circle-4": [
+      "opening",
+      "typography",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-text-circle-5": [
+      "opening",
+      "typography",
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-vision-1": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-vision-2": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-vision-3": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-vision-4": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "carousel-vision-5": [
+      "interaction",
+      "ui-entrance",
+      "rhythm",
+      "outro"
+    ],
+    "chatgpt-exchange": [
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "cinemagraph": [
+      "effects",
+      "rhythm",
+      "transition"
+    ],
+    "claude-exchange": [
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "code-3d-extrude": [
+      "typography",
+      "camera"
+    ],
+    "code-diff": [
+      "typography",
+      "data"
+    ],
+    "code-highlight": [
+      "typography"
+    ],
+    "code-morph": [
+      "typography",
+      "rhythm",
+      "transition"
+    ],
+    "code-particle-assemble": [
+      "typography",
+      "camera",
+      "effects"
+    ],
+    "code-scroll": [
+      "typography",
+      "rhythm"
+    ],
+    "code-shader-dissolve": [
+      "typography",
+      "camera",
+      "effects"
+    ],
+    "code-slice-hero": [
+      "opening",
+      "typography",
+      "camera",
+      "transition"
+    ],
+    "editorial-flash-overlay": [
+      "effects",
+      "interaction",
+      "ui-entrance",
+      "transition"
+    ],
+    "freeze-frame-dressing": [
+      "interaction",
+      "ui-entrance",
+      "transition"
+    ],
+    "heygen-avatar-promo-card": [
+      "interaction",
+      "outro"
+    ],
+    "hw-frame": [
+      "typography"
+    ],
+    "hw-pipeline": [
+      "typography",
+      "data",
+      "ui-entrance"
+    ],
+    "hw-scribble-transition": [
+      "typography",
+      "transition"
+    ],
+    "hw-text-cloud": [
+      "typography",
+      "ui-entrance"
+    ],
+    "hw-write-title": [
+      "opening",
+      "typography",
+      "ui-entrance",
+      "outro"
+    ],
+    "instagram-follow": [
+      "interaction",
+      "ui-entrance"
+    ],
+    "lower-third-bild": [
+      "ui-entrance"
+    ],
+    "lt-accent-underline": [
+      "ui-entrance"
+    ],
+    "lt-bold-block": [
+      "typography",
+      "ui-entrance"
+    ],
+    "lt-clean-bar": [
+      "ui-entrance"
+    ],
+    "lt-color-block": [
+      "typography",
+      "ui-entrance"
+    ],
+    "lt-dark-card": [
+      "ui-entrance"
+    ],
+    "lt-kicker-name": [
+      "typography",
+      "ui-entrance"
+    ],
+    "lt-mask-reveal": [
+      "typography",
+      "ui-entrance"
+    ],
+    "lt-soft-pill": [
+      "ui-entrance"
+    ],
+    "lt-stack-bars": [
+      "typography",
+      "ui-entrance"
+    ],
+    "mk-background": [
+      "ui-entrance"
+    ],
+    "nyc-paris-flight": [
+      "camera",
+      "interaction",
+      "outro"
+    ],
+    "organic-light-leak-overlay": [
+      "effects",
+      "ui-entrance",
+      "transition"
+    ],
+    "oscilloscope-trace": [
+      "data",
+      "interaction",
+      "outro"
+    ],
+    "product-turntable": [
+      "camera",
+      "rhythm"
+    ],
+    "share-sheet-carousel": [
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "snow": [
+      "effects",
+      "ui-entrance",
+      "rhythm"
+    ],
+    "spiral-galaxy": [
+      "opening",
+      "camera",
+      "effects",
+      "ui-entrance"
+    ],
+    "spotify-card": [
+      "interaction",
+      "ui-entrance"
+    ],
+    "starfield": [
+      "effects",
+      "ui-entrance",
+      "rhythm"
+    ],
+    "tiktok-follow": [
+      "interaction",
+      "ui-entrance"
+    ],
+    "transitions-light": [
+      "interaction",
+      "transition",
+      "outro"
+    ],
+    "vfx-anamorphic-flare": [
+      "effects",
+      "interaction",
+      "ui-entrance",
+      "outro"
+    ],
+    "vfx-liquid-background": [
+      "camera",
+      "effects",
+      "ui-entrance"
+    ],
+    "yt-logo-intro": [
+      "opening",
+      "interaction",
+      "outro"
+    ],
+    "yt-lower-third": [
+      "interaction",
+      "ui-entrance"
+    ]
+  }
+}

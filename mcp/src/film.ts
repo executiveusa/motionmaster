@@ -17,6 +17,7 @@ import { join, resolve } from "node:path";
 import { fillBlock, headlineFrom, matchBlocks, type BlockFile, type MotionBlock } from "./blocks.js";
 import type { TokenShape } from "./enhancer.js";
 import type { VerdictMap } from "./verdicts.js";
+import type { BlockRoles } from "./roles.js";
 
 export const HYPERFRAMES_VERSION = "0.8.186";
 
@@ -74,6 +75,35 @@ export function loadBlockCatalogue(path: string): {
  * Variants of one idea are one idea, so a family of near-identical blocks
  * contributes a single shot.
  */
+
+/**
+ * The roles a brief's shot plan names, in order.
+ *
+ * The plan is written into the brief as a numbered list under SHOTS:
+ *
+ *     SHOTS
+ *     1. opening: opening/brand-ink-open (4s) — summary
+ *     2. typography: typography/wordmark-reveal (3s) — summary
+ *
+ * so the roles can be read back out and the block for each shot chosen by
+ * what that shot has to do, not by the wording of the brief.
+ */
+export function rolesFromBrief(brief: string): string[] {
+  const roles: string[] = [];
+  const section = /\bSHOTS\b([\s\S]*?)(?:\n\n[A-Z][A-Z ]+\n|$)/.exec(brief);
+  if (!section) return roles;
+  for (const line of section[1].split("\n")) {
+    const match = /^\s*\d+\.\s*([a-z][a-z-]*)\s*:/.exec(line);
+    if (match && !roles.includes(match[1])) roles.push(match[1]);
+  }
+  return roles;
+}
+
+/** The family a block belongs to, for keeping one idea out of a shot list. */
+function familyOf(id: string): string {
+  return id.replace(/-(\d+)$/, "").replace(/-(style-)?\d+$/, "");
+}
+
 export function planFilm(
   brief: string,
   options: {
@@ -85,6 +115,8 @@ export function planFilm(
     exclude?: string[];
     /** What the gate said about each block, so a measured one is preferred. */
     verdicts?: VerdictMap;
+    /** Which shot roles each block can serve, so a shot gets a block that fits it. */
+    roles?: BlockRoles;
     /** Ordered block IDs from an editable project revision, not a free-form match. */
     selectedIds?: string[];
   },
@@ -115,7 +147,42 @@ export function planFilm(
     .filter((candidate) => !candidate.block.tags.includes("transitions-dev-port"))
     .filter((candidate) => mountable(candidate.block));
 
-  const chosen: MotionBlock[] = [];
+  /*
+   * The shot plan, if the brief carries one.
+   *
+   * A film is a sequence of roles — an opening, some typography, a camera
+   * move, a number, an end — and each of those wants a block that can
+   * actually do it. The plan writes the roles into the brief, so they can be
+   * read back and the block for each shot chosen by role rather than by
+   * whichever words happened to match.
+   */
+  const shotRoles = rolesFromBrief(brief);
+  const roleChosen: MotionBlock[] = [];
+  if (shotRoles.length && options.roles) {
+    const used = new Set<string>();
+    for (const role of shotRoles) {
+      if (roleChosen.length >= count) break;
+      const forRole = matchBlocks(options.blocks, query, {
+        limit: count * 8,
+        requireVariables: true,
+        verdicts: options.verdicts,
+        roles: options.roles,
+        role,
+      }).filter(
+        (candidate) =>
+          !excluded.has(candidate.block.id) &&
+          !craftQuarantine.has(candidate.block.id) &&
+          !candidate.block.tags.includes("transitions-dev-port") &&
+          mountable(candidate.block),
+      );
+      const pick = forRole.find((candidate) => !used.has(familyOf(candidate.block.id)));
+      if (!pick) continue;
+      used.add(familyOf(pick.block.id));
+      roleChosen.push(pick.block);
+    }
+  }
+
+  const chosen: MotionBlock[] = [...roleChosen];
   const selected = options.selectedIds;
   if (selected) {
     if (selected.length === 0 || selected.length > 20 || new Set(selected).size !== selected.length) {

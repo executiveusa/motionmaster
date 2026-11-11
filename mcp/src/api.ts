@@ -59,6 +59,7 @@ import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxKinds } from "./sfx.js";
 import { loadVerdicts } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import {
   copyKitFiles,
   buildFilmProject,
@@ -1126,6 +1127,7 @@ export async function handleApi(
       count: body.shots ?? 3,
       tags: body.tags,
       verdicts: known,
+      roles: loadBlockRoles(config.blockRolesPath),
       exclude: Object.entries(known)
         .filter(([, verdict]) => !verdict.ok)
         .map(([id]) => id),

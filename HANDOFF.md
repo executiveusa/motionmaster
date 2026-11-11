@@ -283,9 +283,15 @@ These cost hours. Read them once.
 2. **Give `enhance_prompt` a shot plan**, so the matcher chooses instead of
    guessing. (`enhance_prompt` now takes `plan_shots` and `max_shots`, so the
    enhancer writes a plan into the brief instead of guessing a shape.)
-3. **Qualify the blocks against the gate, by role.** The pool is measured;
-   what is left is to make the *choice* role-aware, so the block that fits
-   the shot is chosen, not just the words.
+3. ~~**Qualify the blocks against the gate, by role.**~~ **Done**
+   (2026-11-11). `scripts/map-block-roles.mjs` reads the registry tags and
+   maps every gate-passing block to the shot roles it can serve; the plan
+   writes the roles into the brief, the matcher reads them back, and each
+   shot is filled with a block that serves its role **and** has passed the
+   gate. The table is in `scripts/map-block-roles.mjs`, written down so it
+   can be argued with. The pool is uneven — 54 blocks can serve
+   `ui-entrance`, only 6 can serve `opening` — so the roles that are scarce
+   are where the next work is.
 4. **Run the gauntlet blind.** The bars were fetched and compared by eye, but
    the exit condition is that a critic, blind, picks ours. That has not been
    run with a fresh critic. The loop is `gauntlet-loop-main` — builder, harsh

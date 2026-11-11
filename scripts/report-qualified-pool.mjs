@@ -45,6 +45,19 @@ const reasons = [...byReason.entries()].sort((a, b) => b[1].size - a[1].size);
 const measured = entries.length;
 const remaining = blocks.length - measured;
 
+/* The roles each passing block can serve. */
+const roleCounts = [];
+try {
+  const roleFile = JSON.parse(readFileSync(join(ROOT, 'library', 'block-roles.json'), 'utf8'));
+  const byRole = new Map();
+  for (const served of Object.values(roleFile.roles ?? {})) {
+    for (const role of served) byRole.set(role, (byRole.get(role) ?? 0) + 1);
+  }
+  roleCounts.push(...[...byRole.entries()].sort((a, b) => b[1] - a[1]));
+} catch {
+  /* the role map is optional */
+}
+
 const lines = [];
 lines.push('# 23 — THE QUALIFIED POOL');
 lines.push('');
@@ -96,6 +109,27 @@ lines.push("The full list of rejected blocks, with the gate's own words, is in")
 lines.push('`library/block-verdicts.json`. Every one of them is now kept out of a');
 lines.push('plan: the matcher refuses a block the gate has rejected, and prefers a');
 lines.push('block the gate has passed over one nobody has measured.');
+lines.push('');
+lines.push('## The roles, and why a block now has one');
+lines.push('');
+lines.push('The shot vocabulary has ten roles and the block pool had never met');
+lines.push('them: the matcher scored blocks against the wording of a brief, so a');
+lines.push('brief asking for a camera move could be answered with a chart.');
+lines.push('');
+lines.push('`scripts/map-block-roles.mjs` reads the registry tags and maps every');
+lines.push('gate-passing block to the roles it can serve. The table it uses is');
+lines.push('written down in that file rather than hidden in the matcher, so it can');
+lines.push('be argued with.');
+lines.push('');
+if (roleCounts.length) {
+  lines.push('| Role | Blocks that can serve it |');
+  lines.push('|---|---|');
+  for (const [role, count] of roleCounts) lines.push(`| \`${role}\` | ${count} |`);
+  lines.push('');
+}
+lines.push('The plan writes the roles into the brief, the matcher reads them back,');
+lines.push('and each shot is filled with a block that serves its role and has');
+lines.push('passed the gate.');
 lines.push('');
 lines.push('## How the matcher uses this');
 lines.push('');

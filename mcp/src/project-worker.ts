@@ -10,6 +10,7 @@ import type { Config } from "./config.js";
 import { loadBlocks } from "./library.js";
 import { loadTokens } from "./tokens.js";
 import { loadVerdicts } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import { buildFilmProject, planFilm } from "./film.js";
 import { renderProject } from "./render.js";
 import {
@@ -46,6 +47,7 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
   const plan = planFilm(revision.brief, {
     blocks, tokens, count: edits.length || 3,
     verdicts,
+    roles: loadBlockRoles(config.blockRolesPath),
     exclude: Object.entries(verdicts).filter(([, verdict]) => !verdict.ok).map(([id]) => id),
     ...(edits.length > 0 ? { selectedIds: edits.map((shot) => shot.id) } : {}),
   });

@@ -76,6 +76,34 @@ The full list of rejected blocks, with the gate's own words, is in
 plan: the matcher refuses a block the gate has rejected, and prefers a
 block the gate has passed over one nobody has measured.
 
+## The roles, and why a block now has one
+
+The shot vocabulary has ten roles and the block pool had never met
+them: the matcher scored blocks against the wording of a brief, so a
+brief asking for a camera move could be answered with a chart.
+
+`scripts/map-block-roles.mjs` reads the registry tags and maps every
+gate-passing block to the roles it can serve. The table it uses is
+written down in that file rather than hidden in the matcher, so it can
+be argued with.
+
+| Role | Blocks that can serve it |
+|---|---|
+| `ui-entrance` | 54 |
+| `interaction` | 41 |
+| `outro` | 35 |
+| `rhythm` | 29 |
+| `camera` | 20 |
+| `typography` | 20 |
+| `effects` | 10 |
+| `transition` | 9 |
+| `opening` | 6 |
+| `data` | 5 |
+
+The plan writes the roles into the brief, the matcher reads them back,
+and each shot is filled with a block that serves its role and has
+passed the gate.
+
 ## How the matcher uses this
 
 `matchBlocks` now takes the verdicts:

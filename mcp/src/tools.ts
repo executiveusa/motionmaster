@@ -57,6 +57,7 @@ import {
   type RenderJob,
 } from "./render.js";
 import { loadVerdicts, recordVerdict } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import { gateProject } from "./render.js";
 import { isAbsolute } from "node:path";
 import {
@@ -1465,6 +1466,7 @@ server.registerTool(
         count: shots ?? 3,
         tags,
         verdicts: known,
+        roles: loadBlockRoles(config.blockRolesPath),
         exclude: Object.entries(known)
           .filter(([, verdict]) => !verdict.ok)
           .map(([id]) => id),

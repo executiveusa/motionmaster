@@ -17,6 +17,7 @@
  */
 import type { TokenShape } from "./enhancer.js";
 import type { VerdictMap } from "./verdicts.js";
+import type { BlockRoles } from "./roles.js";
 
 /**
  * The headline a card carries, and a short label for the small slots.
@@ -114,6 +115,10 @@ export function matchBlocks(
     requireVariables?: boolean;
     /** What the gate said about each block. */
     verdicts?: VerdictMap;
+    /** Which shot roles each block can serve. */
+    roles?: BlockRoles;
+    /** The role of the shot being filled. A block that serves it comes first. */
+    role?: string;
   } = {},
 ): { block: MotionBlock; score: number; matchedTags: string[] }[] {
   const words = new Set(tokenize(brief));
@@ -181,15 +186,23 @@ export function matchBlocks(
   );
 
   /*
-   * Two tiers. The blocks the gate has passed come first, whatever their
-   * wording matched; the blocks nobody has measured come after. A brief is
-   * answered from the measured pool whenever the measured pool has something
-   * that matched, and falls back to the unmeasured only when it does not.
+   * Three tiers.
+   *
+   * 1. The blocks that can serve the role of the shot being filled.
+   * 2. The blocks the gate has passed, whatever their wording matched.
+   * 3. The blocks nobody has measured.
+   *
+   * A brief is answered from the role pool whenever the role pool has
+   * something that matched, and falls back to the rest when it does not.
    */
-  const measured = ordered.filter((entry) => verdicts[entry.block.id]?.ok);
-  const unmeasured = ordered.filter((entry) => !verdicts[entry.block.id]?.ok);
+  const inRole = options.role
+    ? ordered.filter((entry) => (options.roles?.[entry.block.id] ?? []).includes(options.role!))
+    : [];
+  const rest = ordered.filter((entry) => !inRole.includes(entry));
+  const measured = rest.filter((entry) => verdicts[entry.block.id]?.ok);
+  const unmeasured = rest.filter((entry) => !verdicts[entry.block.id]?.ok);
 
-  return [...measured, ...unmeasured].slice(0, options.limit ?? 8);
+  return [...inRole, ...measured, ...unmeasured].slice(0, options.limit ?? 8);
 }
 
 /**
