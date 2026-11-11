@@ -276,7 +276,20 @@ These cost hours. Read them once.
 ## 8. Do not
 
 - **do not push without the founder.** There is a `gh` session signed in as
-  `executiveusa` in this sandbox; it is a convenience, not permission.
+  `executiveusa` in this sandbox; it is a convenience, not permission. The
+  token in `/workspace/.home/.config/gh/hosts.yml` expires and has to be
+  replaced by a device-flow login; the founder has to type the code.
+- **do not commit onto a detached HEAD.** `git checkout origin/main` to read
+  another branch's work leaves `HEAD` detached, and commits land there with
+  `main` still pointing at the old commit. The push then either does nothing
+  or is refused as a non-fast-forward, and it looks like a permissions
+  problem. After reading another branch: `git branch -f main <your commit>`,
+  then `git checkout main`.
+- **do not reuse a class name that another part of the page already owns.**
+  The console owns `.film__*` for the film it renders. A new section called
+  `film` picked up the console's `max-width: 720px` and its dark stage, and
+  the film came out as a small panel on black. The new section is
+  `showcase__*`.
 - **do not publish a URL or a TLD.** The domain word `motionmaster` is recorded
   in `licence.json`; its TLD is not chosen. The build checks for a canonical
   link and fails if one appears.
