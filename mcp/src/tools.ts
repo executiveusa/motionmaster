@@ -78,6 +78,14 @@ import {
   matchEffects,
 } from "./effects.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
+import {
+  getBrandKit,
+  listBrandKits,
+  resolveTokens,
+  saveBrandKit,
+  type BrandKit,
+  type KitProblem,
+} from "./brandkit.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -107,6 +115,15 @@ const GROUP_SCHEMA = z
   .enum(["all", "motion-master", "motion-design", "gsap", "remotion", "hyperframes"])
   .optional()
   .describe("Only return skills from this group.");
+
+/** The schema every kit-aware tool shares. */
+const BRAND_KIT_SCHEMA = z
+  .string()
+  .optional()
+  .describe(
+    "A brand kit id, for example \"house\". The kit overrides the canonical tokens for this work. " +
+      "Call list_brand_kits to see what there is.",
+  );
 
 const PLANNED_ELEMENT_SCHEMA = z.object({
   name: z.string(),
@@ -198,6 +215,28 @@ function readGsap(repoRoot: string): string {
 export function registerTools(server: McpServer, config: Config): void {
   const tokens = () => loadTokens(config.tokensPath);
 
+  /**
+   * Resolve a brand kit id into the tokens a render should actually use.
+   *
+   * A kit that does not exist, or that has problems, falls back to the
+   * canonical tokens rather than throwing: a missing brand must not be able
+   * to stop a render. The problems are reported alongside the result so the
+   * caller can see that the brand was not applied.
+   */
+  const kitProblems = (id?: string): { kit?: BrandKit; problems: KitProblem[] } => {
+    if (!id) return { problems: [] };
+    const found = getBrandKit(config.repoRoot, id, tokens());
+    return { kit: found.kit, problems: found.problems };
+  };
+
+  const tokensFor = (kitId?: string): { tokens: MotionTokens; kit?: BrandKit; problems: KitProblem[] } => {
+    const base = tokens();
+    if (!kitId) return { tokens: base, problems: [] };
+    const found = kitProblems(kitId);
+    if (!found.kit) return { tokens: base, problems: found.problems };
+    return { tokens: resolveTokens(base, found.kit), kit: found.kit, problems: found.problems };
+  };
+
   server.registerTool(
     "list_skills",
     {
@@ -243,10 +282,12 @@ export function registerTools(server: McpServer, config: Config): void {
         "These are the values every generated composition must use.",
       inputSchema: {
         group: TOKEN_GROUP_SCHEMA,
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ group }) => {
-      const all = tokens();
+    async ({ group, brand_kit }) => {
+      const resolved = tokensFor(brand_kit);
+      const all = resolved.tokens;
       const groups = group && group !== "all" ? [group] : Object.keys(all);
       const selected: Record<string, unknown> = {};
       for (const key of groups) {
@@ -255,6 +296,8 @@ export function registerTools(server: McpServer, config: Config): void {
       return ok({
         source: tokenSource(config.tokensPath),
         canonicalPath: config.tokensPath,
+        kit: resolved.kit ? { id: resolved.kit.id, name: resolved.kit.name } : undefined,
+        kitProblems: resolved.problems,
         version: all.version,
         name: all.name,
         doctrine: {
@@ -264,6 +307,111 @@ export function registerTools(server: McpServer, config: Config): void {
           staggerBudgetMs: all.stagger.budgetMs,
         },
         tokens: selected,
+      });
+    },
+  );
+
+  /* ---- brand kits ------------------------------------------------------ */
+
+  server.registerTool(
+    "list_brand_kits",
+    {
+      title: "List brand kits",
+      description:
+        "List the brand kits: the named, per-project overrides of the Motion Master tokens. A kit changes the " +
+        "palette, the type, the easing or the timing for one brand without touching the canonical token file. " +
+        "Call this before a render when the work is for a particular brand.",
+      inputSchema: {},
+    },
+    async () => {
+      const kits = listBrandKits(config.repoRoot);
+      return ok({
+        path: config.brandKitsPath,
+        count: kits.length,
+        note:
+          "A kit overrides the canonical tokens. It may not remove a token and it may not change the system " +
+          "identity. The house kit is the default for every render.",
+        kits,
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_brand_kit",
+    {
+      title: "Get a brand kit",
+      description:
+        "Return one brand kit with the tokens it overrides and the resolved result, so a caller can see what " +
+        "the render will actually use.",
+      inputSchema: {
+        id: z.string().describe("The kit id, for example \"house\"."),
+      },
+    },
+    async ({ id }) => {
+      const base = tokens();
+      const { kit, problems } = getBrandKit(config.repoRoot, id, base);
+      if (!kit) {
+        return fail(`There is no usable kit called "${id}".`, {
+          problems,
+          available: listBrandKits(config.repoRoot).map((k) => k.id),
+        });
+      }
+      const resolved = resolveTokens(base, kit);
+      return ok({
+        id: kit.id,
+        name: kit.name,
+        notes: kit.notes,
+        path: join(config.brandKitsPath, `${kit.id}.json`),
+        problems,
+        overrides: kit,
+        resolved: {
+          palette: resolved.palette,
+          typography: resolved.typography,
+          easing: resolved.easing,
+          duration: resolved.duration,
+          styleDurations: resolved.styleDurations,
+          motion: resolved.motion,
+        },
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_brand_kit",
+    {
+      title: "Save a brand kit",
+      description:
+        "Write a brand kit from a brand brief. The kit is validated first: it may only override token sections " +
+        "and tokens that exist, palette values must be hex, and the system identity may not be changed. A kit " +
+        "with problems is not written.",
+      inputSchema: {
+        id: z.string().describe("Lowercase id, letters digits and dashes."),
+        name: z.string().describe("The name people will read."),
+        notes: z.string().optional().describe("What this kit is for."),
+        palette: z.record(z.string()).optional().describe("Token name to hex colour."),
+        typography: z.record(z.any()).optional().describe("Typography overrides, by token."),
+        easing: z.record(z.any()).optional(),
+        duration: z.record(z.any()).optional(),
+        durationRanges: z.record(z.any()).optional(),
+        styleDurations: z.record(z.any()).optional(),
+        spring: z.record(z.any()).optional(),
+        stagger: z.record(z.any()).optional(),
+        motion: z.record(z.any()).optional(),
+      },
+    },
+    async (args) => {
+      const base = tokens();
+      const result = saveBrandKit(config.repoRoot, args, base);
+      if (!result.saved) {
+        return fail("The kit was not written because it has problems.", {
+          problems: result.problems,
+        });
+      }
+      return ok({
+        saved: true,
+        id: args.id,
+        path: result.path,
+        note: "The kit overrides the canonical tokens. Pass its id to the render tools to use it.",
       });
     },
   );
@@ -575,12 +723,14 @@ export function registerTools(server: McpServer, config: Config): void {
         height: z.number().int().positive().optional(),
         duration_seconds: z.number().positive().optional(),
         style: z.enum(["premium", "calm", "energetic", "snappy"]).optional(),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
     async (args) => {
       if (!args.brief && !args.storyboard) {
         return fail("Give the tool either a brief or a storyboard to build from.");
       }
+      const resolvedKit = tokensFor(args.brand_kit);
 
       let storyboard: Storyboard;
       if (args.storyboard) {
@@ -607,7 +757,7 @@ export function registerTools(server: McpServer, config: Config): void {
         );
       }
 
-      const composition = buildComposition(storyboard, tokens(), {
+      const composition = buildComposition(storyboard, resolvedKit.tokens, {
         id: args.id,
         filename: args.filename,
       });
@@ -616,6 +766,8 @@ export function registerTools(server: McpServer, config: Config): void {
         ...composition,
         storyboard,
         tokensSource: tokenSource(config.tokensPath),
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
       });
     },
   );
@@ -830,13 +982,14 @@ export function registerTools(server: McpServer, config: Config): void {
           })
           .describe("A storyboard. Get one from plan_video first."),
         project_name: z.string().optional().describe("Directory name for the project (default 'composition')."),
+        brand_kit: BRAND_KIT_SCHEMA,
         include_gsap: z
           .boolean()
           .optional()
           .describe("Include the GSAP source so the project is self-contained (default true)."),
       },
     },
-    async ({ storyboard, project_name, include_gsap }) => {
+    async ({ storyboard, project_name, include_gsap, brand_kit }) => {
       let board: Storyboard;
       try {
         board = normalizeStoryboard(storyboard as Partial<Storyboard>);
@@ -845,7 +998,8 @@ export function registerTools(server: McpServer, config: Config): void {
           hint: "Call plan_video first and pass the storyboard it returns.",
         });
       }
-      const tokenFile = tokens();
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens;
       let gsapSource = "";
       if (include_gsap !== false) {
         gsapSource = readGsap(config.repoRoot);
@@ -856,6 +1010,8 @@ export function registerTools(server: McpServer, config: Config): void {
       });
       return ok({
         generator: "hyperframes 0.8.186 (Apache-2.0)",
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         storyboard: board,
         composition: result.composition,
         files: result.files.map((f) => ({
@@ -1146,9 +1302,10 @@ export function registerTools(server: McpServer, config: Config): void {
           .string()
           .optional()
           .describe("If given, the block is also filled from this brief and the filled values are returned."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ block, brief }) => {
+    async ({ block, brief, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
       const found = file.blocks.find((b) => b.id === block);
       if (!found) {
@@ -1184,7 +1341,8 @@ export function registerTools(server: McpServer, config: Config): void {
         },
       };
       if (brief) {
-        const tokenFile = tokens() as unknown as TokenShape;
+        const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
         payload.filled = fillBlock(found, {
           brief,
           tokens: tokenFile,
@@ -1259,11 +1417,13 @@ server.registerTool(
           .optional()
           .describe("Explicit values by variable id. These always win."),
         headline: z.string().optional().describe("Override the headline."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ brief, block, tag, values, headline }) => {
+    async ({ brief, block, tag, values, headline, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
 
       let chosen: MotionBlock | undefined;
       let matched: { block: MotionBlock; score: number; matchedTags: string[] }[] = [];
@@ -1453,11 +1613,13 @@ server.registerTool(
           .boolean()
           .optional()
           .describe("Wait for the render and return the finished file. For a terminal, not a chat."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput }) => {
+    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
 
       const known = loadVerdicts(config.repoRoot);
       const plan = planFilm(brief, {
@@ -1563,6 +1725,8 @@ server.registerTool(
           title: title ?? plan.headline,
           brief,
           directory,
+          brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+          kitProblems: resolvedKit.problems,
           headline: plan.headline,
           durationSeconds: built.plan.total,
           shotList: built.plan.shots.map((s) => ({
@@ -1701,6 +1865,8 @@ server.registerTool(
         brief,
         headline: plan.headline,
         directory,
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         status: "rendering",
         kit: kit.map((take) => ({
           id: take.id,
@@ -1812,11 +1978,13 @@ server.registerTool(
         count: z.number().int().positive().max(8).optional().describe("How many blocks (default 3)."),
         tags: z.array(z.string()).optional().describe("Require these tags."),
         values: z.record(z.any()).optional().describe("Explicit values by variable id."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ brief, count, tags, values }) => {
+    async ({ brief, count, tags, values, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
       const want = count ?? 3;
 
       const matched = matchBlocks(file, brief, {
@@ -1870,6 +2038,8 @@ server.registerTool(
         source: config.blocksPath,
         brief,
         headline,
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         shotCount: shots.length,
         estimatedDurationSeconds: total,
         shots,
@@ -1905,6 +2075,7 @@ server.registerTool(
           .optional()
           .describe("Extra constraint lines to append verbatim."),
         alternatives: z.number().int().positive().max(6).optional().describe("Alternative styles to offer."),
+        brand_kit: BRAND_KIT_SCHEMA,
         plan_shots: z
           .boolean()
           .optional()
@@ -1914,7 +2085,8 @@ server.registerTool(
     },
     async (args) => {
       const catalogue = loadCatalogue(config.libraryPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(args.brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
 
       // A brief that already has a shape should not be given a second one.
       let shotPlan: ReturnType<typeof planShots>["shots"] | undefined;
@@ -1956,6 +2128,8 @@ server.registerTool(
       return ok({
         source: config.libraryPath,
         tokens: config.tokensPath,
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         ...(shotSource ? { shotPlan: shotSource } : {}),
         ...result,
       });

@@ -88,6 +88,7 @@ test("the server advertises every tool", async () => {
     "enhance_prompt",
     "fill_block",
     "film_status",
+    "get_brand_kit",
     "get_clip_prompt",
     "get_library_item",
     "get_motion_block",
@@ -95,6 +96,7 @@ test("the server advertises every tool", async () => {
     "get_motion_tokens",
     "get_sfx",
     "get_shot",
+    "list_brand_kits",
     "list_clips",
     "list_films",
     "list_library_categories",
@@ -109,6 +111,7 @@ test("the server advertises every tool", async () => {
     "plan_sound",
     "plan_video",
     "render_film",
+    "save_brand_kit",
     "search_sfx",
   ]);
   for (const tool of tools) {

@@ -96,6 +96,9 @@ const main = async () => {
       console.log(`- ${tool.name}: ${tool.description.slice(0, 90)}…`);
     }
     const REQUIRED_TOOLS = [
+      "list_brand_kits",
+      "get_brand_kit",
+      "save_brand_kit",
       "list_skills", "get_motion_tokens", "list_clips", "get_clip_prompt",
       "plan_video", "build_composition", "build_hyperframes_composition",
       "mix_footage",

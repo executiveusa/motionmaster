@@ -29,6 +29,9 @@ const SERVER_VERSION = "1.0.0";
 const TOOL_NAMES = [
   "list_skills",
   "get_motion_tokens",
+  "list_brand_kits",
+  "get_brand_kit",
+  "save_brand_kit",
   "list_clips",
   "get_clip_prompt",
   "plan_video",

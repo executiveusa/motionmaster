@@ -1,0 +1,22 @@
+{
+  "id": "house",
+  "name": "Motion Master house",
+  "notes": "The studio's own identity. It overrides almost nothing on purpose: the canonical tokens already are the house look, so this kit names it and states the two decisions that matter — the accent, and the fact that the house motion is settled rather than bouncy. A new brand kit starts from this one and changes what it needs to.",
+  "palette": {
+    "accent": "#FF4A1C"
+  },
+  "typography": {
+    "display": {
+      "family": "sans",
+      "weight": 700,
+      "tracking": "-0.03em"
+    }
+  },
+  "motion": {
+    "overshoot": {
+      "premium": "0%",
+      "feedback": "0%",
+      "celebration": "0%"
+    }
+  }
+}

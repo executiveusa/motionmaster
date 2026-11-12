@@ -84,6 +84,7 @@ import {
 import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
 import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } from "./shots.js";
 import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
+import { getBrandKit, listBrandKits, resolveTokens, saveBrandKit } from "./brandkit.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -192,6 +193,21 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       },
       [`${API_PREFIX}/tokens`]: {
         get: { summary: "The motion tokens.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/kits`]: {
+        get: { summary: "The brand kits: per-project overrides of the tokens.", responses: { 200: { description: "ok", content: json(obj) } } },
+        post: {
+          summary: "Write a brand kit. It is validated first and a kit with problems is not written.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 201: { description: "written", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/kits/{id}`]: {
+        get: {
+          summary: "One brand kit, with the tokens it overrides and the resolved result.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
       },
       [`${API_PREFIX}/clips`]: {
         get: { summary: "The gallery clips and the exact prompt behind each.", responses: { 200: { description: "ok", content: json(obj) } } },
@@ -488,6 +504,9 @@ export async function handleApi(
       endpoints: [
         "GET  /skills",
         "GET  /tokens",
+        "GET  /kits",
+        "GET  /kits/{id}",
+        "POST /kits",
         "GET  /clips",
         "GET  /licence",
         "GET  /board-sync/readiness",
@@ -550,6 +569,51 @@ export async function handleApi(
 
   if (route === "/tokens" && method === "GET") {
     writeJson(res, 200, { source: tokenSource(config.tokensPath), tokens: loadTokens(config.tokensPath) });
+    return true;
+  }
+
+  /* ── brand kits ────────────────────────────────────────────────────────── */
+  if (route === "/kits" && method === "GET") {
+    const kits = listBrandKits(config.repoRoot);
+    writeJson(res, 200, {
+      path: config.brandKitsPath,
+      total: kits.length,
+      note:
+        "A kit overrides the canonical tokens for one brand. It may not remove a token and it may not " +
+        "change the system identity.",
+      kits,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/kits/") && method === "GET") {
+    const id = decodeURIComponent(route.slice("/kits/".length));
+    const base = loadTokens(config.tokensPath);
+    const { kit, problems } = getBrandKit(config.repoRoot, id, base);
+    if (!kit) {
+      writeJson(res, 404, { error: `There is no usable kit called "${id}".`, problems });
+      return true;
+    }
+    writeJson(res, 200, {
+      id: kit.id,
+      name: kit.name,
+      notes: kit.notes,
+      problems,
+      overrides: kit,
+      resolved: resolveTokens(base, kit),
+    });
+    return true;
+  }
+
+  if (route === "/kits" && method === "POST") {
+    const body = (await readJson(req)) as Record<string, unknown>;
+    const base = loadTokens(config.tokensPath);
+    const result = saveBrandKit(config.repoRoot, body, base);
+    if (!result.saved) {
+      writeJson(res, 400, { error: "The kit was not written because it has problems.", problems: result.problems });
+      return true;
+    }
+    writeJson(res, 201, { saved: true, id: body.id, path: result.path });
     return true;
   }
 

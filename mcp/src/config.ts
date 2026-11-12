@@ -77,6 +77,8 @@ export interface Config {
   blockRolesPath: string;
   /** The sound library: one index of every sound in the house. */
   sfxPath: string;
+  /** The brand kits: per-project overrides of the canonical tokens. */
+  brandKitsPath: string;
   montage: MontageConfig;
 }
 
@@ -114,6 +116,8 @@ export function loadConfig(): Config {
       env("MOTION_MASTER_BLOCK_ROLES_PATH") ?? join(repoRoot, "library", "block-roles.json"),
     sfxPath:
       env("MOTION_MASTER_SFX_PATH") ?? join(repoRoot, "library", "sfx.json"),
+    brandKitsPath:
+      env("MOTION_MASTER_BRAND_KITS_PATH") ?? join(repoRoot, "studio", "kits"),
     montage: {
       baseUrl: montageBase,
       token: env("MOTION_MASTER_MONTAGE_TOKEN"),
