@@ -11,7 +11,7 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
@@ -99,10 +99,18 @@ try {
   const reason = String(refused.content?.[0]?.text ?? "");
   check("the refusal carries the gate's reason", reason.includes("gate"), reason.slice(0, 90));
 
-  /* 4 — the tool list still matches the banner. */
+  /* 4 — the tool list still matches the banner.
+     The count comes from the banner in the source, not from a number typed
+     in here: a hard-coded count is a drift trap, and this one has already
+     been wrong twice. */
   const listed = await client.listTools();
   const names = listed.tools.map((t) => t.name);
-  check("the server exposes every tool", names.length === 35, `${names.length} tools`);
+  const source = readFileSync(join(repoRoot, "mcp", "src", "index.ts"), "utf8");
+  const banner = (source.match(/const TOOL_NAMES = \[([\s\S]*?)\]/) ?? ["", ""])[1].match(/"[a-z_]+"/g)?.length ?? 0;
+  check("the server exposes every tool", names.length === banner, `${names.length} tools, the banner names ${banner}`);
+  const bannerNames = [...(source.match(/const TOOL_NAMES = \[([\s\S]*?)\]/) ?? ["", ""])[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+  const missing = bannerNames.filter((n) => !names.includes(n));
+  check("the banner names no tool that does not exist", missing.length === 0, missing.join(", "));
 } finally {
   if (connected) await client.close().catch(() => {});
   child.kill("SIGTERM");

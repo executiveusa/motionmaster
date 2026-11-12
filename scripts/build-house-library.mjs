@@ -126,9 +126,7 @@ for (const template of templates) {
   }
 }
 
-writeFileSync(
-  outPath,
-  `${JSON.stringify(
+const document = `${JSON.stringify(
     {
       generated: "scripts/build-house-library.mjs",
       note:
@@ -143,9 +141,26 @@ writeFileSync(
     },
     null,
     2,
-  )}\n`,
-  "utf8",
-);
+  )}\n`;
+
+if (process.argv.includes("--check")) {
+  let current = "";
+  try {
+    current = readFileSync(outPath, "utf8");
+  } catch {
+    console.error(`stale: ${outPath} does not exist. Run: node scripts/build-house-library.mjs`);
+    process.exit(1);
+  }
+  if (current !== document) {
+    console.error(`stale: ${outPath} is out of date with the gate verdicts and the role map.`);
+    console.error("Run: node scripts/build-house-library.mjs");
+    process.exit(1);
+  }
+  console.log(`the house library is in sync: ${templates.length} scenes`);
+  process.exit(0);
+}
+
+writeFileSync(outPath, document, "utf8");
 
 console.log(`${templates.length} house scenes`);
 for (const [role, count] of Object.entries(byRole).sort((a, b) => b[1] - a[1])) {

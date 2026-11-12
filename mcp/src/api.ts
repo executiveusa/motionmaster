@@ -86,6 +86,7 @@ import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } 
 import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
 import { getBrandKit, listBrandKits, resolveTokens, saveBrandKit } from "./brandkit.js";
 import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
+import { queueState, reconcileJobs } from "./queue.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -209,6 +210,9 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           parameters: [{ name: "id", in: "path", required: true, schema: str }],
           responses: { 200: { description: "ok", content: json(obj) } },
         },
+      },
+      [`${API_PREFIX}/queue`]: {
+        get: { summary: "What the render queue is doing.", responses: { 200: { description: "ok", content: json(obj) } } },
       },
       [`${API_PREFIX}/scenes`]: {
         get: { summary: "The house scenes: the reusable shots the studio renders from.", responses: { 200: { description: "ok", content: json(obj) } } },
@@ -525,6 +529,7 @@ export async function handleApi(
         "GET  /kits",
         "GET  /kits/{id}",
         "POST /kits",
+        "GET  /queue",
         "GET  /scenes",
         "GET  /scenes/{id}",
         "POST /scenes/plan",
@@ -635,6 +640,22 @@ export async function handleApi(
       return true;
     }
     writeJson(res, 201, { saved: true, id: body.id, path: result.path });
+    return true;
+  }
+
+  /* ── the render queue ─────────────────────────────────────────────────── */
+  if (route === "/queue" && method === "GET") {
+    const interrupted = reconcileJobs(config.repoRoot);
+    writeJson(res, 200, {
+      ...queueState(config.repoRoot, {
+        concurrency: Math.max(1, config.renderConcurrency),
+        target: config.renderTarget,
+        remoteUrl: config.renderRemoteUrl,
+      }),
+      remoteConfigured: Boolean(config.renderRemoteUrl),
+      remoteUrl: config.renderRemoteUrl ?? null,
+      interrupted,
+    });
     return true;
   }
 

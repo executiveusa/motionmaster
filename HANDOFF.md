@@ -97,7 +97,7 @@ disk and appeared nowhere.
 
 ### The agent surfaces
 
-- **MCP**: 35 tools — the shot vocabulary (`list_shots`, `get_shot`,
+- **MCP**: 42 tools — the shot vocabulary (`list_shots`, `get_shot`,
   `plan_shots`), the effect shelf (`list_motion_effects`,
   `get_motion_effect`), the block inspector and the gate
   (`get_motion_block`, `check_hyperframes`), and the board sync.

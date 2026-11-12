@@ -99,6 +99,7 @@ const main = async () => {
       "list_brand_kits",
       "get_brand_kit",
       "save_brand_kit",
+      "queue_status",
       "list_house_templates",
       "get_house_template",
       "plan_house_template",

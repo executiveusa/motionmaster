@@ -55,6 +55,13 @@ export interface FilmRecord {
   gate?: GateResult;
   /** The last render's log tail. */
   log?: string;
+  /** When the render ran on another instance. */
+  remote?: {
+    url: string;
+    id: string;
+    statusUrl: string;
+    videoUrl: string;
+  };
 }
 
 /** The directory every rendered film lives in. */
@@ -448,6 +455,13 @@ export interface RenderJob {
   /** The shots that made it into the film. */
   shots?: { id: string; title: string; duration: number }[];
   seconds?: number;
+  /** When the render ran on another instance. */
+  remote?: {
+    url: string;
+    id: string;
+    statusUrl: string;
+    videoUrl: string;
+  };
 }
 
 /** Where a film's job state lives. */

@@ -87,6 +87,16 @@ import {
   type KitProblem,
 } from "./brandkit.js";
 import {
+  acquireSlot,
+  cachedFilm,
+  queueDirectoryName,
+  queueKey,
+  queueState,
+  reconcileJobs,
+  releaseSlot,
+  renderRemotely,
+} from "./queue.js";
+import {
   getHouseTemplate,
   houseLibraryPath,
   houseLibraryProblems,
@@ -420,6 +430,35 @@ export function registerTools(server: McpServer, config: Config): void {
         id: args.id,
         path: result.path,
         note: "The kit overrides the canonical tokens. Pass its id to the render tools to use it.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "queue_status",
+    {
+      title: "Render queue status",
+      description:
+        "What the render queue is doing: how many renders are running, how many are waiting, how many films " +
+        "are on disk and how many of those are finished. A render that was interrupted is reported as failed, " +
+        "so it can be asked for again.",
+      inputSchema: {},
+    },
+    async () => {
+      const interrupted = reconcileJobs(config.repoRoot);
+      const state = queueState(config.repoRoot, {
+        concurrency: Math.max(1, config.renderConcurrency),
+        target: config.renderTarget,
+        remoteUrl: config.renderRemoteUrl,
+      });
+      return ok({
+        ...state,
+        remoteConfigured: Boolean(config.renderRemoteUrl),
+        remoteUrl: config.renderRemoteUrl ?? null,
+        interrupted,
+        note:
+          "One render at a time by default: a render wants the whole machine. The same request renders once — " +
+          "the key is a hash of the brief, the brand kit and the render options.",
       });
     },
   );
@@ -1735,9 +1774,16 @@ server.registerTool(
           .optional()
           .describe("Wait for the render and return the finished file. For a terminal, not a chat."),
         brand_kit: BRAND_KIT_SCHEMA,
+        target: z
+          .enum(["local", "remote"])
+          .optional()
+          .describe(
+            "Where the render runs: here, or on another Motion Master instance. Remote needs " +
+              "MOTION_MASTER_RENDER_REMOTE_URL on the server.",
+          ),
       },
     },
-    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput, brand_kit }) => {
+    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput, brand_kit, target }) => {
       const file = loadBlocks(config.blocksPath);
       const resolvedKit = tokensFor(brand_kit);
       const tokenFile = resolvedKit.tokens as unknown as TokenShape;
@@ -1761,8 +1807,34 @@ server.registerTool(
         });
       }
 
-      const id = filmSlug(title ?? plan.headline);
+      /* The job is keyed by a hash of the request. The same request lands in
+         the same directory, so asking for the same film twice returns the
+         film that already exists instead of rendering it again. */
+      const requestKey = queueKey({
+        brief,
+        brandKit: brand_kit,
+        title: title ?? plan.headline,
+        tags,
+        count: shots ?? 3,
+        fps: fps ?? 30,
+      });
+      const id = queueDirectoryName(filmSlug(title ?? plan.headline), requestKey);
       const directory = join(filmsDir(config.repoRoot), id);
+
+      const already = cachedFilm(config.repoRoot, id);
+      if (already && !build_only) {
+        return ok({
+          id,
+          title: title ?? plan.headline,
+          brief,
+          directory,
+          status: "ready",
+          cached: true,
+          requestKey,
+          video: { name: "film.mp4", bytes: already.bytes },
+          note: "This exact request has already been rendered. The file is the one below.",
+        });
+      }
 
       let kit: KitTake[] = [];
 
@@ -1882,6 +1954,51 @@ server.registerTool(
 
       const run = async (): Promise<void> => {
         let plan = built.plan;
+
+        /* The remote target. The heavy work goes to another instance, which
+           runs its own queue and its own gate. The file lands there. */
+        const where = target ?? config.renderTarget;
+        if (where === "remote") {
+          const remoteUrl = config.renderRemoteUrl;
+          if (!remoteUrl) {
+            job.status = "failed";
+            job.finishedAt = new Date().toISOString();
+            job.error =
+              "A remote render needs MOTION_MASTER_RENDER_REMOTE_URL set on the server. There is no remote instance configured.";
+            writeJob(config.repoRoot, job);
+            return;
+          }
+          const remote = await renderRemotely({
+            remoteUrl,
+            request: { brief, shots: shots ?? 3, tags, title: title ?? plan.headline, sound: sound !== false },
+          });
+          if (!remote.ok) {
+            job.status = "failed";
+            job.finishedAt = new Date().toISOString();
+            job.error = remote.error;
+            writeJob(config.repoRoot, job);
+            return;
+          }
+          job.remote = {
+            url: remoteUrl,
+            id: remote.id,
+            statusUrl: remote.statusUrl,
+            videoUrl: remote.videoUrl,
+          };
+          job.status = "ready";
+          job.finishedAt = new Date().toISOString();
+          job.shots = plan.shots.map((s) => ({ id: s.id, title: s.title, duration: s.duration }));
+          writeJob(config.repoRoot, job);
+          writeFilmMeta(directory, {
+            id,
+            title: title ?? plan.headline,
+            brief,
+            createdAt: new Date().toISOString(),
+            remote: job.remote,
+          });
+          return;
+        }
+
         let result = await renderProject(config.repoRoot, directory, { fps: fps ?? 30 });
         const dropped: { id: string; reasons: string[] }[] = [];
 
@@ -1945,7 +2062,23 @@ server.registerTool(
         writeJob(config.repoRoot, job);
       };
 
-      const running = run().catch((error: unknown) => {
+      /*
+       * The queue.
+       *
+       * A render takes minutes and it wants the whole machine: a browser, a
+       * Node render server and ffmpeg. Agents fire renders at once, so the
+       * renders take a slot from the queue and wait their turn. One at a
+       * time by default, because the default machine has two cores.
+       */
+      const limit = Math.max(1, config.renderConcurrency);
+      const running = (async () => {
+        await acquireSlot(limit);
+        try {
+          await run();
+        } finally {
+          releaseSlot();
+        }
+      })().catch((error: unknown) => {
         job.status = "failed";
         job.finishedAt = new Date().toISOString();
         job.error = error instanceof Error ? error.message : String(error);
@@ -1989,6 +2122,13 @@ server.registerTool(
         brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
         kitProblems: resolvedKit.problems,
         status: "rendering",
+        requestKey,
+        target: target ?? config.renderTarget,
+        queue: queueState(config.repoRoot, {
+          concurrency: Math.max(1, config.renderConcurrency),
+          target: config.renderTarget,
+          remoteUrl: config.renderRemoteUrl,
+        }),
         kit: kit.map((take) => ({
           id: take.id,
           title: take.title,

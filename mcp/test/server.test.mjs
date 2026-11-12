@@ -113,6 +113,7 @@ test("the server advertises every tool", async () => {
     "plan_shots",
     "plan_sound",
     "plan_video",
+    "queue_status",
     "render_film",
     "save_brand_kit",
     "search_sfx",

@@ -22,6 +22,7 @@ import { filmsDir, listFilms, readJob } from "./render.js";
 import { authorised, handleApi } from "./api.js";
 import { recoverInterruptedProjectJobs } from "./projects.js";
 import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
+import { queueState, reconcileJobs } from "./queue.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
@@ -32,6 +33,7 @@ const TOOL_NAMES = [
   "list_brand_kits",
   "get_brand_kit",
   "save_brand_kit",
+  "queue_status",
   "list_house_templates",
   "get_house_template",
   "plan_house_template",
@@ -688,6 +690,15 @@ export async function startChatServer(config: Config): Promise<{
 
 export async function main(): Promise<void> {
   const config = loadConfig();
+
+  /* A render that was interrupted is not rendering. Say so, so the queue
+     knows what was running and the film can be asked for again. */
+  const interrupted = reconcileJobs(config.repoRoot);
+  if (interrupted.length) {
+    process.stdout.write(
+      `  reconciled   : ${interrupted.length} interrupted render(s) marked as failed\n`,
+    );
+  }
   const { server: httpServer } = await startChatServer(config);
 
   const skills = listSkills(config.skillsDir);
@@ -703,7 +714,12 @@ export async function main(): Promise<void> {
         config.montage.baseUrl.length > 0 ? config.montage.baseUrl : "not configured"
       }`,
       `  licence      : ${LICENCE.summary}`,
-      `  rendering    : local (Remotion) on your own machine; Studio can also render on ours — never billed automatically`,
+      `  rendering    : ${
+        LICENCE.status?.onSale && LICENCE.rendering?.hosted?.available
+          ? "local on your own machine, or hosted on ours; nothing is ever charged automatically"
+          : "local on your own machine. There is no hosted rendering."
+      }`,
+      `  queue        : ${Math.max(1, config.renderConcurrency)} render(s) at a time`,
       "",
     ].join("\n"),
   );

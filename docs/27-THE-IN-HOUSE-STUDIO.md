@@ -23,7 +23,7 @@ already here:
 
 | already built | where |
 |---|---|
-| 35 MCP tools, 47 skills | `mcp/src/`, `plugins/motion-master/skills/` |
+| 42 MCP tools, 47 skills | `mcp/src/`, `plugins/motion-master/skills/` |
 | A deterministic planner, shot planner and prompt enhancer | `mcp/src/planner.ts`, `shots.ts`, `enhancer.ts` |
 | 448 registry blocks, each mounted and gated; 75 pass | `library/blocks.json`, `library/block-verdicts.json` |
 | 3,988 library items, 1,470 sounds | `library/catalogue.json`, `library/sfx.json` |
@@ -150,28 +150,36 @@ The house library is a curated set of **compositions**, each one:
 - shipped with the prompt that produces it, so an agent can write the brief
   and get the scene
 
-Shape — `studio/templates/<id>.json`:
+Shape — `studio/templates.json`, one generated file, 75 scenes:
 
 ```json
 {
-  "id": "title-card-ink",
-  "name": "Ink title card",
-  "role": "opening",
-  "block": "<a gate-passing block id>",
+  "id": "lt-color-block",
+  "name": "Lower Third — Colour Block",
+  "role": "ui-entrance",
+  "roles": ["ui-entrance", "typography"],
+  "block": "lt-color-block",
   "kit": "house",
-  "durationSeconds": 6,
+  "durationSeconds": 4,
+  "format": { "width": 1920, "height": 1080, "aspect": "16:9" },
   "prompt": "The brief that produces this scene.",
-  "why": "What this scene is for."
+  "why": "What this scene is for.",
+  "variables": [],
+  "contentVariables": ["name", "role"]
 }
 ```
 
 Built by `scripts/build-house-library.mjs` from the role map
 (`library/block-roles.json`) restricted to blocks with a recorded passing
-verdict — so a template can never be built on a block that does not pass.
+verdict — so a scene can never be built on a block that does not pass. The
+file is generated rather than hand-written because every field in it comes
+from the registry, the verdicts or the role map; a hand edit would be a
+claim with nothing behind it. `node scripts/build-house-library.mjs --check`
+fails when it drifts, and it is a completion gate.
 
 New MCP tools: `list_house_templates`, `get_house_template`,
 `plan_house_template` (the brief plus the tokens plus the block, ready to
-render).
+render). The HTTP API mirrors them at `/api/v1/scenes`.
 
 ## Layer 3 — the render queue
 
@@ -189,6 +197,22 @@ box. The queue is:
 New module `mcp/src/queue.ts`; the queue sits in front of `renderProject()`,
 which is already where the gate lives. A job that fails the gate is a failed
 job — it is never published as a finished film.
+
+What it does, concretely:
+
+- The job's directory name carries the request's content hash, so the same
+  request lands in the same place and the second request finds the first
+  one's file instead of rendering it again.
+- A semaphore hands slots over rather than releasing and re-taking them, so a
+  caller that arrives in the gap cannot jump the queue.
+- A job left marked "rendering" by a process that died is reconciled to
+  "failed, interrupted" at startup — otherwise it looks busy forever.
+- `target: "remote"` posts the request to another instance's
+  `/api/v1/films` and polls it. The remote instance runs its own queue and
+  its own gate; the file lands there.
+
+`queue_status` is the tool that reports all of it, and `GET /api/v1/queue`
+is the same thing over HTTP.
 
 ## What is deliberately not built
 
@@ -213,6 +237,15 @@ job — it is never published as a finished film.
 4. **Layer 3.** The queue. It is last because a queue that renders faster but
    renders badly is worse than no queue, and because the gate must be in
    front of it.
+
+## What was built, in order
+
+| layer | status |
+|---|---|
+| 0 — the contract | **done.** `scripts/sync-plugin-contract.mjs` owns nine files; `scripts/check-plugin-contract.mjs` is a gate and scans 1,157 agent-readable files |
+| 1 — brand kits | **done.** `mcp/src/brandkit.ts`, `studio/kits/house.json`, three MCP tools, three HTTP routes, `brand_kit` on eight tools |
+| 2 — the house library | **done.** 75 scenes in `studio/templates.json`, three MCP tools, three HTTP routes |
+| 3 — the render queue | **done.** `mcp/src/queue.ts`, `queue_status`, `GET /api/v1/queue`, a remote target |
 
 ## How each layer is proved
 
