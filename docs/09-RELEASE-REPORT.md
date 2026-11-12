@@ -16,6 +16,15 @@ the final home. The history on disk is 335 commits and 3,691 files.
 >
 > **The hero film is now 55.4 seconds** and has a score. See
 > [`docs/25-THE-HERO-FILM.md`](25-THE-HERO-FILM.md).
+>
+> **Updated 2026-11-12 — the in-house studio.** The founder's three
+> decisions set the shape: house library first, renders local or remote, and
+> the taste gate hard on every render. Four layers were built — a generated
+> contract, brand kits, a 75-scene house library and a render queue. The
+> plugin had been advertising a paid product with a hosted render allowance
+> while `licence.json` said it was not on sale; that is fixed at the source
+> and a gate now keeps it fixed. See
+> [`docs/27-THE-IN-HOUSE-STUDIO.md`](27-THE-IN-HOUSE-STUDIO.md).
 
 > **Updated 2026-10-24 — it is live.** The repository was pushed to
 > `executiveusa/motionmaster` on 2026-10-24, replacing the single README commit that
