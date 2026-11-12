@@ -16,6 +16,7 @@ const outputDir = resolve(root, ".completion-proof");
 mkdirSync(outputDir, { recursive: true });
 const checks = [
   { name: "private-offer", cwd: ".", command: process.execPath, args: ["-e", "const f=require('./licence.json');if(f.status.onSale!==false)process.exit(1)"], timeoutMs: 15_000 },
+  { name: "plugin-contract", cwd: ".", command: process.execPath, args: ["scripts/check-plugin-contract.mjs"], timeoutMs: 60_000 },
   { name: "mcp-typecheck", cwd: "mcp", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "mcp-tests", cwd: "mcp", command: "npm", args: ["test"], timeoutMs: 600_000 },
   { name: "mcp-tool-policy", cwd: "mcp", command: "node", args: ["scripts/verify-tools.mjs"], timeoutMs: 240_000 },

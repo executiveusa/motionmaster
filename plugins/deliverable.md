@@ -8,6 +8,13 @@ Everything in this document was produced by running the commands shown, in this
 repository, in this sandbox. Anything that could not be verified is marked
 **UNVERIFIED**.
 
+> **Status — 2026-11-12.** This document is the historical record of the plugin
+> deliverable as it was verified at the time of writing. Motion Master is **not on
+> sale** now: it is the founder's own motion-design studio, used in-house. The offer
+> text below describes the state at the time of delivery and is not the current
+> offer. The current status lives in `licence.json`, and every agent-readable file
+> is generated from it by `scripts/sync-plugin-contract.mjs`.
+
 ---
 
 ## 1. What is in this deliverable

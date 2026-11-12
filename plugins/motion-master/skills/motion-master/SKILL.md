@@ -20,9 +20,10 @@ metadata:
 **Describe the video. Get the file.**
 
 Motion Master is **not on sale**. It is the founder's own motion-design agent,
-used in-house. The paid terms it would ship under are recorded in `licence.json` —
-$99 Solo, $399 Studio, one payment, no subscription — so that a launch is a single
-change rather than a rebuild, but nothing may be published as purchasable.
+used in-house. The terms it would ship under are recorded in `licence.json` at the
+repo root — read that file if you need them — so that a launch is a single change
+rather than a rebuild. Nothing may be published as purchasable, and no price may
+appear in any file you write.
 
 Motion Master teaches an agent to write motion design in code — Remotion, GSAP,
 HyperFrames, ffmpeg — and hand back a finished video. The agent plans the shot list,
@@ -316,8 +317,7 @@ The upstream skills keep their own licences and attribution — MIT, MIT + CC BY
 Apache-2.0 for `motionmaxxing` — and each carries its licence file and an `UPSTREAM.md`
 saying where it came from. The Motion Master layer — this router, the token files, the
 prompt library and the MCP server — is the product. It is **not on sale**; the terms it
-would ship under are recorded in `licence.json` (**$99 Solo, $399 Studio,
-one-time**.
+would ship under are recorded in `licence.json` at the repo root.
 
 ### How to route
 

@@ -7,9 +7,12 @@ separately and the split is deliberate.
 
 ## 1. The Motion Master layer — proprietary
 
-The files written for Motion Master itself are proprietary and are sold as a
-**paid, one-time licence** (Solo $99, Studio $399 — one payment, no
-subscription).
+<!-- mm:offer:start -->
+The files written for Motion Master itself are proprietary.
+They are used in-house. The terms they would ship under are recorded in `licence.json` at the repo root and are not published.
+
+Motion Master does not run a hosted render service. Compositions render locally, and real footage is mixed by a Montage instance the owner runs themselves.
+<!-- mm:offer:end -->
 
 | Path | Licence |
 | --- | --- |
@@ -18,11 +21,7 @@ subscription).
 | `skills/motion-master/**` (the router and its `references/`) | proprietary |
 | `skills/<upstream>/**` | **MIT**, unchanged — see below |
 
-The licence key is delivered by email after checkout.
 
-Motion Master does not run a hosted render service. Compositions are rendered
-on the buyer's own machine with Remotion, and real footage is mixed by a
-Montage instance the buyer runs themselves.
 
 ---
 
