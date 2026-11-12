@@ -85,6 +85,7 @@ import { exportProjectSource, importProjectSource } from "./project-source-bundl
 import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } from "./shots.js";
 import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
 import { getBrandKit, listBrandKits, resolveTokens, saveBrandKit } from "./brandkit.js";
+import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -206,6 +207,23 @@ export function openApiDocument(config: Config): Record<string, unknown> {
         get: {
           summary: "One brand kit, with the tokens it overrides and the resolved result.",
           parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/scenes`]: {
+        get: { summary: "The house scenes: the reusable shots the studio renders from.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/scenes/{id}`]: {
+        get: {
+          summary: "One house scene, in full.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/scenes/plan`]: {
+        post: {
+          summary: "Fill a house scene from a brief.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
           responses: { 200: { description: "ok", content: json(obj) } },
         },
       },
@@ -507,6 +525,9 @@ export async function handleApi(
         "GET  /kits",
         "GET  /kits/{id}",
         "POST /kits",
+        "GET  /scenes",
+        "GET  /scenes/{id}",
+        "POST /scenes/plan",
         "GET  /clips",
         "GET  /licence",
         "GET  /board-sync/readiness",
@@ -614,6 +635,74 @@ export async function handleApi(
       return true;
     }
     writeJson(res, 201, { saved: true, id: body.id, path: result.path });
+    return true;
+  }
+
+  /* ── the house library ────────────────────────────────────────────────── */
+  if (route === "/scenes" && method === "GET") {
+    const library = loadHouseLibrary(config.repoRoot);
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const role = url.searchParams.get("role") ?? undefined;
+    const query = url.searchParams.get("query") ?? undefined;
+    const limit = num(url.searchParams.get("limit"), 0);
+    const templates = listHouseTemplates(config.repoRoot, { role, query, limit: limit || undefined });
+    writeJson(res, 200, {
+      source: houseLibraryPath(config.repoRoot),
+      total: library.counts.total,
+      matched: templates.length,
+      byRole: library.counts.byRole,
+      problems: houseLibraryProblems(config.repoRoot),
+      templates,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/scenes/") && method === "GET" && !route.endsWith("/plan")) {
+    const id = decodeURIComponent(route.slice("/scenes/".length));
+    const template = getHouseTemplate(config.repoRoot, id);
+    if (!template) {
+      writeJson(res, 404, { error: `There is no house scene called "${id}".` });
+      return true;
+    }
+    writeJson(res, 200, { source: houseLibraryPath(config.repoRoot), template, problems: houseLibraryProblems(config.repoRoot) });
+    return true;
+  }
+
+  if (route === "/scenes/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      id?: string;
+      brief?: string;
+      values?: Record<string, unknown>;
+      headline?: string;
+      brand_kit?: string;
+    };
+    if (!body.id || !body.brief) {
+      writeJson(res, 400, { error: "A scene plan needs a scene id and a brief." });
+      return true;
+    }
+    const base = loadTokens(config.tokensPath);
+    let tokens = base;
+    let kit: { id: string; name: string } | undefined;
+    const problems: unknown[] = [];
+    if (body.brand_kit) {
+      const found = getBrandKit(config.repoRoot, body.brand_kit, base);
+      if (found.kit) {
+        tokens = resolveTokens(base, found.kit);
+        kit = { id: found.kit.id, name: found.kit.name };
+      }
+      problems.push(...found.problems);
+    }
+    const planned = planHouseTemplate(config.repoRoot, body.id, {
+      brief: body.brief,
+      tokens,
+      values: body.values,
+      headline: body.headline,
+    });
+    if (!planned.template || !planned.filled) {
+      writeJson(res, 404, { error: `There is no house scene called "${body.id}".`, problems: planned.problems });
+      return true;
+    }
+    writeJson(res, 200, { template: planned.template, filled: planned.filled, brandKit: kit, problems });
     return true;
   }
 

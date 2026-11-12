@@ -86,6 +86,14 @@ import {
   type BrandKit,
   type KitProblem,
 } from "./brandkit.js";
+import {
+  getHouseTemplate,
+  houseLibraryPath,
+  houseLibraryProblems,
+  listHouseTemplates,
+  loadHouseLibrary,
+  planHouseTemplate,
+} from "./houselibrary.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -412,6 +420,119 @@ export function registerTools(server: McpServer, config: Config): void {
         id: args.id,
         path: result.path,
         note: "The kit overrides the canonical tokens. Pass its id to the render tools to use it.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_house_templates",
+    {
+      title: "List the house scenes",
+      description:
+        "List the house library: the reusable scenes the studio renders from. Every one of them is a motion " +
+        "block that passed the gate, filed under the shot roles it can serve, bound to a brand kit and " +
+        "named down to its content variables. Pick a scene by what the shot has to do — an opening, a " +
+        "number, a camera move, an end — rather than by searching for a prompt.",
+      inputSchema: {
+        role: z
+          .string()
+          .optional()
+          .describe(
+            "Only scenes that can serve this shot role: opening, typography, camera, data, effects, " +
+              "interaction, ui-entrance, rhythm, transition, outro.",
+          ),
+        query: z.string().optional().describe("Search the scene names, ids and tags."),
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ role, query, limit }) => {
+      const library = loadHouseLibrary(config.repoRoot);
+      const templates = listHouseTemplates(config.repoRoot, { role, query, limit });
+      return ok({
+        source: houseLibraryPath(config.repoRoot),
+        total: library.counts.total,
+        matched: templates.length,
+        byRole: library.counts.byRole,
+        problems: houseLibraryProblems(config.repoRoot),
+        note:
+          "Every scene here passed the gate. The motion already works: fill the content variables and it " +
+          "renders.",
+        templates: templates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          role: template.role,
+          roles: template.roles,
+          durationSeconds: template.durationSeconds,
+          format: template.format,
+          contentVariables: template.contentVariables,
+          why: template.why,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_house_template",
+    {
+      title: "Get one house scene",
+      description:
+        "Return one house scene in full: every variable it takes, what each one means, what it defaults to, " +
+        "and the brief that produces it.",
+      inputSchema: {
+        id: z.string().describe("The scene id."),
+      },
+    },
+    async ({ id }) => {
+      const template = getHouseTemplate(config.repoRoot, id);
+      if (!template) {
+        return fail(`There is no house scene called "${id}".`, {
+          hint: "Call list_house_templates to see what there is.",
+        });
+      }
+      return ok({
+        source: houseLibraryPath(config.repoRoot),
+        template,
+        problems: houseLibraryProblems(config.repoRoot),
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_house_template",
+    {
+      title: "Plan a house scene from a brief",
+      description:
+        "Fill a house scene from a brief and return the scene's variables with their values, plus the tokens " +
+        "and the kit it will render with. This is the fast path: the motion already works, so the brief only " +
+        "has to say what the scene is about.",
+      inputSchema: {
+        id: z.string().describe("The scene id."),
+        brief: z.string().describe("What the scene is about."),
+        values: z.record(z.any()).optional().describe("Explicit values by variable id. These always win."),
+        headline: z.string().optional().describe("Override the headline."),
+        brand_kit: BRAND_KIT_SCHEMA,
+      },
+    },
+    async ({ id, brief, values, headline, brand_kit }) => {
+      const resolvedKit = tokensFor(brand_kit);
+      const planned = planHouseTemplate(config.repoRoot, id, {
+        brief,
+        tokens: resolvedKit.tokens,
+        values,
+        headline,
+      });
+      if (!planned.template || !planned.filled) {
+        return fail(`There is no house scene called "${id}".`, { problems: planned.problems });
+      }
+      return ok({
+        template: planned.template,
+        filled: planned.filled,
+        tokensSource: tokenSource(config.tokensPath),
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
+        note:
+          "Install the block with `npx hyperframes add <id>` and render it. The scene already passed the " +
+          "gate, so it renders as it is.",
       });
     },
   );
