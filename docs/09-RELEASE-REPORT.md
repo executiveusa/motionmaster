@@ -25,6 +25,13 @@ the final home. The history on disk is 335 commits and 3,691 files.
 > while `licence.json` said it was not on sale; that is fixed at the source
 > and a gate now keeps it fixed. See
 > [`docs/27-THE-IN-HOUSE-STUDIO.md`](27-THE-IN-HOUSE-STUDIO.md).
+>
+> **Updated 2026-11-13 — ten repos, nine of them taken.** A video named ten
+> HyperFrames repositories; every one was checked here before anything went
+> in. Thirteen skills, thirty-five compositions and one engine came out of
+> it. The compositions went through our own gate: **24 of 27 passed**, and
+> the house library went from 75 scenes to 99 — the `data` role from 5 to 20.
+> See [`docs/28-THE-TEN-REPOS.md`](28-THE-TEN-REPOS.md).
 
 > **Updated 2026-10-24 — it is live.** The repository was pushed to
 > `executiveusa/motionmaster` on 2026-10-24, replacing the single README commit that

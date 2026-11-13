@@ -1,0 +1,534 @@
+<!doctype html>
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"title","type":"string","label":"Title","default":"목록"},
+    {"id":"items","type":"json","label":"Items","default":[]},
+    {"id":"values","type":"json","label":"Values","default":[]},
+    {"id":"unit","type":"string","label":"Unit","default":""},
+    {"id":"accent","type":"color","label":"Accent","default":"Highlight"},
+    {"id":"mood","type":"string","label":"Mood","default":"informative"},
+    {"id":"emphasis","type":"string","label":"Emphasis","default":"count"},
+    {"id":"reveal","type":"string","label":"Reveal","default":"stagger"},
+    {"id":"visualKind","type":"string","label":"Visual kind","default":"list"},
+    {"id":"source","type":"string","label":"Source","default":""},
+    {"id":"repeatIndex","type":"number","label":"Repeat index","default":0}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>ReelForge list block</title>
+  </head>
+  <body>
+    <template>
+      <style>
+        .list-rootbox {
+          position: absolute;
+          inset: 0;
+          width: 1920px;
+          height: 1080px;
+          box-sizing: border-box;
+          overflow: hidden;
+          color: var(--list-ink);
+          font-family: "Pretendard", "Pretendard Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          --list-ink: var(--rf-text, currentColor);
+          --list-muted: var(--rf-ink-subtle, var(--rf-muted-text, var(--rf-text, currentColor)));
+          --list-tertiary: var(--rf-ink-tertiary, var(--rf-ink-subtle, var(--rf-text, currentColor)));
+          --list-accent: var(--rf-accent, var(--rf-text, currentColor));
+          --list-accent-alt: var(--rf-accent-alt, var(--rf-accent, var(--rf-text, currentColor)));
+          --list-hairline: var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 18%, transparent));
+          --list-hairline-strong: var(--rf-hairline-strong, var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 30%, transparent)));
+          --list-type-small: 1.55rem;
+          --list-type-label: 3.85rem;
+          --list-type-marker: 11rem;
+          --list-row-count: 3;
+        }
+
+        .list-stage {
+          position: absolute;
+          inset: 7.2% 6.25%;
+          box-sizing: border-box;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .list-caption {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          display: flex;
+          align-items: baseline;
+          gap: 1.35rem;
+          min-width: 0;
+          padding: 0 0 1.65rem;
+          border-bottom: 1px solid var(--list-hairline);
+          opacity: 0;
+        }
+
+        .list-title,
+        .list-count,
+        .list-source {
+          margin: 0;
+          min-width: 0;
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: var(--list-type-small);
+          font-weight: 700;
+          line-height: 1.1;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .list-title {
+          flex: 0 1 auto;
+          color: var(--list-muted);
+        }
+
+        .list-count {
+          flex: 0 0 auto;
+          color: var(--list-accent);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .list-source {
+          flex: 0 1 auto;
+          margin-inline-start: auto;
+          color: var(--list-tertiary);
+          letter-spacing: 0.03em;
+          text-align: end;
+          text-transform: none;
+        }
+
+        .list-stack {
+          position: absolute;
+          inset: 7.4rem 0 0;
+          display: grid;
+          grid-template-rows: repeat(var(--list-row-count), minmax(0, 1fr));
+          min-width: 0;
+          min-height: 0;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .list-row {
+          position: relative;
+          display: grid;
+          align-items: center;
+          min-width: 0;
+          min-height: 0;
+          border-bottom: 1px solid var(--list-hairline);
+          opacity: 0;
+          will-change: transform, filter, opacity;
+        }
+
+        .list-row:first-child {
+          border-top: 1px solid var(--list-hairline);
+        }
+
+        .list-index {
+          display: block;
+          min-width: 0;
+          color: var(--list-tertiary);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: var(--list-type-marker);
+          font-weight: 740;
+          font-variant-numeric: tabular-nums;
+          line-height: 0.78;
+          letter-spacing: -0.07em;
+          white-space: nowrap;
+        }
+
+        .list-marker {
+          display: block;
+          width: 0.35rem;
+          height: min(68%, 7rem);
+          background: var(--list-accent);
+          opacity: 0.94;
+        }
+
+        .list-copy {
+          display: grid;
+          align-content: center;
+          gap: 0.75rem;
+          min-width: 0;
+        }
+
+        .list-label,
+        .list-value {
+          display: block;
+          min-width: 0;
+          margin: 0;
+          font-size: var(--list-type-label);
+          font-weight: 760;
+          line-height: 1.05;
+          letter-spacing: -0.03em;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+        }
+
+        .list-label {
+          color: var(--list-ink);
+        }
+
+        .list-meta {
+          display: block;
+          min-width: 0;
+          color: var(--list-muted);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: var(--list-type-small);
+          font-weight: 650;
+          line-height: 1.1;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .list-value {
+          max-width: 29rem;
+          color: var(--list-accent);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-variant-numeric: tabular-nums;
+          text-align: end;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .list-signal {
+          position: absolute;
+          pointer-events: none;
+          animation: list-signal-breathe 2.2s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        .list-rootbox[data-variant="rail"] .list-signal {
+          top: 7.4rem;
+          bottom: 0;
+          left: 11.45rem;
+          width: 0.35rem;
+          background: var(--list-accent);
+          opacity: 0.44;
+        }
+
+        .list-rootbox[data-variant="ledger"] .list-signal {
+          right: 0;
+          bottom: 0;
+          width: 26%;
+          height: 0.35rem;
+          background: var(--list-accent-alt);
+          opacity: 0.44;
+        }
+
+        @keyframes list-signal-breathe {
+          0% {
+            opacity: 0.3;
+            filter: brightness(0.96);
+          }
+          100% {
+            opacity: 0.8;
+            filter: brightness(1.16);
+          }
+        }
+
+        .list-rootbox[data-variant="rail"] .list-stack {
+          padding-inline-start: 0;
+        }
+
+        .list-rootbox[data-variant="rail"] .list-row {
+          grid-template-columns: 10.5rem 1.3rem minmax(0, 1fr) minmax(14rem, auto);
+          column-gap: 1.65rem;
+        }
+
+        .list-rootbox[data-variant="rail"] .list-index {
+          text-align: end;
+        }
+
+        .list-rootbox[data-variant="ledger"] .list-row {
+          grid-template-columns: 13rem minmax(0, 1fr) minmax(14rem, auto);
+          column-gap: 2.1rem;
+        }
+
+        .list-rootbox[data-variant="ledger"] .list-index {
+          color: var(--list-accent);
+          opacity: 0.82;
+        }
+
+        .list-rootbox[data-variant="ledger"] .list-row::after {
+          content: "";
+          position: absolute;
+          top: -1px;
+          left: 0;
+          width: 7.5rem;
+          height: 0.35rem;
+          background: var(--list-accent);
+          opacity: 0.9;
+        }
+
+        .list-rootbox[data-has-values="false"] .list-row,
+        .list-row[data-has-value="false"] {
+          grid-template-columns: 10.5rem 1.3rem minmax(0, 1fr);
+        }
+
+        .list-rootbox[data-variant="ledger"][data-has-values="false"] .list-row,
+        .list-rootbox[data-variant="ledger"] .list-row[data-has-value="false"] {
+          grid-template-columns: 13rem minmax(0, 1fr);
+        }
+      </style>
+      <div
+        id="root"
+        class="list-rootbox"
+        data-composition-id="list"
+        data-width="1920"
+        data-height="1080"
+        data-duration="4"
+        role="img"
+        aria-label=""
+      >
+        <section class="list-stage">
+          <header class="list-caption">
+            <p class="list-title" data-list-title></p>
+            <p class="list-count" data-list-count></p>
+            <p class="list-source" data-list-source></p>
+          </header>
+          <span class="list-signal" aria-hidden="true"></span>
+          <ol class="list-stack" data-list-items aria-label="목록 항목"></ol>
+        </section>
+      </div>
+      <script>
+        (function () {
+          const root =
+            document.querySelector('[data-hf-inner-root="true"][data-hf-authored-id="root"]') ||
+            document.querySelector('[data-hf-inner-root="true"]') ||
+            document.querySelector('.list-rootbox[data-composition-id="list"], .list-rootbox[data-hf-original-composition-id="list"]') ||
+            document.getElementById("root") ||
+            document.querySelector('[data-composition-id="list"], [data-hf-original-composition-id="list"]');
+          const host =
+            root.parentElement?.closest("[data-variable-values]") ||
+            root.closest("[data-variable-values]") ||
+            root.parentElement?.closest("[data-composition-id]") ||
+            root.closest("[data-composition-id]") ||
+            root;
+          const titleEl = root.querySelector("[data-list-title]");
+          const sourceEl = root.querySelector("[data-list-source]");
+          const countEl = root.querySelector("[data-list-count]");
+          const listEl = root.querySelector("[data-list-items]");
+          const variables = readVariables(host);
+
+          const title = stringValue(variables.title, "목록");
+          const source = stringValue(variables.source, "");
+          const unit = displayUnit(variables.unit);
+          const rows = normalizeRows(arrayValue(variables.items), arrayValue(variables.values), title);
+          const repeatIndex = Math.max(0, Math.floor(numericValue(variables.repeatIndex)));
+          const variant = repeatIndex % 2 === 0 ? "rail" : "ledger";
+
+          root.style.setProperty("--list-accent", safeColor(variables.accent));
+          root.style.setProperty("--list-row-count", String(Math.max(1, rows.length)));
+          root.style.setProperty("--list-type-label", rows.length > 5 ? "2.8rem" : "3.85rem");
+          root.style.setProperty("--list-type-marker", rows.length > 5 ? "5rem" : "11rem");
+          root.dataset.variant = variant;
+          root.dataset.mood = stringValue(variables.mood, "informative");
+          root.dataset.hasValues = rows.some((row) => row.value.length > 0) ? "true" : "false";
+          titleEl.textContent = title;
+          countEl.textContent = String(rows.length).padStart(2, "0");
+          if (source) {
+            sourceEl.textContent = source;
+          } else {
+            sourceEl.remove();
+          }
+          root.setAttribute("aria-label", ariaLabel(title, rows, unit));
+
+          rows.forEach((row, index) => {
+            const item = document.createElement("li");
+            const marker = document.createElement("span");
+            const itemIndex = document.createElement("span");
+            const copy = document.createElement("span");
+            const label = document.createElement("span");
+            const meta = document.createElement("span");
+
+            item.className = "list-row";
+            marker.className = "list-marker";
+            itemIndex.className = "list-index";
+            copy.className = "list-copy";
+            label.className = "list-label";
+            meta.className = "list-meta";
+            item.dataset.hasValue = row.value.length > 0 ? "true" : "false";
+
+            marker.setAttribute("aria-hidden", "true");
+            itemIndex.setAttribute("aria-hidden", "true");
+            itemIndex.textContent = String(index + 1).padStart(2, "0");
+            label.textContent = row.label;
+            meta.textContent = unit ? `${unit} / ${String(index + 1).padStart(2, "0")}` : String(index + 1).padStart(2, "0");
+
+            copy.append(label, meta);
+            item.append(itemIndex);
+            if (variant === "rail") item.append(marker);
+            item.append(copy);
+            if (row.value.length > 0) {
+              const value = document.createElement("span");
+              value.className = "list-value";
+              value.textContent = row.value;
+              item.append(value);
+            }
+            listEl.appendChild(item);
+          });
+
+          window.__timelines = window.__timelines || {};
+          const tl = gsap.timeline({ paused: true });
+          const caption = root.querySelector(".list-caption");
+          const items = gsap.utils.toArray(root.querySelectorAll(".list-row"));
+          const rowStagger = items.length > 1 ? 0.28 / (items.length - 1) : 0;
+
+          tl.fromTo(
+            caption,
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, duration: 0.2, ease: "power2.out" },
+            0
+          );
+          items.forEach((item, index) => {
+            const start = 0.12 + index * rowStagger;
+            tl.fromTo(
+              item,
+              { opacity: 0, y: 20 },
+              { opacity: 1, y: 0, duration: 0.18, ease: "power3.out" },
+              start
+            );
+            if (index > 0) {
+              tl.to(
+                items.slice(0, index),
+                { opacity: 0.58, filter: "brightness(0.94)", duration: 0.12, ease: "power2.out" },
+                start + 0.04
+              );
+            }
+          });
+          tl.addLabel("final", blockDuration(root, 4));
+          timelineIds(host, root).forEach((id) => {
+            if (id) window.__timelines[id] = tl;
+          });
+          globalThis.__timelines = window.__timelines;
+          timelineIds(host, root).forEach((id) => {
+            if (id) globalThis.__timelines[id] = tl;
+          });
+
+          function arrayValue(value) {
+            return Array.isArray(value) ? value : [];
+          }
+
+          function readVariables(hostElement) {
+            const direct =
+              window.__hyperframes && typeof window.__hyperframes.getVariables === "function"
+                ? window.__hyperframes.getVariables()
+                : {};
+            const runtimeId = hostElement?.getAttribute("data-composition-id") || "";
+            const authoredId = hostElement?.getAttribute("data-hf-original-composition-id") || "list";
+            const registry = {
+              ...(globalThis.__hfVariablesByComp?.[authoredId] || {}),
+              ...(globalThis.__hfVariablesByComp?.[runtimeId] || {})
+            };
+            return { ...readHostVariables(hostElement), ...registry, ...direct };
+          }
+
+          function readHostVariables(element) {
+            let node = element;
+            while (node) {
+              if (node.getAttribute && node.hasAttribute("data-variable-values")) {
+                try {
+                  const parsed = JSON.parse(node.getAttribute("data-variable-values"));
+                  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+                } catch {
+                  return {};
+                }
+              }
+              node = node.parentElement;
+            }
+            return {};
+          }
+
+          function timelineIds(hostElement, rootElement) {
+            const runtimeId = typeof __hfTimelineCompId !== "undefined" && __hfTimelineCompId ? __hfTimelineCompId : "";
+            if (runtimeId) return new Set([runtimeId]);
+            return new Set([
+              hostElement?.getAttribute("data-composition-id") || "",
+              hostElement?.getAttribute("data-hf-original-composition-id") || "",
+              rootElement?.getAttribute("data-composition-id") || "",
+              rootElement?.getAttribute("data-hf-original-composition-id") || "",
+              "list"
+            ]);
+          }
+
+          function stringValue(value, fallback) {
+            if (value === undefined || value === null) return fallback;
+            const text = String(value).trim();
+            return text.length > 0 ? text : fallback;
+          }
+
+          function numericValue(value) {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : 0;
+          }
+
+          function displayUnit(value) {
+            const text = stringValue(value, "");
+            if (!text) return "";
+            const normalized = text === "％" ? "%" : text.toLowerCase();
+            return new Set(["%", "sec", "원", "건", "개", "명", "회", "hex", "점"]).has(normalized)
+              ? normalized
+              : "";
+          }
+
+          function normalizeRows(labels, rawValues, fallbackTitle) {
+            const count = Math.max(labels.length, rawValues.length);
+            if (count === 0) {
+              return [{ label: fallbackTitle, value: "" }];
+            }
+            const rows = [];
+            for (let index = 0; index < count; index += 1) {
+              rows.push({
+                label: stringValue(labels[index], `항목 ${index + 1}`),
+                value: valueText(rawValues[index], labels[index])
+              });
+            }
+            return rows;
+          }
+
+          function valueText(value, label) {
+            if (value === undefined || value === null) return "";
+            const text = String(value).trim();
+            if (!text) return "";
+            return text === String(label ?? "").trim() ? "" : text;
+          }
+
+          function ariaLabel(listTitle, rows, unitText) {
+            const itemText = rows
+              .map((row) => (row.value ? `${row.label} ${unitText ? `${unitText} ` : ""}${row.value}` : row.label))
+              .join(", ");
+            return `${listTitle}: ${itemText}`;
+          }
+
+          function safeColor(value) {
+            const text = stringValue(value, "");
+            return /^[A-Za-z]+$|^#[0-9A-Fa-f]{3,8}$|^var\(--[A-Za-z0-9_-]+\)$|^color-mix\(.+\)$/.test(text)
+              ? text
+              : "var(--rf-accent, var(--rf-text, currentColor))";
+          }
+
+          function blockDuration(element, fallback) {
+            let node = element.parentElement;
+            while (node) {
+              const value = Number(node.getAttribute?.("data-duration"));
+              if (Number.isFinite(value) && value > 0) return value;
+              node = node.parentElement;
+            }
+            const own = Number(element.getAttribute("data-duration"));
+            return Number.isFinite(own) && own > 0 ? own : fallback;
+          }
+        })();
+      </script>
+    </template>
+  </body>
+</html>

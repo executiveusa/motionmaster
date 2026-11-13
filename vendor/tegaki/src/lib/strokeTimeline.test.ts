@@ -1,0 +1,290 @@
+import { describe, expect, test } from 'bun:test';
+import type { TegakiBundle, TegakiGlyphData } from '../types.ts';
+import { subdivideStroke } from './strokeCache.ts';
+import {
+  type PlacedStroke,
+  placeStrokes,
+  rawStrokePath,
+  retimeTimeline,
+  sampleFrame,
+  sampleStroke,
+  strokeInstances,
+} from './strokeTimeline.ts';
+import { computeTimeline } from './timeline.ts';
+
+type Pt = [number, number, number];
+const linear = (t: number) => t;
+
+// A 1s horizontal stroke then a 0.5s vertical one, 100 font units each.
+const two: TegakiGlyphData = {
+  w: 100,
+  t: 1.5,
+  s: [
+    {
+      p: [
+        [0, 0, 10],
+        [100, 0, 10],
+      ] as Pt[],
+      d: 0,
+      a: 1,
+    },
+    {
+      p: [
+        [50, 0, 10],
+        [50, 100, 10],
+      ] as Pt[],
+      d: 1,
+      a: 0.5,
+    },
+  ],
+};
+const dot: TegakiGlyphData = { w: 20, t: 0.2, s: [{ p: [[10, 10, 8]] as Pt[], d: 0, a: 0.2 }] };
+
+function makeBundle(glyphData: Record<string, TegakiGlyphData>): TegakiBundle {
+  return { family: 'test', lineCap: 'round', fontUrl: '', fontFaceCSS: '', unitsPerEm: 100, ascender: 0, descender: 0, glyphData };
+}
+
+const bundle = makeBundle({ a: two, i: dot });
+const place = { x: 0, y: 0, scale: 1, ascender: 0, seed: 0 };
+
+describe('strokeInstances', () => {
+  const timeline = computeTimeline('a a', bundle, { glyphGap: 0.1, wordGap: 0.2 });
+  const strokes = strokeInstances(timeline, bundle);
+
+  test('one instance per stroke of each drawn glyph, in drawing order', () => {
+    expect(strokes.map((s) => s.id)).toEqual(['0:0', '0:1', '2:0', '2:1']);
+  });
+
+  test('a stroke starts at its glyph offset plus its bundled delay', () => {
+    const second = timeline.entries[2]!.offset;
+    expect(strokes.map((s) => [s.start, s.duration])).toEqual([
+      [0, 1],
+      [1, 0.5],
+      [second, 1],
+      [second + 1, 0.5],
+    ]);
+  });
+
+  test('characters without strokes have no instances', () => {
+    const tl = computeTimeline('a?\nb', bundle);
+    expect(strokeInstances(tl, bundle).every((s) => s.entry.char === 'a')).toBe(true);
+  });
+
+  test('stagger with a fixed duration scales each stroke with its glyph', () => {
+    const tl = computeTimeline('a', bundle, { stagger: { advance: 0, duration: 3 } });
+    expect(strokeInstances(tl, bundle).map((s) => [s.start, s.duration])).toEqual([
+      [0, 2],
+      [2, 1],
+    ]);
+  });
+
+  test('a deferred stroke starts where the scheduler moved it', () => {
+    const marked: TegakiGlyphData = { ...two, s: [two.s[0]!, { ...two.s[1]!, r: -1 }] };
+    const b = makeBundle({ a: marked });
+    const tl = computeTimeline('aa', b, { glyphGap: 0.1 });
+    const [, mark1, , mark2] = strokeInstances(tl, b);
+    // Both bodies (1s each) draw first, 0.1s apart; the marks follow a gap later, a gap apart.
+    expect(mark1!.start).toBeCloseTo(2.2, 6);
+    expect(mark2!.start).toBeCloseTo(2.8, 6);
+  });
+});
+
+describe('sampleStroke', () => {
+  const timeline = computeTimeline('a', bundle);
+  const [first, second] = strokeInstances(timeline, bundle);
+
+  test('pending before its start, drawing inside its window, done at its end', () => {
+    expect(sampleStroke(second!, 0.5).state).toBe('pending');
+    expect(sampleStroke(second!, 1.25, { strokeEasing: linear })).toEqual({ state: 'drawing', linear: 0.5, progress: 0.5 });
+    expect(sampleStroke(second!, 1.5).state).toBe('done');
+  });
+
+  test('a stroke with no delay is pending until its glyph starts', () => {
+    const tl = computeTimeline('aa', bundle);
+    const later = strokeInstances(tl, bundle)[2]!;
+    expect(sampleStroke(later, later.start - 0.01).state).toBe('pending');
+  });
+
+  test('progress takes the stroke easing', () => {
+    expect(sampleStroke(first!, 0.5, { strokeEasing: (t) => t * t }).progress).toBeCloseTo(0.25, 6);
+    // Default: ease-out quad.
+    expect(sampleStroke(first!, 0.5).progress).toBeCloseTo(0.75, 6);
+  });
+
+  test('glyph easing warps the whole slot before stroke timing reads it', () => {
+    // u² over the 1.5s slot: at 0.75s the glyph is at 0.375s — a stroke 3/8 in.
+    const s = sampleStroke(first!, 0.75, { strokeEasing: linear, glyphEasing: (u) => u * u });
+    expect(s.progress).toBeCloseTo(0.375, 6);
+  });
+
+  test('a stroke ending a hair past its slot (float error) still finishes', () => {
+    // 1.194 + 0.299 − 1.194 = 0.29899999999999993: the slot ends just short of the stroke.
+    const g: TegakiGlyphData = { w: 100, t: 0.299, s: [{ ...two.s[0]!, a: 0.299 }] };
+    const entry = { char: 'a', graphemeIndex: 0, hasGlyph: true, offset: 1.194, duration: 1.194 + 0.299 - 1.194 };
+    const instance = strokeInstances({ entries: [entry], totalDuration: 1.493 }, makeBundle({ a: g }))[0]!;
+    expect(entry.duration).toBeLessThan(0.299);
+    expect(sampleStroke(instance, 99)).toEqual({ state: 'done', linear: 1, progress: 1 });
+  });
+
+  test('easings that overshoot are clamped to the stroke', () => {
+    expect(sampleStroke(first!, 0.9, { strokeEasing: (t) => t * 1.5 }).progress).toBe(1);
+  });
+});
+
+describe('rawStrokePath', () => {
+  const sub = subdivideStroke(two.s[0]!, Infinity);
+  const pathOf = (g: TegakiGlyphData, si: number, at = place) => rawStrokePath(g.s[si]!, subdivideStroke(g.s[si]!, Infinity), at)!;
+
+  test('the head sits where the ink ends, heading along the stroke', () => {
+    const head = rawStrokePath(two.s[0]!, sub, { x: 10, y: 20, scale: 2, ascender: 0 })!.pointAt(0.5);
+    expect(head.x).toBeCloseTo(110, 6);
+    expect(head.y).toBeCloseTo(20, 6);
+    expect(head.angle).toBeCloseTo(0, 6);
+    expect(head.width).toBeCloseTo(20, 6);
+  });
+
+  test('a downward stroke heads down (y grows downward)', () => {
+    const head = pathOf(two, 1).pointAt(1);
+    expect(head.angle).toBeCloseTo(Math.PI / 2, 6);
+    expect(head.y).toBeCloseTo(100, 6);
+  });
+
+  test('a finished stroke keeps the direction of its last segment', () => {
+    const head = pathOf(two, 0).pointAt(1);
+    expect(head.x).toBeCloseTo(100, 6);
+    expect(head.angle).toBeCloseTo(0, 6);
+  });
+
+  test("widths are the bundle's, scaled by the placement", () => {
+    expect(pathOf(two, 0, { ...place, scale: 2 }).points.map((p) => p.width)).toEqual([20, 20]);
+  });
+
+  test('a dot is a single point, and its own head', () => {
+    const path = pathOf(dot, 0);
+    expect(path.points).toHaveLength(1);
+    const head = path.pointAt(1);
+    expect([head.x, head.y, head.angle, head.width]).toEqual([10, 10, 0, 8]);
+  });
+});
+
+describe('placeStrokes reshape', () => {
+  const strokes = strokeInstances(computeTimeline('a', bundle), bundle);
+
+  test('reshape makes the ink; the raw path stays as the bundle has it', () => {
+    const [first] = placeStrokes(strokes, { placeEntry: () => place, reshape: (path) => path.map((p) => ({ ...p, x: p.x + 3 })) });
+    expect(first!.path.points[0]).toMatchObject({ x: 3, y: 0 });
+    expect(first!.rawPath.points[0]).toMatchObject({ x: 0, y: 0 });
+  });
+
+  test("bundleIndexAt maps draw progress onto the bundle's own points", () => {
+    const seen: number[] = [];
+    const fine = (s: TegakiGlyphData['s'][number]) => subdivideStroke(s, 10);
+    placeStrokes(strokes.slice(0, 1), {
+      placeEntry: () => place,
+      getSubdivided: fine,
+      reshape: (path, g) => {
+        seen.push(g.bundleIndexAt(0), g.bundleIndexAt(0.5), g.bundleIndexAt(1));
+        return path;
+      },
+    });
+    expect(seen).toEqual([0, 0.5, 1]);
+  });
+
+  test('each stroke carries its glyph seed', () => {
+    const placed = placeStrokes(strokes, { placeEntry: () => ({ ...place, seed: 9 }) });
+    expect(placed.map((s) => s.seed)).toEqual([9, 9]);
+  });
+});
+
+describe('placeStrokes / sampleFrame', () => {
+  const timeline = computeTimeline('ai', bundle, { glyphGap: 0 });
+  const strokes = strokeInstances(timeline, bundle);
+  const placed = placeStrokes(strokes, { placeEntry: () => place });
+
+  test('pending strokes have no head; the active list holds the strokes being drawn', () => {
+    const frame = sampleFrame(placed, 1.25, { strokeEasing: linear });
+    expect(frame.strokes.map((s) => s.state)).toEqual(['done', 'drawing', 'pending']);
+    expect(frame.strokes[2]!.head).toBeNull();
+    expect(frame.active.map((s) => s.id)).toEqual(['0:1']);
+    expect(frame.active[0]!.head.y).toBeCloseTo(50, 6);
+  });
+
+  test('the head is the path at the stroke progress', () => {
+    const s = sampleFrame(placed, 1.25, { strokeEasing: linear }).active[0]!;
+    expect(s.head).toEqual(s.path.pointAt(s.progress));
+  });
+
+  test('frames share the placed paths', () => {
+    const a = sampleFrame(placed, 0.2).strokes[0]!;
+    const b = sampleFrame(placed, 0.9).strokes[0]!;
+    expect(a.path).toBe(b.path);
+  });
+
+  test('strokes of glyphs the layout does not place are left out', () => {
+    const some: PlacedStroke[] = placeStrokes(strokes, { placeEntry: (ei: number) => (ei === 0 ? place : null) });
+    expect(some.map((s) => s.entry.char)).toEqual(['a', 'a']);
+  });
+});
+
+describe('retimeTimeline', () => {
+  // 'a a': glyph, space, glyph — two strokes each.
+  const timeline = computeTimeline('a a', bundle, { glyphGap: 0.1, wordGap: 0.2 });
+  const strokes = strokeInstances(timeline, bundle);
+  const same = strokes.map((s) => ({ start: s.start, duration: s.duration }));
+
+  test('nothing moved is the same timeline', () => {
+    expect(retimeTimeline(timeline, strokes, same)).toBe(timeline);
+  });
+
+  test('a glyph with a stroke moved spans its strokes, each drawing when and as long as it was given', () => {
+    const times = same.map((t, i) => (i === 1 ? { start: 5, duration: 2 } : t));
+    const retimed = retimeTimeline(timeline, strokes, times);
+    const entry = retimed.entries[0]!;
+    expect([entry.offset, entry.duration]).toEqual([0, 7]);
+    const [first, second] = strokeInstances(retimed, bundle);
+    expect([first!.start, first!.duration]).toEqual([0, 1]);
+    expect([second!.start, second!.duration]).toEqual([5, 2]);
+  });
+
+  test('a stroke samples at its new time', () => {
+    const times = same.map((t, i) => (i === 0 ? { start: 2, duration: 1 } : t));
+    const retimed = retimeTimeline(timeline, strokes, times);
+    const first = strokeInstances(retimed, bundle)[0]!;
+    expect(sampleStroke(first, 1.9).state).toBe('pending');
+    expect(sampleStroke(first, 2.5, { strokeEasing: linear }).progress).toBeCloseTo(0.5, 6);
+  });
+
+  test('a glyph with no stroke moved keeps its slot', () => {
+    const times = same.map((t, i) => (i >= 2 ? { start: t.start + 1, duration: t.duration } : t));
+    const retimed = retimeTimeline(timeline, strokes, times);
+    expect(retimed.entries[0]).toBe(timeline.entries[0]!);
+  });
+
+  test('an entry with no strokes keeps its distance from the end of the one before', () => {
+    // Every stroke instant, from 0: the first glyph ends at once, and the space follows it by the same gap.
+    const times = same.map((_, i) => ({ start: i < 2 ? 0 : 1, duration: 0 }));
+    const retimed = retimeTimeline(timeline, strokes, times);
+    const [a, space] = timeline.entries;
+    expect(retimed.entries[1]!.offset).toBeCloseTo(space!.offset - (a!.offset + a!.duration), 6);
+  });
+
+  test('the timeline runs as long past its last end as it did, or as long as asked, never short of its last end', () => {
+    const shifted = same.map((t) => ({ start: t.start + 1, duration: t.duration }));
+    expect(retimeTimeline(timeline, strokes, shifted).totalDuration).toBeCloseTo(timeline.totalDuration + 1, 6);
+    expect(retimeTimeline(timeline, strokes, same, 99).totalDuration).toBe(99);
+    expect(retimeTimeline(timeline, strokes, shifted, 0.5).totalDuration).toBeCloseTo(timeline.totalDuration + 1, 6);
+  });
+
+  test('a retimed glyph drops its stagger scale: its durations are in seconds', () => {
+    const tl = computeTimeline('a', bundle, { stagger: { advance: 0, duration: 3 } });
+    const list = strokeInstances(tl, bundle);
+    const retimed = retimeTimeline(tl, list, [
+      { start: 0, duration: 0.5 },
+      { start: 0.5, duration: 0.5 },
+    ]);
+    expect(strokeInstances(retimed, bundle).map((s) => [s.start, s.duration])).toEqual([
+      [0, 0.5],
+      [0.5, 0.5],
+    ]);
+  });
+});

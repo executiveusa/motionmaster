@@ -156,6 +156,21 @@ try {
   });
   check("a house scene can be planned with a brand kit", withKit.data.brandKit?.id === "proof-kit");
 
+  /* A scene that came from one of the vendored repos has to plan too. */
+  const localScene = (scenes.data.templates ?? []).find((t) => t.id === "big-number-card");
+  if (localScene) {
+    const localPlanned = await call("plan_house_template", {
+      id: "big-number-card",
+      brief: "A launch film for a coffee subscription called Slow mornings",
+    });
+    check("a scene from the vendored repos can be planned", localPlanned.data.filled !== undefined);
+    check(
+      "the plan says where the composition lives",
+      String(localPlanned.data.note ?? "").includes("composition"),
+      localPlanned.data.template?.source?.path,
+    );
+  }
+
   const missingScene = await call("get_house_template", { id: "no-such-scene" });
   check("a scene that does not exist says so", missingScene.result.isError === true);
 

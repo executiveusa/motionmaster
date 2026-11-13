@@ -1,0 +1,570 @@
+import type { StrokePaint } from '../lib/paintStroke.ts';
+import type { Box, StrokePath } from '../lib/strokePath.ts';
+import type { GlyphPlacement, PlacedStroke, StrokeGeometryContext, StrokeTime, TegakiFrame } from '../lib/strokeTimeline.ts';
+import type { Timeline, TimelineConfig } from '../lib/timeline.ts';
+import type { TegakiBundle } from '../types.ts';
+
+// ---------------------------------------------------------------------------
+// Time control types (shared with adapters)
+// ---------------------------------------------------------------------------
+
+/** Fields shared by both speed- and duration-paced uncontrolled modes. */
+interface UncontrolledShared {
+  mode: 'uncontrolled';
+  /** Initial time in seconds. Default: `0` */
+  initialTime?: number;
+  /** Whether animation is playing. Default: `true` */
+  playing?: boolean;
+  /** Loop animation when it reaches the end. Default: `false` */
+  loop?: boolean;
+  /**
+   * Delay before the animation starts (seconds). Applied once on
+   * initialization and again on {@link TegakiEngine.restart}. Default: `0`
+   */
+  delay?: number;
+  /**
+   * Pause between loop iterations (seconds). Only effective when
+   * `loop` is `true`. Default: `0`
+   */
+  loopGap?: number;
+  /**
+   * Easing function mapping linear progress `(0–1)` to displayed progress `(0–1)`.
+   * Applied at read-time so `currentTime`, `onTimeChange`, and the CSS custom
+   * properties all reflect the eased value. Completion is evaluated against
+   * linear progress so curves that overshoot or undershoot the endpoints do
+   * not trip completion early or late.
+   */
+  easing?: (t: number) => number;
+  /** Called on every frame with the current (eased) time. */
+  onTimeChange?: (time: number) => void;
+}
+
+export type TimeControlMode = {
+  controlled: {
+    mode: 'controlled';
+    /** Current time in seconds (default), or progress 0–1 when `unit` is `'progress'`. */
+    value: number;
+    /** Interpret `value` as seconds (default) or as a 0–1 progress ratio. */
+    unit?: 'seconds' | 'progress';
+  };
+  uncontrolled:
+    | (UncontrolledShared & {
+        /** Playback speed multiplier. Default: `1` */
+        speed?: number;
+        /**
+         * Catch-up strength. When positive, playback speeds up when there is a
+         * large amount of remaining animation and decays back to normal gradually.
+         * `0` disables catch-up (default). Higher values ramp up more aggressively.
+         * Typical range: `0.2` – `2`.
+         */
+        catchUp?: number;
+        duration?: never;
+      })
+    | (UncontrolledShared & {
+        /**
+         * Stretch or compress playback so one iteration takes exactly this many
+         * seconds. Mutually exclusive with `speed` / `catchUp`.
+         */
+        duration?: number;
+        speed?: never;
+        catchUp?: never;
+      });
+  css: {
+    mode: 'css';
+  };
+};
+
+/**
+ * A plain number is shorthand for `{ mode: 'controlled', value: number }`.
+ * A percentage string like `'50%'` is shorthand for
+ * `{ mode: 'controlled', value: 0.5, unit: 'progress' }`.
+ * `'css'` is shorthand for `{ mode: 'css' }`.
+ * Omit for uncontrolled mode with default settings.
+ */
+export type TimeControlProp = null | undefined | number | `${number}%` | 'css' | TimeControlMode[keyof TimeControlMode];
+
+/**
+ * How uncontrolled playback treats reduced motion. Under reduced motion the
+ * text is drawn finished instead of written out (`onComplete` still fires).
+ *
+ * - `'never'` (default) — always animate. Ink appearing in place is not the
+ *   kind of motion (parallax, zooming, sliding) the OS setting guards against.
+ * - `'user'` — follow the user's `prefers-reduced-motion` setting.
+ * - `'always'` — never animate.
+ *
+ * Controlled and `css` time are driven by the host, so they are unaffected.
+ */
+export type ReducedMotionProp = 'user' | 'always' | 'never';
+
+// ---------------------------------------------------------------------------
+// Quality
+// ---------------------------------------------------------------------------
+
+/**
+ * Render-quality knobs. These trade CPU/GPU cost for visual fidelity.
+ * They do not change the style of the rendered text — see `plugins` for that.
+ */
+export interface TegakiQuality {
+  /**
+   * Internal supersampling factor applied on top of `window.devicePixelRatio`.
+   * Values > 1 draw into a larger backing canvas and let the browser downsample
+   * to the displayed size, producing higher-quality antialiasing at a quadratic
+   * cost in pixels filled. Values < 1 save cost at the expense of sharpness.
+   * Default: `1`.
+   */
+  pixelRatio?: number;
+  /**
+   * Maximum drawn segment length in CSS pixels when the ink varies along a
+   * stroke (`pressure`, or any plugin that reshapes or paints it). Smaller values
+   * produce smoother transitions at the cost of more draw calls per stroke.
+   * Because this is measured in pixels, subdivision count scales with rendered
+   * size: a glyph drawn at 10px is cheaper to render than the same glyph at
+   * 100px. Defaults to `2` when the ink varies, otherwise segments are not
+   * subdivided.
+   */
+  segmentSize?: number;
+  /**
+   * Clip handwriting strokes to the filled text shape using canvas composite
+   * operations (`destination-in`). Strokes that extend beyond the glyph
+   * outlines are masked away, producing a "drawn inside the text" effect.
+   *
+   * - `false` (default) — no clipping.
+   * - `true` — clip with no stroke width change.
+   * - A number > 0 — clip and scale stroke widths by that factor. Values
+   *   around `2`–`3` make the strokes fill more of the glyph interior,
+   *   producing a result closer to the original filled text.
+   */
+  clipText?: boolean | number;
+  /**
+   * Smooth stroke polylines with a centripetal Catmull-Rom spline through the
+   * original glyph points. Hides the faceted corners visible at large render
+   * sizes where the baked polyline resolution shows through.
+   *
+   * Requires subdivision to be active — when enabled without a `segmentSize`,
+   * `segmentSize` defaults to `2` CSS px. Default: `false` (unchanged behavior).
+   */
+  smoothing?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Plugins
+// ---------------------------------------------------------------------------
+
+/** What every plugin hook that paints can use. */
+interface TegakiPluginContext {
+  /** Font size in px. */
+  fontSize: number;
+  /** The text's color (its CSS color). */
+  color: string;
+  /**
+   * Whether clip-to-text is on (`quality.clipText`): the ink is cut to the
+   * letters once it's painted, so what a plugin paints past them should go
+   * on `unclipped`, or be done to the clipped ink in `ink`.
+   */
+  clipped: boolean;
+  /**
+   * A random number generator (0–1) seeded by the renderer and key: the
+   * same key yields the same numbers every frame, so painting doesn't flicker.
+   * Key it by what should look the same across frames, e.g. a stroke's id.
+   */
+  random(key: string | number): () => number;
+  /**
+   * Which of the plugin's {@link TegakiPlugin.steps} drawings is showing,
+   * from `0`; always `0` for a plugin without steps. A plugin whose steps
+   * only paint — no `geometry` or `outline`, say a flicker — costs no more
+   * than a redraw per step.
+   */
+  step: number;
+}
+
+/** What `underlay` and `overlay` paint with. */
+export interface TegakiPaintContext extends TegakiPluginContext {
+  /**
+   * The canvas context, in CSS px with its origin at the top-left of the text
+   * box — the space of every stroke's path and head. Its state is saved
+   * before the call and restored after.
+   */
+  ctx: CanvasRenderingContext2D;
+  /** The frame being drawn. */
+  frame: TegakiFrame;
+}
+
+/** What a `geometry` hook knows about the stroke it reshapes. */
+export interface TegakiGeometryContext extends StrokeGeometryContext {
+  /** Font size in px. */
+  fontSize: number;
+  /** The box the text's lines fill, in the same px as the path: what a plugin laying the whole text out (on a curve, say) measures it by. */
+  textBox: Box;
+  /** Which of the plugin's {@link TegakiPlugin.steps} drawings to make, from `0`; always `0` for a plugin without steps. */
+  step: number;
+  /** See {@link TegakiPluginContext.random}. */
+  random(key: string | number): () => number;
+}
+
+/** A glyph outline an `outline` hook reshapes: where the glyph sits, as for its strokes. */
+export interface TegakiOutlineContext {
+  place: GlyphPlacement;
+  /** The number fixed per glyph that its strokes get too. */
+  seed: number;
+  /** Font size in px. */
+  fontSize: number;
+  /** The box the text's lines fill, as for its strokes' `geometry`. */
+  textBox: Box;
+  /** Which of the plugin's {@link TegakiPlugin.steps} drawings this is, as for its strokes' `geometry`. */
+  step: number;
+}
+
+/**
+ * A plugin's cycle of drawings: the ink redrawn `count` ways, one after
+ * another, `fps` times a second, the way line boil makes hand-drawn
+ * animation shimmer. See {@link TegakiPlugin.steps}.
+ */
+export interface TegakiPluginSteps {
+  /** How many drawings the cycle has (at least 1). */
+  count: number;
+  /** Drawings a second (8–12 reads as hand-drawn). */
+  fps: number;
+  /**
+   * Keep cycling once the text is written, or while it's paused, in
+   * uncontrolled and CSS time — the engine redraws at `fps` for as long as
+   * the renderer lives, while its canvas is on screen. Controlled time always takes the drawing from the
+   * time it's given, so it holds still when the time does. Default `false`.
+   */
+  idle?: boolean;
+  /**
+   * The drawings differ only in how they're painted — a flicker, a camera
+   * swaying — though the plugin has `geometry` or `outline` too: those are
+   * called once per layout, for drawing `0`, rather than once per drawing,
+   * and the canvas isn't sized for each. The painting hooks still get
+   * `step`. Default `false`.
+   */
+  paintOnly?: boolean;
+}
+
+/** A stroke a `paint` hook paints, and how the next hook will paint it. */
+export interface TegakiStrokePaintContext extends StrokePaint, TegakiPluginContext {
+  /**
+   * A canvas clip-to-text doesn't cut, in the same px as `ctx`: pass a
+   * stroke on with `ctx: unclipped` to paint it past the letters' edges (a
+   * wide brush, a pass around the ink), or draw on it directly (flecks and
+   * drops off the line). It's laid under the clipped ink once the mask is
+   * on, before the `ink` hooks, so they see it as ink. Without clip-to-text
+   * it's `ctx` itself.
+   */
+  unclipped: CanvasRenderingContext2D;
+  /** The box the text's lines fill, in the same px as the stroke's path. */
+  textBox: Box;
+  /**
+   * The frame being drawn: its `time` (with the stroke's `start` and
+   * `duration`, how long ago the pen passed a point) and every stroke in it,
+   * drawn or not — the rest of the glyph, the whole timeline's length.
+   */
+  frame: TegakiFrame;
+}
+
+/** What an `ink` hook post-processes. */
+export interface TegakiInkContext extends TegakiPluginContext {
+  /**
+   * The canvas context, in text-box px like the other hooks'. Its canvas
+   * (`ctx.canvas`) holds the finished ink — strokes and fallback text,
+   * clipped to the text if that's on — as the `ink` hooks before this one
+   * left it. Draw with `setTransform(1, 0, 0, 1, 0, 0)` to work in device
+   * pixels. Copy what you read before drawing over it.
+   */
+  ctx: CanvasRenderingContext2D;
+  /**
+   * The box the ink drawn so far covers, in text-box px (`ctx.getTransform()`
+   * maps it to device pixels); `null` before anything is drawn. Work inside
+   * it: the rest of `ink` is empty, and a blur over the whole canvas costs
+   * what the canvas measures, not what the ink does.
+   */
+  bounds: Box | null;
+  /** The frame the ink is of: when each stroke was drawn, where the pens are. */
+  frame: TegakiFrame;
+}
+
+/** What an {@link TegakiPlugin.attach} hook gets from the engine it's attached to. */
+export interface TegakiAttachContext {
+  /**
+   * Draw the frame on screen again, at the same time — once something the
+   * plugin paints with is ready (a library loaded, an image decoded), since
+   * paused or controlled time draws only when something changes. Several
+   * calls before the next animation frame draw once; after the plugin is
+   * detached, it does nothing.
+   */
+  redraw(): void;
+}
+
+/** What a plugin sizes its {@link TegakiPlugin.bounds} from. */
+export interface TegakiBoundsContext {
+  /** Every placed stroke, drawn yet or not. */
+  strokes: readonly PlacedStroke[];
+  /** Font size in px. */
+  fontSize: number;
+}
+
+/** What a `timing` hook retimes. */
+export interface TegakiTimingContext {
+  /**
+   * Every placed stroke, in drawing order, at the `start` and `duration`
+   * (timeline seconds) the `timing` hooks before this one gave it — the
+   * first gets the timeline's. Read those rather than `entry`'s times.
+   */
+  strokes: readonly PlacedStroke[];
+  /** Seconds the timeline runs: to the last stroke's end, and any pause after. */
+  duration: number;
+  /** Font size in px. */
+  fontSize: number;
+  /** See {@link TegakiPluginContext.random}. */
+  random(key: string | number): () => number;
+}
+
+/**
+ * What an `svg` hook adds to `toSVG` / `exportSVG`'s file. Markup is SVG
+ * source in the file's px, the space `strokes` are given in (the text box
+ * moved by the canvas's padding). Give anything you `defs` an {@link id}.
+ */
+export interface TegakiSvgContext {
+  /** Every stroke, placed and timed — the first drawing of any `steps`. */
+  strokes: readonly PlacedStroke[];
+  /** Seconds the timeline runs. */
+  duration: number;
+  /** Font size in px. */
+  fontSize: number;
+  /** The text's color. */
+  color: string;
+  /** The box the text's lines fill, in the file's px (a gradient across the text spans it). */
+  textBox: Box;
+  /**
+   * Attributes sizing a filter, mask or clip region to the whole file:
+   * `<filter id="…" filterUnits="userSpaceOnUse" ${svg.region}>`.
+   */
+  region: string;
+  /** `'static'`: the finished artwork; `'once'`: SMIL, played once; `'loop'`: CSS keyframes, drawn, held, faded and repeated. */
+  mode: 'static' | 'once' | 'loop';
+  /** See {@link TegakiPluginContext.random}. */
+  random(key: string | number): () => number;
+  /** A document-unique id starting with `name`. */
+  id(name: string): string;
+  /** Add to `<defs>`: a filter, gradient or pattern. */
+  defs(markup: string): void;
+  /** Add under the ink. Clip-to-text doesn't cut it, and a loop doesn't fade it. */
+  underlay(markup: string): void;
+  /** Add over the ink. Clip-to-text doesn't cut it; a loop fades it with the ink. */
+  overlay(markup: string): void;
+  /** Wrap the ink (after clip-to-text) in `<g {attrs}>` — e.g. `filter="url(#…)"`. The first call is innermost. */
+  ink(attrs: string): void;
+  /**
+   * Restyle one stroke: its paint in place of the text's — a color, a
+   * `url(#…)` paint, or a color per draw progress along the stroke — and
+   * attributes for a `<g>` around it. A later call's color wins.
+   */
+  style(stroke: PlacedStroke, style: { color?: string | ((t: number) => string); attrs?: string }): void;
+  /** What shows an element from timeline second `t` on, in any mode: `attrs` go in its tag, `inner` inside it. */
+  appear(t: number): { attrs: string; inner: string };
+  /** Seconds in the file for timeline second `t` (the export's speed), for SMIL of your own. */
+  seconds(t: number): number;
+}
+
+/**
+ * Paints alongside the handwriting, reshapes it, or reacts to it. Every hook
+ * is optional, and plugins run in the order they're listed, so a plugin sees
+ * the ink the ones before it made. Painting is a function of the frame alone:
+ * the renderer can draw any time, in any order (controlled time, scrubbing,
+ * CSS time).
+ */
+export interface TegakiPlugin {
+  /** Names the plugin in error messages. */
+  name: string;
+  /**
+   * Reshape a stroke's ink: move its points, change its widths. Called once
+   * per layout per stroke with the path the plugins before it made (the
+   * first gets the stroke as the bundle has it), not per frame. Return a new
+   * path; {@link StrokePath.map} keeps where the pen is exact. A dot is a
+   * path of one point. Numbers the hooks after it should see — a depth, say,
+   * for a painter drawing the ink in 3D — go on the points' `data`.
+   */
+  geometry?(path: StrokePath, ctx: TegakiGeometryContext): StrokePath;
+  /**
+   * Retime the handwriting: when each stroke starts and how long it takes.
+   * Called once per layout, with every stroke placed (so where it is can
+   * decide when it draws: a sweep, the pen's travel from the stroke before).
+   * Return one `{ start, duration }` per stroke, in the order given, and the
+   * timeline's new `duration` if it should change otherwise than with its
+   * last stroke (a pause at the end, time for an effect to finish). The
+   * engine's `duration`, the pen, `onComplete`, CSS time and `toSVG` all
+   * follow; each glyph's easing runs over the time its strokes now span, and
+   * characters drawn from the fallback font keep their distance from the
+   * glyph before them. Hooks run in order, each on the times the one before
+   * returned.
+   */
+  timing?(ctx: TegakiTimingContext): { strokes: readonly StrokeTime[]; duration?: number } | undefined;
+  /**
+   * Reshape a glyph outline contour (points in px) the way `geometry`
+   * reshapes the glyph's strokes, for clip-to-text: a variation moves the
+   * letter's edges with its strokes. Called once per layout.
+   */
+  outline?(contour: readonly { x: number; y: number }[], ctx: TegakiOutlineContext): { x: number; y: number }[];
+  /**
+   * Paint a stroke. Called every frame for every stroke, the ones the pen
+   * hasn't reached too (`stroke.state` is `'pending'`), so a plugin can
+   * decide what shows when. `next` paints it the way the rest of the chain
+   * does — the plugins after this one, then the default painter
+   * ({@link paintStroke}), which paints only what's drawn: a pending stroke
+   * passed on unchanged shows nothing. Change what it gets (`style`, the
+   * stroke's `path`, `state` and `progress`), call it more than once, draw
+   * around it, or don't call it at all. Anything drawn directly, rather than
+   * through `next`, should check `stroke.state` first.
+   */
+  paint?(stroke: TegakiStrokePaintContext, next: (stroke: TegakiStrokePaintContext) => void): void;
+  /** Post-process the finished ink every frame, before `underlay` and `overlay`: a glow, a shadow, a filter. */
+  ink?(ink: TegakiInkContext): void;
+  /** Paint under the ink. Clip-to-text doesn't clip it. */
+  underlay?(paint: TegakiPaintContext): void;
+  /** Paint over the ink. Clip-to-text doesn't clip it. */
+  overlay?(paint: TegakiPaintContext): void;
+  /**
+   * Called after every render with the frame drawn and the one drawn before
+   * it (`null` the first time) — for side effects such as sound. A render can
+   * repeat a time (a resize) or jump (a seek, a loop): compare the two frames.
+   */
+  onFrame?(frame: TegakiFrame, prev: TegakiFrame | null): void;
+  /**
+   * The box the plugin paints in over the whole animation, in the same
+   * space as ctx — the canvas grows to hold it, as it holds the ink. Keep
+   * it the same from frame to frame: the canvas is sized once, not per frame.
+   */
+  bounds?(ctx: TegakiBoundsContext): Box | null;
+  /**
+   * Draw into `toSVG` / `exportSVG`'s file, which the painting hooks don't
+   * reach (the file is markup, not a canvas): add defs, markup under or over
+   * the ink, attributes around it, or restyle strokes. `geometry`, `outline`
+   * and `timing` need no SVG of their own — the file draws the ink they shape
+   * and time. A plugin with `bounds` has the crop take them in.
+   */
+  svg?(svg: TegakiSvgContext): void;
+  /**
+   * Called when an engine starts running the plugin — it's in the `plugins`
+   * the engine was given — once per engine (a plugin two renderers share is
+   * attached to each). Set up what the plugin needs for as long as it runs —
+   * a WebGL context, a worker, a listener, a library or an image to load —
+   * and return the function that releases it: it's called when that engine
+   * stops running the plugin, because `plugins` no longer holds it or the
+   * engine is destroyed. Hooks may run before an asynchronous setup is done;
+   * call `ctx.redraw()` once it is. `drawGlyph()` doesn't attach.
+   */
+  attach?(ctx: TegakiAttachContext): undefined | void | (() => void);
+  /**
+   * Redraw the ink as a cycle of drawings over time. `geometry` and
+   * `outline` are called once per drawing per layout, told which one in
+   * `ctx.step`; the engine keeps them all and shows one at a time — chosen
+   * from the time in controlled mode (so a video renders the same every
+   * time), from the clock otherwise. The canvas is sized to hold every
+   * drawing. Reduced motion (see `reducedMotion`) holds the first. The
+   * painting hooks are told the drawing too (`step`), so a plugin with no
+   * `geometry` can use steps as a clock for painting alone (a flicker).
+   */
+  steps?: TegakiPluginSteps;
+}
+
+/**
+ * An entry of `plugins`: a plugin, or one named by the factory registered
+ * under that name (see {@link TegakiEngine.registerPlugin}) — `'glow'`, or
+ * `['glow', { radius: 0.15 }]` with options, read through the factory's params
+ * (numbers kept in range, unknown keys dropped). Named entries are plain
+ * data, so they work where functions can't go: an HTML attribute, props an
+ * Astro page sends to the browser, a CLI flag.
+ */
+export type TegakiPluginSpec = TegakiPlugin | string | readonly [name: string, options?: Readonly<Record<string, unknown>>];
+
+// ---------------------------------------------------------------------------
+// Engine options
+// ---------------------------------------------------------------------------
+
+export interface TegakiEngineOptions {
+  text?: string;
+  /** A font bundle, or a registered bundle name (see {@link TegakiEngine.registerBundle}). */
+  font?: TegakiBundle | string;
+  time?: TimeControlProp;
+  /** Whether uncontrolled playback honours reduced motion. Default: `'never'`. See {@link ReducedMotionProp}. */
+  reducedMotion?: ReducedMotionProp;
+  /**
+   * How much the ink's width follows the pen pressure the bundle records, 0–1:
+   * `1` (default) draws each point as wide as the bundle says, `0` draws each
+   * stroke at one width, its mean.
+   */
+  pressure?: number;
+  timing?: TimelineConfig;
+  /** Render-quality knobs (supersampling, segment subdivision). */
+  quality?: TegakiQuality;
+  /**
+   * Plugins that reshape, retime or paint the ink, paint under or over it, or
+   * react to the frames drawn (see {@link TegakiPlugin}), run in order:
+   * plugin objects, or plugins named by their registered factory (see
+   * {@link TegakiPluginSpec}). A name registered later is picked up then.
+   */
+  plugins?: readonly TegakiPluginSpec[];
+  /**
+   * The number the renderer's random choices come from: what plugins draw
+   * with `random(key)` or shape by a glyph's `seed` (a variation's field, where
+   * a gradient starts). The same seed draws the same every time — on every load,
+   * in every tab or process rendering a video. Each character adds its index
+   * to it, so repeated letters still differ. `'random'` picks one when the
+   * engine is created, for text that looks a little different every time;
+   * read it back from {@link TegakiEngine.seed} to keep a result you like.
+   * Default: `0`.
+   */
+  seed?: number | 'random';
+  showOverlay?: boolean;
+  onComplete?: () => void;
+  /**
+   * Fires after the engine recomputes its timeline — on initial load, font
+   * swaps, text changes, and again once async shaper resolution finishes.
+   * The argument is the same `Timeline` exposed via `engine.timeline`. Use
+   * this instead of calling `computeTimeline` from the host: a manual call
+   * without the engine's resolved shaper returns the pre-shaping
+   * totalDuration.
+   */
+  onChangeTimeline?: (timeline: Timeline) => void;
+  /** Text direction. When set, applies the CSS `direction` property to the container. */
+  direction?: 'ltr' | 'rtl';
+  /**
+   * CSS font-family list for characters the bundle has no glyph for, placed
+   * after the bundle's own families (e.g. `'"Noto Serif SC", serif'`). Such
+   * characters appear without a handwriting animation, in the first font of
+   * the stack that covers them. Bundles that ship their full font try it
+   * first; the rest (CJK bundles ship only the generated subset) fall straight
+   * through to this list, or to the browser's default font without it.
+   */
+  fallbackFont?: string;
+  /**
+   * Whether this engine instance uses the globally-registered shaper. When
+   * `false`, the engine ignores the shaper factory and renders via the
+   * char-keyed grapheme path — useful for opting one renderer out of shaping
+   * (e.g. side-by-side comparisons, lightweight previews) without unregistering
+   * the shaper for the whole process. Default: `true`.
+   */
+  shaper?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Render elements
+// ---------------------------------------------------------------------------
+
+export type CreateElementFn<T> = (tag: string, props: Record<string, any>, ...children: (T | string)[]) => T;
+
+/** Options for `TegakiEngine.toSVG` / `exportSVG`. */
+export interface TegakiSvgOptions {
+  /** Self-drawing (default) or the finished artwork. */
+  animated?: boolean;
+  /** Loop forever with CSS keyframes: draw, hold, fade, repeat. Implies `animated`. */
+  loop?: boolean;
+  /** Playback speed multiplier. Default: the engine's uncontrolled `speed`, else `1`. */
+  speed?: number;
+  /** Loop mode: seconds the finished text holds before it fades out. Default `1.5`. */
+  loopHold?: number;
+  /** Crop the viewBox to the ink (plus a small margin) instead of the full canvas box. Default `true`. */
+  crop?: boolean;
+  /** `@font-face` rules to embed for the SVG's text (clip-to-text, fallback characters). `exportSVG` fills these in. */
+  fontFaces?: { family: string; src: string }[];
+}

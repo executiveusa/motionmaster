@@ -21,7 +21,9 @@ export type SkillGroup =
   | "shots"
   | "gsap"
   | "remotion"
-  | "hyperframes";
+  | "hyperframes"
+  | "editing"
+  | "diagrams";
 
 export interface SkillSummary {
   /** The skill's identity in this plugin: its directory name. Always unique. */
@@ -187,6 +189,27 @@ const GROUP_BY_NAME: Record<string, SkillGroup> = {
   "hyperframes-cli": "hyperframes",
   "hyperframes-registry": "hyperframes",
   "media-use": "hyperframes",
+  // A second HyperFrames doctrine, and a richer one: nine palettes, the
+  // house style, the transition catalogue, captions, audio-reactive visuals.
+  "hyperframes-doctrine": "hyperframes",
+  // Cutting what was recorded: the one thing this repo had no answer for.
+  "cut-mistakes": "editing",
+  "cut-silences": "editing",
+  "edit-video": "editing",
+  "short-form-edit": "editing",
+  // The production route from a brief to a finished film.
+  "make-a-video": "production",
+  "motion-showreel": "production",
+  "short-form-video": "production",
+  "video-storytelling": "production",
+  "style-library": "production",
+  // The seven-stage studio process and the creative muscle behind it.
+  "saas-motion-video": "production",
+  // Technical diagrams that draw themselves, with a camera rig and a
+  // voiceover mode that fires every beat on its cue.
+  "animated-diagrams": "diagrams",
+  // A website captured and turned into a video.
+  "website-to-hyperframes": "production",
 };
 
 function groupFor(name: string): SkillGroup {
@@ -205,7 +228,9 @@ const UPSTREAM: Record<string, string> = {
   web: "oil-motion (MIT), animate (MIT), claude-motion (MIT), analog-motion (MIT), vector-map (MIT)",
   catalogue: "awesome-ai-motion (MIT)",
   shots: "video-shotcraft (Apache-2.0)",
-  hyperframes: "HyperFrames by HeyGen (Apache-2.0)",
+  hyperframes: "HyperFrames by HeyGen (Apache-2.0), herk-edit-kit (MIT)",
+  editing: "herk-edit-kit by nateherkai (MIT)",
+  diagrams: "animated-diagrams-skill by omkamal (Apache-2.0)",
 };
 
 function upstreamFor(group: SkillGroup): string | null {

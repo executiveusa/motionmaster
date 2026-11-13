@@ -34,7 +34,10 @@ export interface HouseTemplate {
   name: string;
   role: string;
   roles: string[];
-  block: string;
+  /** Where the scene lives: a registry block, or a composition vendored here. */
+  source: { kind: "registry" | "local"; id: string; path?: string };
+  /** The registry block, when the scene came from the registry. */
+  block?: string;
   kit: string;
   durationSeconds: number;
   format: { width: number; height: number; aspect: string };
@@ -132,6 +135,16 @@ export function houseLibraryProblems(repoRoot: string): HouseProblem[] {
   const blocks = loadBlocks(join(repoRoot, "library", "blocks.json"));
 
   for (const template of library.templates) {
+    if (template.source?.kind === "local") {
+      const path = template.source.path
+        ? join(repoRoot, template.source.path)
+        : join(repoRoot, "studio", "compositions", template.source.id);
+      if (!existsSync(path)) {
+        problems.push({ path: template.id, message: `The composition "${template.source.path}" is not on disk.` });
+        continue;
+      }
+      continue;
+    }
     const block = blocks.blocks.find((b) => b.id === template.block);
     if (!block) {
       problems.push({ path: template.id, message: `The block "${template.block}" is not in the registry.` });
@@ -169,8 +182,40 @@ export function planHouseTemplate(
   if (!template) {
     return { problems: [{ path: "id", message: `There is no house scene called "${id}".` }] };
   }
-  const blocks = loadBlocks(join(repoRoot, "library", "blocks.json"));
-  const block = blocks.blocks.find((b) => b.id === template.block);
+  /*
+   * A scene comes from one of two places. A registry block is installed with
+   * `hyperframes add`; a vendored composition is a file in this repository.
+   * Both fill the same way, so both are planned the same way.
+   */
+  const block =
+    template.source?.kind === "local"
+      ? ({
+          id: template.id,
+          type: "hyperframes:composition",
+          title: template.name,
+          description: "",
+          tags: template.tags ?? [],
+          author: template.author ?? null,
+          license: template.license ?? null,
+          dimensions: null,
+          duration: template.durationSeconds,
+          variables: (template.variables ?? []).map((v) => ({
+            id: v.id,
+            type: v.type,
+            role: v.role,
+            label: v.label,
+            description: v.description,
+            default: v.default,
+            min: null,
+            max: null,
+            options: v.options ?? [],
+          })),
+          files: [],
+        } as unknown as MotionBlock)
+      : loadBlocks(join(repoRoot, "library", "blocks.json")).blocks.find(
+          (b) => b.id === template.block,
+        );
+
   if (!block) {
     return {
       template,

@@ -2,18 +2,18 @@
   "generated": "scripts/build-house-library.mjs",
   "note": "The house library: every motion block that passed the gate, as a reusable scene. An agent picks a scene by the shot role it serves, fills the content variables and renders it. Nothing in here failed the gate, and nothing in here is invented.",
   "counts": {
-    "total": 75,
+    "total": 99,
     "byRole": {
       "ui-entrance": 54,
       "interaction": 41,
       "outro": 35,
-      "rhythm": 29,
+      "rhythm": 32,
+      "typography": 26,
+      "data": 20,
       "camera": 20,
-      "typography": 20,
       "effects": 10,
       "transition": 9,
-      "opening": 6,
-      "data": 5
+      "opening": 6
     }
   },
   "templates": [
@@ -27,6 +27,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "ai-answer-rank"
+      },
       "block": "ai-answer-rank",
       "kit": "house",
       "durationSeconds": 9,
@@ -174,6 +178,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "ai-chat-reveal"
+      },
       "block": "ai-chat-reveal",
       "kit": "house",
       "durationSeconds": 19.3333,
@@ -331,12 +339,46 @@
       "author": "Miao Yang"
     },
     {
+      "id": "bar-chart-grow",
+      "name": "Bar Chart Grow",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "bar-chart-grow",
+        "path": "studio/compositions/motion-library/bar-chart-grow/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 6,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "bar-chart-grow. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 6 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "bar-chart-race",
       "name": "Bar Chart Race",
       "role": "data",
       "roles": [
         "data"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "bar-chart-race"
+      },
       "block": "bar-chart-race",
       "kit": "house",
       "durationSeconds": 12,
@@ -469,6 +511,10 @@
         "rhythm",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "beat-freeze-cut"
+      },
       "block": "beat-freeze-cut",
       "kit": "house",
       "durationSeconds": 6,
@@ -492,6 +538,66 @@
       "author": null
     },
     {
+      "id": "before-after-stat",
+      "name": "Before After Stat",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "before-after-stat",
+        "path": "studio/compositions/motion-library/before-after-stat/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "before-after-stat. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "big-number-card",
+      "name": "Big Number Card",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "big-number-card",
+        "path": "studio/compositions/motion-library/big-number-card/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "big-number-card. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "blue-sweater-intro-video",
       "name": "Blue Sweater Intro Video",
       "role": "interaction",
@@ -499,6 +605,10 @@
         "interaction",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "blue-sweater-intro-video"
+      },
       "block": "blue-sweater-intro-video",
       "kit": "house",
       "durationSeconds": 12,
@@ -530,6 +640,10 @@
         "interaction",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "camcorder-hud"
+      },
       "block": "camcorder-hud",
       "kit": "house",
       "durationSeconds": 4,
@@ -562,6 +676,10 @@
       "roles": [
         "camera"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "camera-dolly-zoom"
+      },
       "block": "camera-dolly-zoom",
       "kit": "house",
       "durationSeconds": 4,
@@ -666,6 +784,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-circle-1"
+      },
       "block": "carousel-circle-1",
       "kit": "house",
       "durationSeconds": 6,
@@ -839,6 +961,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-circle-2"
+      },
       "block": "carousel-circle-2",
       "kit": "house",
       "durationSeconds": 6,
@@ -1012,6 +1138,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-circle-3"
+      },
       "block": "carousel-circle-3",
       "kit": "house",
       "durationSeconds": 6,
@@ -1185,6 +1315,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-circle-4"
+      },
       "block": "carousel-circle-4",
       "kit": "house",
       "durationSeconds": 6,
@@ -1358,6 +1492,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-circle-5"
+      },
       "block": "carousel-circle-5",
       "kit": "house",
       "durationSeconds": 6,
@@ -1532,6 +1670,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-orbit-1"
+      },
       "block": "carousel-orbit-1",
       "kit": "house",
       "durationSeconds": 6,
@@ -1827,6 +1969,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-orbit-2"
+      },
       "block": "carousel-orbit-2",
       "kit": "house",
       "durationSeconds": 6,
@@ -2122,6 +2268,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-orbit-3"
+      },
       "block": "carousel-orbit-3",
       "kit": "house",
       "durationSeconds": 6,
@@ -2417,6 +2567,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-orbit-4"
+      },
       "block": "carousel-orbit-4",
       "kit": "house",
       "durationSeconds": 6,
@@ -2712,6 +2866,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-orbit-5"
+      },
       "block": "carousel-orbit-5",
       "kit": "house",
       "durationSeconds": 6,
@@ -3007,6 +3165,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-path-1"
+      },
       "block": "carousel-path-1",
       "kit": "house",
       "durationSeconds": 6,
@@ -3301,6 +3463,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-path-2"
+      },
       "block": "carousel-path-2",
       "kit": "house",
       "durationSeconds": 6,
@@ -3475,6 +3641,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-path-3"
+      },
       "block": "carousel-path-3",
       "kit": "house",
       "durationSeconds": 6,
@@ -3649,6 +3819,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-path-4"
+      },
       "block": "carousel-path-4",
       "kit": "house",
       "durationSeconds": 6,
@@ -3943,6 +4117,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-path-5"
+      },
       "block": "carousel-path-5",
       "kit": "house",
       "durationSeconds": 6,
@@ -4238,6 +4416,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-text-circle-4"
+      },
       "block": "carousel-text-circle-4",
       "kit": "house",
       "durationSeconds": 5,
@@ -4434,6 +4616,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-text-circle-5"
+      },
       "block": "carousel-text-circle-5",
       "kit": "house",
       "durationSeconds": 5,
@@ -4628,6 +4814,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-vision-1"
+      },
       "block": "carousel-vision-1",
       "kit": "house",
       "durationSeconds": 6,
@@ -4802,6 +4992,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-vision-2"
+      },
       "block": "carousel-vision-2",
       "kit": "house",
       "durationSeconds": 6,
@@ -4976,6 +5170,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-vision-3"
+      },
       "block": "carousel-vision-3",
       "kit": "house",
       "durationSeconds": 6,
@@ -5150,6 +5348,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-vision-4"
+      },
       "block": "carousel-vision-4",
       "kit": "house",
       "durationSeconds": 6,
@@ -5324,6 +5526,10 @@
         "rhythm",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "carousel-vision-5"
+      },
       "block": "carousel-vision-5",
       "kit": "house",
       "durationSeconds": 6,
@@ -5497,6 +5703,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "chatgpt-exchange"
+      },
       "block": "chatgpt-exchange",
       "kit": "house",
       "durationSeconds": 14.9,
@@ -5530,6 +5740,10 @@
         "rhythm",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "cinemagraph"
+      },
       "block": "cinemagraph",
       "kit": "house",
       "durationSeconds": 10,
@@ -5562,6 +5776,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "claude-exchange"
+      },
       "block": "claude-exchange",
       "kit": "house",
       "durationSeconds": 21.4,
@@ -5594,6 +5812,10 @@
         "typography",
         "camera"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-3d-extrude"
+      },
       "block": "code-3d-extrude",
       "kit": "house",
       "durationSeconds": 8,
@@ -5625,6 +5847,10 @@
         "typography",
         "data"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-diff"
+      },
       "block": "code-diff",
       "kit": "house",
       "durationSeconds": 6,
@@ -5654,6 +5880,10 @@
       "roles": [
         "typography"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-highlight"
+      },
       "block": "code-highlight",
       "kit": "house",
       "durationSeconds": 5,
@@ -5685,6 +5915,10 @@
         "rhythm",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-morph"
+      },
       "block": "code-morph",
       "kit": "house",
       "durationSeconds": 7,
@@ -5717,6 +5951,10 @@
         "camera",
         "effects"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-particle-assemble"
+      },
       "block": "code-particle-assemble",
       "kit": "house",
       "durationSeconds": 8,
@@ -5749,6 +5987,10 @@
         "typography",
         "rhythm"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-scroll"
+      },
       "block": "code-scroll",
       "kit": "house",
       "durationSeconds": 6,
@@ -5780,6 +6022,10 @@
         "camera",
         "effects"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-shader-dissolve"
+      },
       "block": "code-shader-dissolve",
       "kit": "house",
       "durationSeconds": 7,
@@ -5813,6 +6059,10 @@
         "camera",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "code-slice-hero"
+      },
       "block": "code-slice-hero",
       "kit": "house",
       "durationSeconds": 8,
@@ -5840,6 +6090,96 @@
       "author": null
     },
     {
+      "id": "compact-number-callout",
+      "name": "Compact Number Callout",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "compact-number-callout",
+        "path": "studio/compositions/motion-library/compact-number-callout/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 3.2,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "compact-number-callout. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 3.2 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "concept-spotlight",
+      "name": "Concept Spotlight",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "concept-spotlight",
+        "path": "studio/compositions/motion-library/concept-spotlight/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "concept-spotlight. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "donut-progress",
+      "name": "Donut Progress",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "donut-progress",
+        "path": "studio/compositions/motion-library/donut-progress/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "donut-progress. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "editorial-flash-overlay",
       "name": "Editorial Flash Overlay",
       "role": "effects",
@@ -5849,6 +6189,10 @@
         "ui-entrance",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "editorial-flash-overlay"
+      },
       "block": "editorial-flash-overlay",
       "kit": "house",
       "durationSeconds": 4,
@@ -5883,6 +6227,10 @@
         "ui-entrance",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "freeze-frame-dressing"
+      },
       "block": "freeze-frame-dressing",
       "kit": "house",
       "durationSeconds": 4,
@@ -5916,6 +6264,10 @@
         "interaction",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "heygen-avatar-promo-card"
+      },
       "block": "heygen-avatar-promo-card",
       "kit": "house",
       "durationSeconds": 10,
@@ -5939,12 +6291,46 @@
       "author": "HeyGen"
     },
     {
+      "id": "horizontal-bar-compare",
+      "name": "Horizontal Bar Compare",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "horizontal-bar-compare",
+        "path": "studio/compositions/motion-library/horizontal-bar-compare/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "horizontal-bar-compare. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "hw-frame",
       "name": "Sketched Frame",
       "role": "typography",
       "roles": [
         "typography"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "hw-frame"
+      },
       "block": "hw-frame",
       "kit": "house",
       "durationSeconds": 8,
@@ -5975,6 +6361,10 @@
         "data",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "hw-pipeline"
+      },
       "block": "hw-pipeline",
       "kit": "house",
       "durationSeconds": 7,
@@ -6005,6 +6395,10 @@
         "typography",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "hw-scribble-transition"
+      },
       "block": "hw-scribble-transition",
       "kit": "house",
       "durationSeconds": 2.2,
@@ -6034,6 +6428,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "hw-text-cloud"
+      },
       "block": "hw-text-cloud",
       "kit": "house",
       "durationSeconds": 6,
@@ -6065,6 +6463,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "hw-write-title"
+      },
       "block": "hw-write-title",
       "kit": "house",
       "durationSeconds": 6,
@@ -6096,6 +6498,10 @@
         "interaction",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "instagram-follow"
+      },
       "block": "instagram-follow",
       "kit": "house",
       "durationSeconds": 4.5,
@@ -6118,12 +6524,136 @@
       "author": null
     },
     {
+      "id": "iteration-loop",
+      "name": "Iteration Loop",
+      "role": "rhythm",
+      "roles": [
+        "rhythm"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "iteration-loop",
+        "path": "studio/compositions/motion-library/iteration-loop/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 4.2,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "iteration-loop. A rhythm scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 4.2 seconds, with the house brand kit.",
+      "why": "A rhythm scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "key-point-marker",
+      "name": "Key Point Marker",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "key-point-marker",
+        "path": "studio/compositions/motion-library/key-point-marker/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 4.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "key-point-marker. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 4.5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "keyword-blast",
+      "name": "Keyword Blast",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "keyword-blast",
+        "path": "studio/compositions/motion-library/keyword-blast/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "keyword-blast. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "line-chart-draw",
+      "name": "Line Chart Draw",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "line-chart-draw",
+        "path": "studio/compositions/motion-library/line-chart-draw/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 7,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "line-chart-draw. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 7 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "lower-third-bild",
       "name": "Lower Third — BILD Style",
       "role": "ui-entrance",
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lower-third-bild"
+      },
       "block": "lower-third-bild",
       "kit": "house",
       "durationSeconds": 8,
@@ -6175,6 +6705,10 @@
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-accent-underline"
+      },
       "block": "lt-accent-underline",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6206,6 +6740,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-bold-block"
+      },
       "block": "lt-bold-block",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6236,6 +6774,10 @@
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-clean-bar"
+      },
       "block": "lt-clean-bar",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6266,6 +6808,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-color-block"
+      },
       "block": "lt-color-block",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6296,6 +6842,10 @@
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-dark-card"
+      },
       "block": "lt-dark-card",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6327,6 +6877,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-kicker-name"
+      },
       "block": "lt-kicker-name",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6358,6 +6912,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-mask-reveal"
+      },
       "block": "lt-mask-reveal",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6388,6 +6946,10 @@
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-soft-pill"
+      },
       "block": "lt-soft-pill",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6419,6 +6981,10 @@
         "typography",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "lt-stack-bars"
+      },
       "block": "lt-stack-bars",
       "kit": "house",
       "durationSeconds": 4.8,
@@ -6443,12 +7009,46 @@
       "author": null
     },
     {
+      "id": "metric-pulse",
+      "name": "Metric Pulse",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "metric-pulse",
+        "path": "studio/compositions/motion-library/metric-pulse/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 6,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "metric-pulse. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 6 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "mk-background",
       "name": "Minimal Gradient Background",
       "role": "ui-entrance",
       "roles": [
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "mk-background"
+      },
       "block": "mk-background",
       "kit": "house",
       "durationSeconds": 10,
@@ -6473,6 +7073,126 @@
       "author": null
     },
     {
+      "id": "mode-choice-compare",
+      "name": "Mode Choice Compare",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "mode-choice-compare",
+        "path": "studio/compositions/motion-library/mode-choice-compare/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 3.6,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "mode-choice-compare. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 3.6 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "myth-fact-swap",
+      "name": "Myth Fact Swap",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "myth-fact-swap",
+        "path": "studio/compositions/motion-library/myth-fact-swap/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "myth-fact-swap. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "number-counter",
+      "name": "Number Counter",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "number-counter",
+        "path": "studio/compositions/motion-library/number-counter/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "number-counter. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "number-impact",
+      "name": "Number Impact",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "number-impact",
+        "path": "studio/compositions/motion-library/number-impact/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "number-impact. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "nyc-paris-flight",
       "name": "NYC Paris Flight",
       "role": "camera",
@@ -6481,6 +7201,10 @@
         "interaction",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "nyc-paris-flight"
+      },
       "block": "nyc-paris-flight",
       "kit": "house",
       "durationSeconds": 6,
@@ -6513,6 +7237,10 @@
         "ui-entrance",
         "transition"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "organic-light-leak-overlay"
+      },
       "block": "organic-light-leak-overlay",
       "kit": "house",
       "durationSeconds": 4,
@@ -6546,6 +7274,10 @@
         "interaction",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "oscilloscope-trace"
+      },
       "block": "oscilloscope-trace",
       "kit": "house",
       "durationSeconds": 6,
@@ -6665,6 +7397,10 @@
         "camera",
         "rhythm"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "product-turntable"
+      },
       "block": "product-turntable",
       "kit": "house",
       "durationSeconds": 6,
@@ -6691,6 +7427,36 @@
       "author": null
     },
     {
+      "id": "quote-card",
+      "name": "Quote Card",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "quote-card",
+        "path": "studio/compositions/motion-library/quote-card/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "quote-card. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "share-sheet-carousel",
       "name": "Share-Sheet Carousel",
       "role": "interaction",
@@ -6699,6 +7465,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "share-sheet-carousel"
+      },
       "block": "share-sheet-carousel",
       "kit": "house",
       "durationSeconds": 7.2333,
@@ -6843,6 +7613,10 @@
         "ui-entrance",
         "rhythm"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "snow"
+      },
       "block": "snow",
       "kit": "house",
       "durationSeconds": 6,
@@ -6908,6 +7682,36 @@
       "author": null
     },
     {
+      "id": "source-citation-card",
+      "name": "Source Citation Card",
+      "role": "typography",
+      "roles": [
+        "typography"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "source-citation-card",
+        "path": "studio/compositions/motion-library/source-citation-card/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "source-citation-card. A typography scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A typography scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "spiral-galaxy",
       "name": "Spiral Galaxy",
       "role": "opening",
@@ -6917,6 +7721,10 @@
         "effects",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "spiral-galaxy"
+      },
       "block": "spiral-galaxy",
       "kit": "house",
       "durationSeconds": 10,
@@ -7020,6 +7828,10 @@
         "interaction",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "spotify-card"
+      },
       "block": "spotify-card",
       "kit": "house",
       "durationSeconds": 5,
@@ -7050,6 +7862,10 @@
         "ui-entrance",
         "rhythm"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "starfield"
+      },
       "block": "starfield",
       "kit": "house",
       "durationSeconds": 6,
@@ -7139,6 +7955,96 @@
       "author": null
     },
     {
+      "id": "stat-duel",
+      "name": "Stat Duel",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "stat-duel",
+        "path": "studio/compositions/motion-library/stat-duel/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "stat-duel. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "status-split",
+      "name": "Status Split",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "status-split",
+        "path": "studio/compositions/motion-library/status-split/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "status-split. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "three-step-flow",
+      "name": "Three Step Flow",
+      "role": "rhythm",
+      "roles": [
+        "rhythm"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "three-step-flow",
+        "path": "studio/compositions/motion-library/three-step-flow/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 6,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "three-step-flow. A rhythm scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 6 seconds, with the house brand kit.",
+      "why": "A rhythm scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "tiktok-follow",
       "name": "TikTok Follow",
       "role": "interaction",
@@ -7146,6 +8052,10 @@
         "interaction",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "tiktok-follow"
+      },
       "block": "tiktok-follow",
       "kit": "house",
       "durationSeconds": 4.5,
@@ -7168,6 +8078,66 @@
       "author": null
     },
     {
+      "id": "timeline-scan",
+      "name": "Timeline Scan",
+      "role": "rhythm",
+      "roles": [
+        "rhythm"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "timeline-scan",
+        "path": "studio/compositions/motion-library/timeline-scan/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "timeline-scan. A rhythm scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A rhythm scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
+      "id": "top-rank-list",
+      "name": "Top Rank List",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "top-rank-list",
+        "path": "studio/compositions/motion-library/top-rank-list/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 5.5,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "top-rank-list. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 5.5 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "transitions-light",
       "name": "Light Transitions",
       "role": "interaction",
@@ -7176,6 +8146,10 @@
         "transition",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "transitions-light"
+      },
       "block": "transitions-light",
       "kit": "house",
       "durationSeconds": 21,
@@ -7197,6 +8171,36 @@
       "author": null
     },
     {
+      "id": "turning-point-line",
+      "name": "Turning Point Line",
+      "role": "data",
+      "roles": [
+        "data"
+      ],
+      "source": {
+        "kind": "local",
+        "id": "turning-point-line",
+        "path": "studio/compositions/motion-library/turning-point-line/index.html"
+      },
+      "kit": "house",
+      "durationSeconds": 6,
+      "format": {
+        "width": 1920,
+        "height": 1080,
+        "aspect": "16:9"
+      },
+      "fps": 30,
+      "tags": [
+        "motion-library"
+      ],
+      "prompt": "turning-point-line. A data scene from the studio's motion library. Render at 1920x1080, 16:9, 30fps, about 6 seconds, with the house brand kit.",
+      "why": "A data scene that passed the gate. Fill its content variables and it renders.",
+      "variables": [],
+      "contentVariables": [],
+      "license": "MIT",
+      "author": "nutllwhy"
+    },
+    {
       "id": "vfx-anamorphic-flare",
       "name": "Anamorphic Streak Flare",
       "role": "effects",
@@ -7206,6 +8210,10 @@
         "ui-entrance",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "vfx-anamorphic-flare"
+      },
       "block": "vfx-anamorphic-flare",
       "kit": "house",
       "durationSeconds": 10,
@@ -7320,6 +8328,10 @@
         "effects",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "vfx-liquid-background"
+      },
       "block": "vfx-liquid-background",
       "kit": "house",
       "durationSeconds": 12,
@@ -7352,6 +8364,10 @@
         "interaction",
         "outro"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "yt-logo-intro"
+      },
       "block": "yt-logo-intro",
       "kit": "house",
       "durationSeconds": 6,
@@ -7381,6 +8397,10 @@
         "interaction",
         "ui-entrance"
       ],
+      "source": {
+        "kind": "registry",
+        "id": "yt-lower-third"
+      },
       "block": "yt-lower-third",
       "kit": "house",
       "durationSeconds": 4.5,

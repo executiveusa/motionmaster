@@ -1,0 +1,667 @@
+<!doctype html>
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"title","type":"string","label":"Title","default":"단계 리스트"},
+    {"id":"items","type":"json","label":"Items","default":[]},
+    {"id":"values","type":"json","label":"Values","default":[]},
+    {"id":"unit","type":"string","label":"Unit","default":""},
+    {"id":"accent","type":"color","label":"Accent","default":"currentColor"},
+    {"id":"mood","type":"string","label":"Mood","default":"informative"},
+    {"id":"emphasis","type":"string","label":"Emphasis","default":"rank"},
+    {"id":"reveal","type":"string","label":"Reveal","default":"stagger"},
+    {"id":"visualKind","type":"string","label":"Visual kind","default":"list"},
+    {"id":"source","type":"string","label":"Source","default":""},
+    {"id":"repeatIndex","type":"number","label":"Repeat index","default":0}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>ReelForge numbered block</title>
+  </head>
+  <body>
+    <template>
+      <style>
+        .numbered-block {
+          --numbered-ink: var(--rf-text, currentColor);
+          --numbered-muted: var(--rf-ink-subtle, var(--rf-muted-text, var(--rf-text, currentColor)));
+          --numbered-tertiary: var(--rf-ink-tertiary, var(--rf-ink-subtle, var(--rf-text, currentColor)));
+          --numbered-accent: var(--rf-accent, var(--rf-text, currentColor));
+          --numbered-accent-alt: var(--rf-accent-alt, var(--rf-accent, var(--rf-text, currentColor)));
+          --numbered-hairline: var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 18%, transparent));
+          --numbered-hairline-strong: var(
+            --rf-hairline-strong,
+            var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 34%, transparent))
+          );
+          --numbered-type-meta: 1.45rem;
+          --numbered-type-label: 3.5rem;
+          --numbered-type-display: 21.5rem;
+          --numbered-step-count: 3;
+          position: absolute;
+          inset: 0;
+          width: 1920px;
+          height: 1080px;
+          box-sizing: border-box;
+          overflow: hidden;
+          color: var(--numbered-ink);
+          font-family: "Pretendard", "Pretendard Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .numbered-stage {
+          position: absolute;
+          inset: 7.2% 6.25%;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 2.35rem;
+          min-width: 0;
+          min-height: 0;
+          box-sizing: border-box;
+          animation: numbered-stage-living 2.3s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        @keyframes numbered-stage-living {
+          0% {
+            filter: brightness(0.99);
+          }
+          100% {
+            filter: brightness(1.06);
+          }
+        }
+
+        @keyframes numbered-ghost-living {
+          0% {
+            opacity: 0.14;
+          }
+          100% {
+            opacity: 0.27;
+          }
+        }
+
+        @keyframes numbered-rail-living {
+          0% {
+            filter: brightness(0.92);
+          }
+          100% {
+            filter: brightness(1.25);
+          }
+        }
+
+        .numbered-header {
+          position: relative;
+          z-index: 2;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: end;
+          gap: 2.5rem;
+          min-width: 0;
+        }
+
+        .numbered-kicker,
+        .numbered-count,
+        .numbered-detail,
+        .numbered-index {
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: var(--numbered-type-meta);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .numbered-kicker {
+          width: max-content;
+          max-width: 100%;
+          margin: 0 0 0.8rem;
+          color: var(--numbered-muted);
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .numbered-title {
+          max-width: 72rem;
+          margin: 0;
+          color: var(--numbered-ink);
+          font-size: var(--numbered-type-label);
+          font-weight: 860;
+          line-height: 1.02;
+          letter-spacing: -0.03em;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+        }
+
+        .numbered-count {
+          align-self: start;
+          margin-top: 0.45rem;
+          color: var(--numbered-tertiary);
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: 0.08em;
+          white-space: nowrap;
+        }
+
+        .numbered-body {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          grid-template-columns: minmax(0, 1.08fr) minmax(34rem, 0.92fr);
+          gap: 3.6rem;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .numbered-list-shell,
+        .numbered-ghost-shell {
+          position: relative;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .numbered-list-shell {
+          padding-left: 7.4rem;
+        }
+
+        .numbered-rail {
+          position: absolute;
+          top: 0.5rem;
+          bottom: 0.5rem;
+          left: 3.2rem;
+          width: 1px;
+          background: var(--numbered-hairline);
+        }
+
+        .numbered-rail-progress {
+          position: absolute;
+          inset: 0 auto auto -1px;
+          width: 3px;
+          height: 100%;
+          background: var(--numbered-accent);
+          transform: scaleY(0);
+          transform-origin: center top;
+          animation: numbered-rail-living 2.1s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        .numbered-steps {
+          display: grid;
+          grid-template-rows: repeat(var(--numbered-step-count), minmax(0, 1fr));
+          min-height: 100%;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .numbered-step {
+          position: relative;
+          display: grid;
+          grid-template-columns: 6.2rem minmax(0, 1fr);
+          align-items: center;
+          gap: 1.45rem;
+          min-width: 0;
+          padding: 0.85rem 0;
+          border-top: 1px solid var(--numbered-hairline);
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+
+        .numbered-step:last-child {
+          border-bottom: 1px solid var(--numbered-hairline);
+        }
+
+        .numbered-step::before {
+          content: "";
+          position: absolute;
+          left: -4.24rem;
+          top: 50%;
+          width: 0.82rem;
+          height: 0.82rem;
+          box-sizing: border-box;
+          border: 1px solid var(--numbered-hairline-strong);
+          background: var(--numbered-ink);
+          transform: translateY(-50%);
+        }
+
+        .numbered-step[data-focus="true"]::before {
+          border-color: var(--numbered-accent);
+          background: var(--numbered-accent);
+        }
+
+        .numbered-index {
+          color: var(--numbered-tertiary);
+          font-weight: 760;
+          line-height: 1;
+          letter-spacing: -0.03em;
+        }
+
+        .numbered-step[data-focus="true"] .numbered-index,
+        .numbered-step[data-focus="true"] .numbered-label {
+          color: var(--numbered-accent);
+        }
+
+        .numbered-copy {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: baseline;
+          gap: 1.4rem;
+          min-width: 0;
+        }
+
+        .numbered-label {
+          margin: 0;
+          color: var(--numbered-ink);
+          font-size: var(--numbered-type-label);
+          font-weight: 820;
+          line-height: 1.04;
+          letter-spacing: -0.03em;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+        }
+
+        .numbered-detail {
+          justify-self: end;
+          margin: 0;
+          color: var(--numbered-accent);
+          font-size: var(--numbered-type-label);
+          font-weight: 760;
+          line-height: 1;
+          letter-spacing: -0.03em;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+        }
+
+        .numbered-ghost-shell {
+          display: grid;
+          place-items: center end;
+          overflow: hidden;
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+
+        .numbered-ghost {
+          position: relative;
+          right: -0.07em;
+          color: var(--numbered-accent-alt);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: var(--numbered-type-display);
+          font-weight: 740;
+          font-variant-numeric: tabular-nums;
+          line-height: 0.78;
+          letter-spacing: -0.08em;
+          white-space: nowrap;
+          opacity: 0.14;
+          animation: numbered-ghost-living 2.45s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        .numbered-ghost-shell::before,
+        .numbered-ghost-shell::after {
+          content: "";
+          position: absolute;
+          left: 6%;
+          right: 0;
+          height: 1px;
+          background: var(--numbered-hairline);
+        }
+
+        .numbered-ghost-shell::before {
+          top: 22%;
+        }
+
+        .numbered-ghost-shell::after {
+          bottom: 20%;
+        }
+
+        .numbered-block[data-variant="ghost-numeral"] .numbered-rail-progress {
+          opacity: 0.46;
+        }
+
+        .numbered-block[data-variant="progress-rail"] .numbered-body {
+          grid-template-columns: minmax(32rem, 0.76fr) minmax(0, 1.24fr);
+        }
+
+        .numbered-block[data-variant="progress-rail"] .numbered-list-shell {
+          grid-column: 2;
+          padding-left: 8rem;
+        }
+
+        .numbered-block[data-variant="progress-rail"] .numbered-rail {
+          left: 3.55rem;
+        }
+
+        .numbered-block[data-variant="progress-rail"] .numbered-ghost-shell {
+          grid-column: 1;
+          grid-row: 1;
+          place-items: center start;
+        }
+
+        .numbered-block[data-variant="progress-rail"] .numbered-ghost {
+          right: auto;
+          left: -0.08em;
+          color: var(--numbered-ink);
+        }
+
+        .numbered-block[data-density="medium"] .numbered-body {
+          gap: 2.7rem;
+        }
+
+        .numbered-block[data-density="medium"] .numbered-step {
+          gap: 1.1rem;
+          padding-block: 0.58rem;
+        }
+
+        .numbered-block[data-density="compact"] .numbered-stage {
+          gap: 1.65rem;
+        }
+
+        .numbered-block[data-density="compact"] .numbered-body {
+          gap: 2rem;
+        }
+
+        .numbered-block[data-density="compact"] .numbered-step {
+          gap: 0.95rem;
+          padding-block: 0.36rem;
+        }
+
+        .numbered-block[data-density="compact"] .numbered-detail {
+          max-width: 15rem;
+        }
+      </style>
+
+      <div
+        class="numbered-block"
+        data-composition-id="numbered"
+        data-width="1920"
+        data-height="1080"
+        data-duration="4"
+        role="img"
+        aria-label=""
+      >
+        <section class="numbered-stage">
+          <header class="numbered-header">
+            <div>
+              <p class="numbered-kicker" data-numbered-kicker></p>
+              <h1 class="numbered-title" data-numbered-title></h1>
+            </div>
+            <p class="numbered-count" data-numbered-count></p>
+          </header>
+
+          <section class="numbered-body" aria-label="단계 순서">
+            <div class="numbered-list-shell">
+              <span class="numbered-rail" aria-hidden="true"><span class="numbered-rail-progress" data-numbered-rail-progress></span></span>
+              <ol class="numbered-steps" data-numbered-list></ol>
+            </div>
+            <div class="numbered-ghost-shell" aria-hidden="true">
+              <span class="numbered-ghost" data-numbered-ghost>01</span>
+            </div>
+          </section>
+        </section>
+      </div>
+
+      <script>
+        (function () {
+          window.__timelines = window.__timelines || {};
+
+          const root =
+            document.querySelector('[data-composition-id="numbered"]') ??
+            document.querySelector('[data-hf-original-composition-id="numbered"]');
+          const tl = gsap.timeline({ paused: true });
+
+          if (!root) {
+            window.__timelines["numbered"] = tl;
+            return;
+          }
+
+          const host =
+            root.parentElement?.closest("[data-variable-values]") ||
+            root.closest("[data-variable-values]") ||
+            root.parentElement?.closest("[data-composition-id]") ||
+            root.closest("[data-composition-id]") ||
+            root;
+          const variables = readVariables(root);
+          const title = textValue(variables.title, "단계 리스트");
+          const items = arrayValue(variables.items);
+          const values = arrayValue(variables.values);
+          const unit = displayUnit(variables.unit);
+          const source = textValue(variables.source, "");
+          const rows = normalizeRows({ items, values, unit, title });
+          const repeatIndex = Math.max(0, Math.floor(numberValue(variables.repeatIndex, 0)));
+          const variant = repeatIndex % 2 === 0 ? "ghost-numeral" : "progress-rail";
+          const focusIndex = Math.max(0, rows.length - 1);
+          const duration = blockDuration(root, 4);
+
+          root.style.setProperty("--numbered-accent", safeColor(variables.accent));
+          root.style.setProperty("--numbered-step-count", String(Math.max(1, rows.length)));
+          root.dataset.variant = variant;
+          root.dataset.density = rows.length > 6 ? "compact" : rows.length > 4 ? "medium" : "standard";
+          root.dataset.focusStep = formatStep(focusIndex + 1);
+
+          root.querySelector("[data-numbered-title]").textContent = title;
+          root.querySelector("[data-numbered-kicker]").textContent = `STEP SEQUENCE / ${formatStep(focusIndex + 1)}`;
+          root.querySelector("[data-numbered-count]").textContent = `${formatStep(rows.length)} STEPS`;
+          root.querySelector("[data-numbered-ghost]").textContent = formatStep(focusIndex + 1);
+          root.setAttribute("aria-label", ariaLabel(title, rows, source));
+
+          const list = root.querySelector("[data-numbered-list]");
+          rows.forEach((row, index) => {
+            const item = document.createElement("li");
+            const indexEl = document.createElement("span");
+            const copy = document.createElement("div");
+            const label = document.createElement("h2");
+
+            item.className = "numbered-step";
+            indexEl.className = "numbered-index";
+            copy.className = "numbered-copy";
+            label.className = "numbered-label";
+            item.dataset.focus = String(index === focusIndex);
+            indexEl.textContent = row.badge;
+            label.textContent = row.label;
+            copy.append(label);
+
+            let detail = null;
+            if (row.detail) {
+              detail = document.createElement("p");
+              detail.className = "numbered-detail";
+              detail.textContent = row.detail;
+              copy.append(detail);
+            }
+
+            item.append(indexEl, copy);
+            list.appendChild(item);
+            row.elements = { item, indexEl, copy, detail };
+          });
+
+          const header = root.querySelector(".numbered-header");
+          const ghostShell = root.querySelector(".numbered-ghost-shell");
+          const railProgress = root.querySelector("[data-numbered-rail-progress]");
+
+          tl.fromTo(
+            header,
+            { opacity: 0, y: 16 },
+            { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" },
+            0
+          );
+          tl.fromTo(
+            ghostShell,
+            { opacity: 0, x: variant === "ghost-numeral" ? 30 : -30 },
+            { opacity: 1, x: 0, duration: 0.3, ease: "expo.out" },
+            0.04
+          );
+          tl.fromTo(
+            railProgress,
+            { scaleY: 0, transformOrigin: "center top" },
+            { scaleY: 1, duration: 0.38, ease: "power3.out", transformOrigin: "center top" },
+            0.1
+          );
+
+          const rowStagger = 0.3 / Math.max(1, rows.length - 1);
+          rows.forEach((row, index) => {
+            const start = 0.05 + index * rowStagger;
+            tl.fromTo(
+              row.elements.item,
+              { opacity: 0, x: -22 },
+              { opacity: 1, x: 0, duration: 0.18, ease: "power3.out" },
+              start
+            );
+            tl.fromTo(
+              row.elements.indexEl,
+              { opacity: 0, x: -10 },
+              { opacity: 1, x: 0, duration: 0.12, ease: "power2.out" },
+              start + 0.025
+            );
+            tl.fromTo(
+              row.elements.copy,
+              { opacity: 0, y: 10 },
+              { opacity: 1, y: 0, duration: 0.14, ease: "power2.out" },
+              start + 0.04
+            );
+            if (row.elements.detail) {
+              tl.fromTo(
+                row.elements.detail,
+                { opacity: 0 },
+                { opacity: 1, duration: 0.1, ease: "power2.out" },
+                start + 0.09
+              );
+            }
+            if (index > 0) {
+              tl.to(
+                rows[index - 1].elements.item,
+                { opacity: 0.68, duration: 0.14, ease: "power2.out" },
+                start + 0.11
+              );
+            }
+          });
+
+          tl.addLabel("final", duration);
+
+          timelineIds(host, root).forEach((id) => {
+            if (id) window.__timelines[id] = tl;
+          });
+          globalThis.__timelines = window.__timelines;
+          timelineIds(host, root).forEach((id) => {
+            if (id) globalThis.__timelines[id] = tl;
+          });
+
+          function readVariables(scope) {
+            const hf = typeof __hyperframes !== "undefined" ? __hyperframes : window.__hyperframes;
+            const direct = hf && typeof hf.getVariables === "function" ? hf.getVariables() : {};
+            const host = hostVariables(scope);
+            return { ...host, ...direct };
+          }
+
+          function hostVariables(scope) {
+            let node = scope;
+            while (node) {
+              if (node.getAttribute && node.hasAttribute("data-variable-values")) {
+                try {
+                  const parsed = JSON.parse(node.getAttribute("data-variable-values"));
+                  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+                } catch {
+                  return {};
+                }
+              }
+              node = node.parentElement;
+            }
+            return {};
+          }
+
+          function arrayValue(value) {
+            return Array.isArray(value) ? value : [];
+          }
+
+          function textValue(value, fallback) {
+            if (value === undefined || value === null) return fallback;
+            const text = String(value).trim();
+            return text ? text : fallback;
+          }
+
+          function numberValue(value, fallback) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
+          }
+
+          function normalizeRows({ items, values, unit, title }) {
+            const count = Math.max(items.length, values.length);
+            if (count === 0) {
+              return [{ label: title, badge: "01", detail: "" }];
+            }
+            const rows = [];
+            for (let index = 0; index < count; index += 1) {
+              const raw = values[index];
+              rows.push({
+                label: stripOrdinalEcho(textValue(items[index], `단계 ${index + 1}`), index),
+                badge: formatStep(index + 1),
+                detail: detailText(raw, index, unit)
+              });
+            }
+            return rows;
+          }
+
+          function formatStep(value) {
+            const normalized = Math.max(1, Math.min(99, Math.round(value)));
+            return normalized < 10 ? `0${normalized}` : String(normalized);
+          }
+
+          function detailText(raw, index, unit) {
+            if (raw === undefined || raw === null || String(raw).trim() === "") return "";
+            const text = String(raw).trim();
+            if (isOrdinalEcho(text, index)) return "";
+            return unit && !text.includes(unit) ? `${text} ${unit}` : text;
+          }
+
+          function stripOrdinalEcho(label, index) {
+            const pattern = new RegExp(`^\\s*#?0?${index + 1}(?:[.)#:-]|\\s)+`, "u");
+            const stripped = String(label).replace(pattern, "").trim();
+            return stripped || label;
+          }
+
+          function isOrdinalEcho(text, index) {
+            const normalized = String(text).trim();
+            return new RegExp(`^#?0?${index + 1}$`, "u").test(normalized);
+          }
+
+          function displayUnit(value) {
+            const text = textValue(value, "");
+            if (!text) return "";
+            const normalized = text === "％" ? "%" : text.toLowerCase();
+            return new Set(["%", "sec", "원", "건", "개", "명", "회", "hex", "점"]).has(normalized)
+              ? normalized
+              : "";
+          }
+
+          function ariaLabel(chartTitle, chartRows, sourceText) {
+            const steps = chartRows.map((row) => `${row.badge} ${row.label}${row.detail ? ` ${row.detail}` : ""}`).join(", ");
+            return sourceText ? `${chartTitle}: ${steps}. ${sourceText}` : `${chartTitle}: ${steps}`;
+          }
+
+          function safeColor(value) {
+            const text = textValue(value, "currentColor");
+            return /^[A-Za-z]+$|^#[0-9A-Fa-f]{3,8}$|^var\(--[A-Za-z0-9_-]+\)$/.test(text) ? text : "currentColor";
+          }
+
+          function blockDuration(element, fallback) {
+            let node = element.parentElement;
+            while (node) {
+              const value = Number(node.getAttribute?.("data-duration"));
+              if (Number.isFinite(value) && value > 0) return value;
+              node = node.parentElement;
+            }
+            const own = Number(element.getAttribute("data-duration"));
+            return Number.isFinite(own) && own > 0 ? own : fallback;
+          }
+
+          function timelineIds(hostElement, rootElement) {
+            const runtimeId = typeof __hfTimelineCompId !== "undefined" && __hfTimelineCompId ? __hfTimelineCompId : "";
+            if (runtimeId) return new Set([runtimeId]);
+            return new Set([
+              hostElement?.getAttribute("data-composition-id") || "",
+              hostElement?.getAttribute("data-hf-original-composition-id") || "",
+              rootElement?.getAttribute("data-composition-id") || "",
+              rootElement?.getAttribute("data-hf-original-composition-id") || "",
+              "numbered"
+            ]);
+          }
+        })();
+      </script>
+    </template>
+  </body>
+</html>

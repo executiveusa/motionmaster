@@ -37,12 +37,24 @@ test("the house library is built", { skip }, () => {
 });
 
 test("every house scene passed the gate", { skip }, () => {
-  const verdicts = JSON.parse(
+  const registry = JSON.parse(
     readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8"),
+  ).verdicts ?? {};
+  const compositions = JSON.parse(
+    readFileSync(join(repoRoot, "library", "composition-verdicts.json"), "utf8"),
   ).verdicts ?? {};
   const library = loadHouseLibrary(repoRoot);
   for (const template of library.templates) {
-    const verdict = verdicts[template.block];
+    if (template.source?.kind === "local") {
+      const key = Object.keys(compositions).find(
+        (k) => k.endsWith(`/${template.source.id}`),
+      );
+      const verdict = key ? compositions[key] : undefined;
+      assert.ok(verdict, `${template.id} has a verdict`);
+      assert.equal(verdict.ok, true, `${template.id} passed the gate`);
+      continue;
+    }
+    const verdict = registry[template.block];
     assert.ok(verdict, `${template.id} has a verdict`);
     assert.equal(verdict.ok, true, `${template.id} passed the gate`);
   }

@@ -570,8 +570,12 @@ export function registerTools(server: McpServer, config: Config): void {
         brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
         kitProblems: resolvedKit.problems,
         note:
-          "Install the block with `npx hyperframes add <id>` and render it. The scene already passed the " +
-          "gate, so it renders as it is.",
+          planned.template.source?.kind === "local"
+            ? `The composition is in this repository at ${planned.template.source.path}. Copy it into a ` +
+              "HyperFrames project, or point a host composition at it with data-composition-src. It " +
+              "already passed the gate, so it renders as it is."
+            : "Install the block with `npx hyperframes add <id>` and render it. The scene already " +
+              "passed the gate, so it renders as it is.",
       });
     },
   );

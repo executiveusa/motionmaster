@@ -1,0 +1,187 @@
+---
+import { type TegakiBundle, TegakiEngine, type TegakiEngineOptions, type TegakiPluginSpec } from 'tegaki/core';
+import { isDeclarative } from 'tegaki/internal';
+
+interface Props extends Omit<TegakiEngineOptions, 'onComplete' | 'onChangeTimeline' | 'plugins'> {
+  /**
+   * Plugins by registered name, sent to the browser as data: `['taper', ['glow', { radius: 0.15 }]]`.
+   * Register their factories in a client script (`TegakiEngine.registerPlugin(glowPlugin)`);
+   * a plugin object can't be sent, so it's left out.
+   */
+  plugins?: readonly TegakiPluginSpec[];
+  /** When true, registers the font bundle for client-side lookup by name. If no text is provided, renders nothing else. */
+  bundle?: boolean;
+  /** When true, injects an @font-face rule so the browser starts loading the font immediately. */
+  loadFont?: boolean;
+  class?: string;
+  [key: string]: any;
+}
+
+const { text, font, bundle: registerBundle, loadFont, time, reducedMotion, pressure, plugins, timing, quality, seed, showOverlay, shaper, fallbackFont, class: className, style: userStyle, ...attrs } = Astro.props;
+
+// Only named plugins survive the trip to the browser.
+let clientPlugins = plugins;
+if (plugins && !isDeclarative(plugins)) {
+  clientPlugins = plugins.filter((p) => typeof p === 'string' || Array.isArray(p));
+  console.warn('[tegaki] <TegakiRenderer> in Astro takes plugins by name only; register the factory in a client script and pass its name.');
+}
+
+// Resolve the font bundle for SSR
+let resolvedFont: TegakiBundle | undefined;
+if (typeof font === 'string') {
+  resolvedFont = TegakiEngine.getBundle(font);
+} else if (font) {
+  resolvedFont = font;
+  TegakiEngine.registerBundle(font);
+}
+
+// A font URL the server evaluated as a local file can't load in the browser:
+// the tegaki/astro/integration isn't in the Astro config (see integration.ts).
+if (resolvedFont && [resolvedFont.fontUrl, resolvedFont.fullFontUrl].some((url) => url?.startsWith('file:'))) {
+  const warned = globalThis as { __tegakiFileUrlWarned?: boolean };
+  if (!warned.__tegakiFileUrlWarned) {
+    warned.__tegakiFileUrlWarned = true;
+    console.warn(
+      `[tegaki] The font of "${resolvedFont.family}" resolved to a local file (${resolvedFont.fontUrl}), which the browser won't load. ` +
+        "Add the Tegaki integration to your Astro config: `import tegaki from 'tegaki/astro/integration'` and `integrations: [tegaki()]`.",
+    );
+  }
+}
+
+const shouldRender = !!text || !(registerBundle || loadFont);
+
+const engineOptions: Omit<TegakiEngineOptions, 'onComplete' | 'onChangeTimeline'> = {
+  text,
+  font: resolvedFont,
+  time,
+  reducedMotion,
+  pressure,
+  plugins: clientPlugins,
+  timing,
+  quality,
+  seed,
+  showOverlay,
+  shaper,
+  fallbackFont,
+};
+
+function styleToString(style: Record<string, any>): string {
+  return Object.entries(style)
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => {
+      const prop = k.startsWith('--') ? k : k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      const val = typeof v === 'number' && !k.startsWith('--') ? `${v}px` : String(v);
+      return `${prop}:${val}`;
+    })
+    .join(';');
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function htmlCreateElement(tag: string, props: Record<string, any>, ...children: string[]): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(props)) {
+    if (value == null || value === false) continue;
+    if (key === 'style' && typeof value === 'object') {
+      const css = styleToString(value);
+      if (css) parts.push(`style="${escapeAttr(css)}"`);
+    } else if (typeof value === 'boolean') {
+      parts.push(key);
+    } else {
+      parts.push(`${key}="${escapeAttr(String(value))}"`);
+    }
+  }
+  const open = parts.length > 0 ? `<${tag} ${parts.join(' ')}>` : `<${tag}>`;
+  const content = children.map((c) => (typeof c === 'string' && !c.startsWith('<') ? escapeHtml(c) : c)).join('');
+  return `${open}${content}</${tag}>`;
+}
+
+const renderResult = shouldRender ? TegakiEngine.renderElements(engineOptions, htmlCreateElement) : null;
+const innerHtml = renderResult?.content ?? '';
+const rootStyle = renderResult
+  ? styleToString(renderResult.rootProps.style) + (userStyle ? `;${typeof userStyle === 'object' ? styleToString(userStyle) : userStyle}` : '')
+  : typeof userStyle === 'object' ? styleToString(userStyle) : (userStyle ?? '');
+
+// For serialization, replace the full bundle with just the family name.
+const clientOptions = {
+  ...engineOptions,
+  font: resolvedFont?.family,
+};
+
+// When font is passed as an object directly (not a string lookup), auto-serialize
+// the bundle so the client can hydrate without requiring an explicit `bundle` prop.
+// The `bundle` prop is still useful for the register-only pattern (no text rendered).
+const shouldInlineBundle = !registerBundle && typeof font !== 'string' && !!resolvedFont;
+---
+
+{loadFont && resolvedFont?.fontFaceCSS && (
+  <style is:inline set:html={resolvedFont.fontFaceCSS} />
+)}
+
+{(registerBundle || shouldInlineBundle) && resolvedFont && (
+  <script is:inline type="application/json" data-tegaki-bundle set:html={JSON.stringify(resolvedFont)} />
+)}
+
+{shouldRender && (
+  <div class={className} {...attrs} data-tegaki="root" dir="auto" style={rootStyle} data-tegaki-options={JSON.stringify(clientOptions)} set:html={innerHtml} />
+)}
+
+<script>
+  import { TegakiEngine } from 'tegaki/core';
+
+  const engines = new WeakMap<HTMLElement, TegakiEngine>();
+
+  function hydrateBundle(el: Element) {
+    TegakiEngine.registerBundle(JSON.parse(el.textContent || '{}'));
+  }
+
+  function hydrateContainer(container: HTMLElement) {
+    if (container.dataset.tegakiHydrated) return;
+    container.dataset.tegakiHydrated = '';
+    const options = JSON.parse(container.dataset.tegakiOptions || '{}');
+    const engine = new TegakiEngine(container, { adopt: true, ...options });
+    engines.set(container, engine);
+    container.dispatchEvent(new CustomEvent('tegaki:ready', { detail: { engine }, bubbles: true }));
+  }
+
+  function hydrateAll() {
+    document.querySelectorAll<HTMLScriptElement>('[data-tegaki-bundle]').forEach(hydrateBundle);
+    document.querySelectorAll<HTMLElement>('[data-tegaki-options]').forEach(hydrateContainer);
+  }
+
+  // Destroy engines before View Transitions swaps the DOM, and clear the
+  // hydration flag so elements on the incoming page can be re-hydrated.
+  document.addEventListener('astro:before-swap', () => {
+    document.querySelectorAll<HTMLElement>('[data-tegaki-options]').forEach((container) => {
+      engines.get(container)?.destroy();
+      engines.delete(container);
+      delete container.dataset.tegakiHydrated;
+    });
+  });
+
+  // Re-hydrate after View Transitions (bundles before containers to ensure
+  // the registry is populated before engines are created).
+  document.addEventListener('astro:page-load', hydrateAll);
+
+  // Initial load
+  hydrateAll();
+
+  // Watch for dynamically added elements (non-View-Transitions cases).
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.matches('[data-tegaki-bundle]')) hydrateBundle(node);
+        if (node.matches('[data-tegaki-options]')) hydrateContainer(node);
+        node.querySelectorAll<HTMLScriptElement>('[data-tegaki-bundle]').forEach(hydrateBundle);
+        node.querySelectorAll<HTMLElement>('[data-tegaki-options]').forEach(hydrateContainer);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+</script>

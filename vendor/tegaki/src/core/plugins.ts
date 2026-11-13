@@ -1,0 +1,356 @@
+import { paintStroke } from '../lib/paintStroke.ts';
+import type { StrokePath } from '../lib/strokePath.ts';
+import type { PlacedStroke, StrokeGeometryContext } from '../lib/strokeTimeline.ts';
+import { SVG_REGION, type SvgClock, type SvgDecoration } from '../lib/svgExport.ts';
+import type { TegakiPluginFactory } from './createPlugin.ts';
+import type {
+  TegakiAttachContext,
+  TegakiGeometryContext,
+  TegakiOutlineContext,
+  TegakiPlugin,
+  TegakiPluginSteps,
+  TegakiStrokePaintContext,
+  TegakiSvgContext,
+  TegakiTimingContext,
+} from './types.ts';
+
+// Running a list of plugins' hooks as one: `geometry` and `timing` in sequence, `paint` as
+// a chain of `next` calls ending in the default painter. A hook that throws
+// is reported and skipped, so one broken plugin can't stop the render.
+
+export type PluginErrorHandler = (plugin: TegakiPlugin, hook: keyof TegakiPlugin, error: unknown) => void;
+
+/** Plugins whose `paint` only restyles what the pen has drawn (see {@link paintsDrawnOnly}). */
+const drawnOnly = new WeakSet<TegakiPlugin>();
+
+/**
+ * `factory`, making plugins whose `paint` shows nothing of a stroke the pen
+ * hasn't reached — a color, a glow. The engine then skips pending strokes
+ * for them, and needs no layer past clip-to-text on their account: work a
+ * plugin painting ahead of the pen (a guide, a typewriter) can't be spared.
+ */
+export function paintsDrawnOnly<F extends TegakiPluginFactory>(factory: F): F {
+  const make = (options?: Parameters<F>[0]) => {
+    const plugin = factory(options);
+    drawnOnly.add(plugin);
+    return plugin;
+  };
+  return Object.defineProperties(make, Object.getOwnPropertyDescriptors(factory)) as unknown as F;
+}
+
+/** Whether a plugin's `paint` may show a stroke before the pen gets to it. */
+export function paintsAhead(plugin: TegakiPlugin): boolean {
+  return !!plugin.paint && !drawnOnly.has(plugin);
+}
+
+/** A plugin an engine has attached: what its `attach` returned to release it, and whether it's still attached (what its `redraw` asks). */
+export interface Attachment {
+  detach: (() => void) | undefined;
+  live: boolean;
+}
+
+/**
+ * Bring `attached` in step with `plugins`: the attached plugins it no longer
+ * holds are detached (in the order they were attached), then the ones with
+ * an `attach` hook it holds that aren't yet are attached (in list order) — a
+ * plugin listed twice once. An empty list detaches every one, as a destroyed
+ * engine does. `context` makes each attachment its `attach` context.
+ */
+export function syncAttachments(
+  attached: Map<TegakiPlugin, Attachment>,
+  plugins: readonly TegakiPlugin[],
+  context: (attachment: Attachment) => TegakiAttachContext,
+  onError: PluginErrorHandler,
+): void {
+  const keep = new Set(plugins);
+  for (const [plugin, attachment] of attached) {
+    if (keep.has(plugin)) continue;
+    attached.delete(plugin);
+    attachment.live = false;
+    try {
+      attachment.detach?.();
+    } catch (error) {
+      onError(plugin, 'attach', error);
+    }
+  }
+  for (const plugin of plugins) {
+    if (!plugin.attach || attached.has(plugin)) continue;
+    const attachment: Attachment = { detach: undefined, live: true };
+    attached.set(plugin, attachment);
+    try {
+      const detach = plugin.attach(context(attachment));
+      if (typeof detach === 'function') attachment.detach = detach;
+    } catch (error) {
+      onError(plugin, 'attach', error);
+    }
+  }
+}
+
+/** Which drawing of each plugin with steps to show — plugins not in it show their first. */
+export type PluginSteps = ReadonlyMap<TegakiPlugin, number>;
+
+/** `steps` made safe: a whole `count` of at least 1, and `null` when there's nothing to cycle (one drawing, or no positive, finite `fps`). */
+export function normalizeSteps(steps: TegakiPluginSteps | undefined): Required<TegakiPluginSteps> | null {
+  if (!steps) return null;
+  const count = Math.max(1, Math.floor(Number.isFinite(steps.count) ? steps.count : 1));
+  if (count < 2 || !(steps.fps > 0) || !Number.isFinite(steps.fps)) return null;
+  return { count, fps: steps.fps, idle: steps.idle === true, paintOnly: steps.paintOnly === true };
+}
+
+/** The drawing a cycle shows at `clock` seconds: a new one every `1 / fps`, round and round. */
+export function stepAt(steps: Required<TegakiPluginSteps>, clock: number): number {
+  const tick = Math.floor(Math.max(0, clock) * steps.fps + 1e-9);
+  return tick % steps.count;
+}
+
+/** The plugins that cycle through drawings, with their steps made safe. */
+export function steppedPlugins(plugins: readonly TegakiPlugin[]): { plugin: TegakiPlugin; steps: Required<TegakiPluginSteps> }[] {
+  const out: { plugin: TegakiPlugin; steps: Required<TegakiPluginSteps> }[] = [];
+  for (const plugin of plugins) {
+    const steps = normalizeSteps(plugin.steps);
+    if (steps) out.push({ plugin, steps });
+  }
+  return out;
+}
+
+/** Each stepped plugin's drawing at `clock`, and a key naming the combination (`''` with none). */
+export function pluginStepsAt(plugins: readonly TegakiPlugin[], clock: number): { steps: PluginSteps; key: string } {
+  const steps = new Map<TegakiPlugin, number>();
+  for (const { plugin, steps: s } of steppedPlugins(plugins)) steps.set(plugin, stepAt(s, clock));
+  return { steps, key: stepsKey(steps) };
+}
+
+/** A key naming a combination of drawings, the same for the same steps. */
+export function stepsKey(steps: PluginSteps): string {
+  return [...steps.values()].join(',');
+}
+
+/** Whether a plugin's steps change the ink's shape — it has `geometry` or `outline`, and its steps aren't `paintOnly`. Only those need the strokes placed once per drawing; the rest (a flicker) just paint differently. */
+export function shapesInk(plugin: TegakiPlugin): boolean {
+  return !!(plugin.geometry || plugin.outline) && plugin.steps?.paintOnly !== true;
+}
+
+/** The steps of the plugins that shape the ink, and their key — what placed strokes and clip outlines are cached by. */
+export function shapeSteps(steps: PluginSteps): { steps: PluginSteps; key: string } {
+  const out = new Map<TegakiPlugin, number>();
+  for (const [plugin, step] of steps) if (shapesInk(plugin)) out.set(plugin, step);
+  return { steps: out, key: stepsKey(out) };
+}
+
+/**
+ * Every combination of the drawings of the stepped plugins that shape the
+ * ink — what the canvas must hold — or only the first `limit` of them when
+ * there are more (a few plugins of a few drawings each is the most anyone
+ * needs). A plugin whose steps only paint (no `geometry` or `outline`)
+ * doesn't move the ink, so it adds none.
+ */
+export function allPluginSteps(plugins: readonly TegakiPlugin[], limit = 64): PluginSteps[] {
+  let combos: Map<TegakiPlugin, number>[] = [new Map()];
+  for (const { plugin, steps } of steppedPlugins(plugins.filter(shapesInk))) {
+    const next: Map<TegakiPlugin, number>[] = [];
+    for (const combo of combos) {
+      for (let i = 0; i < steps.count && next.length < limit; i++) next.push(new Map(combo).set(plugin, i));
+    }
+    combos = next;
+  }
+  return combos;
+}
+
+/** Every `geometry` hook in order, as one reshape; `undefined` when no plugin has one. Each hook is told its plugin's drawing in `ctx.step`. */
+export function reshapeWith(
+  plugins: readonly TegakiPlugin[],
+  extra: Pick<TegakiGeometryContext, 'fontSize' | 'random' | 'textBox'>,
+  onError: PluginErrorHandler,
+  steps?: PluginSteps,
+): ((path: StrokePath, ctx: StrokeGeometryContext) => StrokePath) | undefined {
+  const hooks = plugins.filter((p) => p.geometry);
+  if (hooks.length === 0) return undefined;
+  return (path, g) => {
+    const ctx: TegakiGeometryContext = { ...g, ...extra, step: 0 };
+    let out = path;
+    for (const plugin of hooks) {
+      try {
+        ctx.step = steps?.get(plugin) ?? 0;
+        out = plugin.geometry!(out, ctx) ?? out;
+      } catch (error) {
+        onError(plugin, 'geometry', error);
+      }
+    }
+    return out;
+  };
+}
+
+/**
+ * Every `timing` hook in order, as one: the strokes at the times the last
+ * hook gave them, and the timeline's length; `undefined` when no plugin has
+ * one. A hook that throws, or doesn't return a time for every stroke, is
+ * reported and skipped. Times are kept to zero or later.
+ */
+export function timingWith(
+  plugins: readonly TegakiPlugin[],
+  extra: Pick<TegakiTimingContext, 'fontSize' | 'random'>,
+  onError: PluginErrorHandler,
+): ((strokes: readonly PlacedStroke[], duration: number) => { strokes: readonly PlacedStroke[]; duration: number }) | undefined {
+  const hooks = plugins.filter((p) => p.timing);
+  if (hooks.length === 0) return undefined;
+  return (strokes, duration) => {
+    let last = lastEnd(strokes);
+    for (const plugin of hooks) {
+      try {
+        const out = plugin.timing!({ ...extra, strokes, duration });
+        if (!out) continue;
+        const times = out.strokes;
+        if (!Array.isArray(times) || times.length !== strokes.length) {
+          throw new Error(`timing returned ${Array.isArray(times) ? times.length : 'no'} stroke times for ${strokes.length} strokes`);
+        }
+        const next = strokes.map((s, i) => {
+          const t = times[i];
+          if (!t || !Number.isFinite(t.start) || !Number.isFinite(t.duration))
+            throw new Error(`timing gave stroke ${i} no finite start and duration`);
+          const start = Math.max(0, t.start);
+          const length = Math.max(0, t.duration);
+          return start === s.start && length === s.duration ? s : { ...s, start, duration: length };
+        });
+        const end = lastEnd(next);
+        duration = Math.max(end, out.duration !== undefined && Number.isFinite(out.duration) ? out.duration : duration + end - last);
+        strokes = next;
+        last = end;
+      } catch (error) {
+        onError(plugin, 'timing', error);
+      }
+    }
+    return { strokes, duration };
+  };
+}
+
+function lastEnd(strokes: readonly { start: number; duration: number }[]): number {
+  let end = 0;
+  for (const s of strokes) end = Math.max(end, s.start + s.duration);
+  return end;
+}
+
+/** Every `outline` hook in order, as one; `undefined` when no plugin has one. Each hook is told its plugin's drawing in `ctx.step`. */
+export function outlineWith(
+  plugins: readonly TegakiPlugin[],
+  onError: PluginErrorHandler,
+  steps?: PluginSteps,
+): ((contour: { x: number; y: number }[], ctx: Omit<TegakiOutlineContext, 'step'>) => { x: number; y: number }[]) | undefined {
+  const hooks = plugins.filter((p) => p.outline);
+  if (hooks.length === 0) return undefined;
+  return (contour, base) => {
+    const ctx: TegakiOutlineContext = { ...base, step: 0 };
+    let out = contour;
+    for (const plugin of hooks) {
+      try {
+        ctx.step = steps?.get(plugin) ?? 0;
+        out = plugin.outline!(out, ctx) ?? out;
+      } catch (error) {
+        onError(plugin, 'outline', error);
+      }
+    }
+    return out;
+  };
+}
+
+/** What an SVG file's `svg` hooks are told besides the strokes and the clock. */
+export type SvgHookBase = Pick<TegakiSvgContext, 'duration' | 'fontSize' | 'color' | 'textBox' | 'random'>;
+
+/**
+ * What the plugins' `svg` hooks add to a file (see {@link TegakiSvgContext}),
+ * and the boxes of those with `bounds` too, for the crop. `strokes` are in
+ * the file's px, as the hooks get them.
+ */
+export function svgDecoration(
+  plugins: readonly TegakiPlugin[],
+  strokes: readonly PlacedStroke[],
+  clock: SvgClock,
+  base: SvgHookBase,
+  onError: PluginErrorHandler,
+): SvgDecoration {
+  const deco: SvgDecoration = { defs: [], underlay: [], overlay: [], ink: [], strokes: new Map(), boxes: [] };
+  let ids = 0;
+  const svg: TegakiSvgContext = {
+    ...base,
+    strokes,
+    region: SVG_REGION,
+    mode: clock.mode,
+    id: (name) => `${name}-${ids++}`,
+    defs: (markup) => deco.defs.push(markup),
+    underlay: (markup) => deco.underlay.push(markup),
+    overlay: (markup) => deco.overlay.push(markup),
+    ink: (attrs) => deco.ink.push(attrs),
+    style: (stroke, style) => {
+      const prev = deco.strokes.get(stroke.id);
+      const attrs = [prev?.attrs, style.attrs].filter(Boolean).join(' ');
+      deco.strokes.set(stroke.id, { color: style.color ?? prev?.color, attrs: attrs || undefined });
+    },
+    appear: (t) => clock.appear(t),
+    seconds: (t) => clock.seconds(t),
+  };
+  for (const plugin of plugins) {
+    if (!plugin.svg) continue;
+    try {
+      plugin.svg(svg);
+    } catch (error) {
+      onError(plugin, 'svg', error);
+    }
+    if (!plugin.bounds) continue;
+    try {
+      const box = plugin.bounds({ strokes, fontSize: base.fontSize });
+      if (box) deco.boxes.push(box);
+    } catch (error) {
+      onError(plugin, 'bounds', error);
+    }
+  }
+  return deco;
+}
+
+/** A stroke to paint, before the chain tells each plugin its drawing (`step`). */
+export type StrokePaintInput = Omit<TegakiStrokePaintContext, 'step' | 'unclipped'> & {
+  step?: number;
+  unclipped?: CanvasRenderingContext2D;
+};
+
+/**
+ * Every `paint` hook as a chain: the first plugin's `next` is the second's
+ * hook, and the last one's is `base` (the default painter). Each hook runs
+ * between a save and a restore of the canvas state, and is told its
+ * plugin's drawing in `stroke.step`. A hook that throws before calling
+ * `next` has the stroke painted as if it weren't there.
+ */
+export function paintWith(
+  plugins: readonly TegakiPlugin[],
+  onError: PluginErrorHandler,
+  base: (stroke: TegakiStrokePaintContext) => void = paintStroke,
+  steps?: PluginSteps,
+): (stroke: StrokePaintInput) => void {
+  let next: (stroke: StrokePaintInput) => void = base as (stroke: StrokePaintInput) => void;
+  for (let i = plugins.length - 1; i >= 0; i--) {
+    const plugin = plugins[i]!;
+    if (!plugin.paint) continue;
+    const inner = next;
+    const step = steps?.get(plugin) ?? 0;
+    next = (input) => {
+      const stroke = (
+        input.step === step && input.unclipped ? input : { ...input, step, unclipped: input.unclipped ?? input.ctx }
+      ) as TegakiStrokePaintContext;
+      const layer = stroke.unclipped !== stroke.ctx ? stroke.unclipped : null;
+      let called = false;
+      const call = (s: TegakiStrokePaintContext) => {
+        called = true;
+        inner(s);
+      };
+      stroke.ctx.save();
+      layer?.save();
+      try {
+        plugin.paint!(stroke, call);
+      } catch (error) {
+        onError(plugin, 'paint', error);
+        if (!called) inner(stroke);
+      }
+      layer?.restore();
+      stroke.ctx.restore();
+    };
+  }
+  return next;
+}

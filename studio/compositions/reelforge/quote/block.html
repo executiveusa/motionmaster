@@ -1,0 +1,463 @@
+<!doctype html>
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"title","type":"string","label":"Title","default":"인용"},
+    {"id":"items","type":"json","label":"Items","default":[]},
+    {"id":"values","type":"json","label":"Values","default":[]},
+    {"id":"unit","type":"string","label":"Unit","default":""},
+    {"id":"accent","type":"color","label":"Accent","default":"Highlight"},
+    {"id":"mood","type":"string","label":"Mood","default":"contemplative"},
+    {"id":"emphasis","type":"string","label":"Emphasis","default":"quote"},
+    {"id":"reveal","type":"string","label":"Reveal","default":"typewriter"},
+    {"id":"visualKind","type":"string","label":"Visual kind","default":"none"},
+    {"id":"source","type":"string","label":"Source","default":""},
+    {"id":"repeatIndex","type":"number","label":"Repeat index","default":0}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>ReelForge quote block</title>
+  </head>
+  <body>
+    <template>
+      <style>
+        .quote-rootbox {
+          position: absolute;
+          inset: 0;
+          width: 1920px;
+          height: 1080px;
+          box-sizing: border-box;
+          overflow: hidden;
+          color: var(--quote-ink);
+          font-family: "Pretendard", "Pretendard Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          --quote-ink: var(--rf-text, currentColor);
+          --quote-muted: var(--rf-ink-subtle, var(--rf-muted-text, var(--rf-text, currentColor)));
+          --quote-accent: var(--rf-accent, var(--rf-text, currentColor));
+          --quote-accent-alt: var(--rf-accent-alt, var(--rf-accent, var(--rf-text, currentColor)));
+          --quote-hairline: var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 18%, transparent));
+          --quote-hairline-strong: var(--rf-hairline-strong, var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 30%, transparent)));
+        }
+
+        .quote-stage {
+          position: absolute;
+          inset: 7.2% 6.25%;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+          box-sizing: border-box;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .quote-ghost {
+          position: absolute;
+          z-index: 0;
+          color: var(--quote-accent-alt);
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: 38rem;
+          font-weight: 800;
+          line-height: 0.72;
+          pointer-events: none;
+          user-select: none;
+          opacity: 0.16;
+          animation: quote-ghost-living 2.6s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        @keyframes quote-ghost-living {
+          0% {
+            filter: brightness(0.92);
+            opacity: 0.12;
+          }
+          100% {
+            filter: brightness(1.1);
+            opacity: 0.22;
+          }
+        }
+
+        @keyframes quote-copy-living {
+          0% {
+            filter: brightness(0.98);
+          }
+          100% {
+            filter: brightness(1.06);
+          }
+        }
+
+        .quote-header,
+        .quote-attribution {
+          position: relative;
+          z-index: 1;
+          min-width: 0;
+        }
+
+        .quote-header {
+          align-self: start;
+        }
+
+        .quote-title,
+        .quote-source {
+          margin: 0;
+          color: var(--quote-muted);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: 1.35rem;
+          font-weight: 700;
+          line-height: 1.15;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+        }
+
+        .quote-title {
+          width: max-content;
+          max-width: 100%;
+        }
+
+        .quote-copy {
+          position: relative;
+          z-index: 1;
+          align-self: center;
+          min-width: 0;
+          max-width: 82rem;
+          animation: quote-copy-living 2.3s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+        }
+
+        .quote-text {
+          margin: 0;
+          color: var(--quote-ink);
+          font-size: clamp(5.5rem, 8.05vw, 9.15rem);
+          font-weight: 800;
+          line-height: 0.98;
+          letter-spacing: -0.03em;
+          word-break: keep-all;
+          overflow-wrap: anywhere;
+          text-wrap: balance;
+        }
+
+        .quote-line {
+          display: block;
+          min-width: 0;
+          will-change: transform, opacity;
+        }
+
+        .quote-attribution {
+          display: grid;
+          grid-template-columns: minmax(7rem, 0.22fr) minmax(0, 1fr);
+          align-items: center;
+          gap: 1.25rem;
+          padding-top: 1.2rem;
+          border-top: 1px solid var(--quote-hairline);
+        }
+
+        .quote-source-label {
+          color: var(--quote-accent);
+          font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+          font-size: 1.35rem;
+          font-weight: 700;
+          line-height: 1.15;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .quote-source {
+          min-width: 0;
+          overflow: hidden;
+          text-align: end;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .quote-rootbox[data-has-attribution="false"] .quote-attribution {
+          visibility: hidden;
+        }
+
+        .quote-rootbox[data-variant="center-impact"] .quote-stage {
+          justify-items: center;
+          text-align: center;
+        }
+
+        .quote-rootbox[data-variant="center-impact"] .quote-ghost {
+          top: 5%;
+          right: 0;
+        }
+
+        .quote-rootbox[data-variant="center-impact"] .quote-header {
+          justify-self: center;
+        }
+
+        .quote-rootbox[data-variant="center-impact"] .quote-copy {
+          text-align: center;
+        }
+
+        .quote-rootbox[data-variant="center-impact"] .quote-attribution {
+          width: min(74rem, 100%);
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-stage {
+          justify-items: stretch;
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-ghost {
+          top: 3%;
+          left: -5%;
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-header {
+          padding-inline-start: 12%;
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-copy {
+          max-width: 78rem;
+          padding-inline-start: 12%;
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-copy::before {
+          position: absolute;
+          top: 0.08em;
+          bottom: 0.06em;
+          left: 5.5%;
+          width: 1px;
+          background: var(--quote-hairline-strong);
+          content: "";
+        }
+
+        .quote-rootbox[data-variant="editorial"] .quote-attribution {
+          width: min(82rem, 100%);
+          margin-inline-start: 12%;
+        }
+      </style>
+
+      <div
+        id="root"
+        class="quote-rootbox"
+        data-composition-id="quote"
+        data-width="1920"
+        data-height="1080"
+        data-duration="5"
+        role="img"
+        aria-label=""
+      >
+        <section class="quote-stage">
+          <span class="quote-ghost" aria-hidden="true">“</span>
+          <header class="quote-header">
+            <p class="quote-title" data-quote-title></p>
+          </header>
+          <article class="quote-copy">
+            <p class="quote-text" data-quote-text></p>
+          </article>
+          <footer class="quote-attribution">
+            <span class="quote-source-label">Source</span>
+            <span class="quote-source" data-quote-source></span>
+          </footer>
+        </section>
+      </div>
+
+      <script src="../../vendor/gsap.min.js"></script>
+      <script>
+        (function () {
+          const scriptParent = document.currentScript?.parentElement || document;
+          const root =
+            scriptParent.querySelector(':scope > .quote-rootbox[data-composition-id="quote"]') ||
+            scriptParent.querySelector(':scope > .quote-rootbox[data-hf-original-composition-id="quote"]') ||
+            scriptParent.querySelector(':scope > [data-hf-inner-root="true"][data-hf-authored-id="root"]') ||
+            document.querySelector('.quote-rootbox[data-composition-id="quote"], .quote-rootbox[data-hf-original-composition-id="quote"]') ||
+            document.querySelector('[data-composition-id="quote"], [data-hf-original-composition-id="quote"]');
+
+          if (!root) {
+            window.__timelines = window.__timelines || {};
+            window.__timelines.quote = gsap.timeline({ paused: true });
+            return;
+          }
+
+          const host =
+            root.parentElement?.closest("[data-variable-values]") ||
+            root.closest("[data-variable-values]") ||
+            root.parentElement?.closest("[data-composition-id]") ||
+            root.closest("[data-composition-id]") ||
+            root;
+          const variables = readVariables(host);
+          const titleEl = root.querySelector("[data-quote-title]");
+          const quoteEl = root.querySelector("[data-quote-text]");
+          const sourceEl = root.querySelector("[data-quote-source]");
+          const attribution = root.querySelector(".quote-attribution");
+
+          const title = stringValue(variables.title, "인용");
+          const items = arrayValue(variables.items).map((item) => stringValue(item, ""));
+          const source = stringValue(variables.source, "");
+          const unit = displayUnit(variables.unit);
+          const quoteText = stringValue(items[1] || items[0], title);
+          const context = items[0] && normalizeText(items[0]) !== normalizeText(quoteText) ? items[0] : "";
+          const attributionText = source || context || unit;
+          const repeatIndex = Math.max(0, Math.floor(numericValue(variables.repeatIndex)));
+          const variant = repeatIndex % 2 === 0 ? "center-impact" : "editorial";
+          const revealMode = stringValue(variables.reveal, "typewriter").toLowerCase();
+          const titleText = normalizeText(title) === normalizeText(quoteText) ? "Quote" : title;
+          const duration = blockDuration(root, 5);
+
+          root.style.setProperty("--quote-accent", safeColor(variables.accent));
+          root.dataset.variant = variant;
+          root.dataset.revealMode = revealMode;
+          root.dataset.hasAttribution = attributionText ? "true" : "false";
+          titleEl.textContent = titleText;
+          sourceEl.textContent = attributionText;
+          renderQuoteLines(quoteEl, quoteText);
+          root.setAttribute("aria-label", ariaLabel(title, quoteText, attributionText));
+
+          window.__timelines = window.__timelines || {};
+          const tl = gsap.timeline({ paused: true });
+          const lines = gsap.utils.toArray(root.querySelectorAll(".quote-line"));
+
+          tl.addLabel("start", 0);
+          tl.fromTo(titleEl, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.16, ease: "power2.out" }, 0);
+          tl.to(titleEl, { opacity: 0.64, duration: 0.12, ease: "power2.out" }, 0.18);
+          lines.forEach((line, index) => {
+            const at = 0.1 + index * (revealMode.includes("type") ? 0.15 : 0.18);
+            tl.fromTo(
+              line,
+              { opacity: 0, y: 22 },
+              { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" },
+              at
+            );
+          });
+          if (attributionText) {
+            tl.fromTo(
+              attribution,
+              { opacity: 0, y: 10 },
+              { opacity: 1, y: 0, duration: 0.12, ease: "power2.out" },
+              0.48
+            );
+          }
+          tl.addLabel("final", duration);
+          registerTimeline(tl);
+
+          function renderQuoteLines(container, text) {
+            splitQuoteLines(text).forEach((lineText) => {
+              const line = document.createElement("span");
+              line.className = "quote-line";
+              line.textContent = lineText;
+              container.appendChild(line);
+            });
+          }
+
+          function splitQuoteLines(text) {
+            const explicit = String(text)
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean);
+            if (explicit.length > 1) return [explicit[0], explicit.slice(1).join(" ")];
+
+            const words = String(text).trim().split(/\s+/).filter(Boolean);
+            if (words.length < 5) return [String(text).trim()];
+            const pivot = Math.ceil(words.length / 2);
+            return [words.slice(0, pivot).join(" "), words.slice(pivot).join(" ")];
+          }
+
+          function registerTimeline(timeline) {
+            timelineIds(host, root).forEach((id) => {
+              if (id) window.__timelines[id] = timeline;
+            });
+            globalThis.__timelines = window.__timelines;
+            timelineIds(host, root).forEach((id) => {
+              if (id) globalThis.__timelines[id] = timeline;
+            });
+          }
+
+          function arrayValue(value) {
+            return Array.isArray(value) ? value : [];
+          }
+
+          function stringValue(value, fallback) {
+            if (value === undefined || value === null) return fallback;
+            const text = String(value).trim();
+            return text.length > 0 ? text : fallback;
+          }
+
+          function normalizeText(value) {
+            return String(value ?? "").trim().replace(/\s+/g, " ");
+          }
+
+          function numericValue(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }
+
+          function displayUnit(value) {
+            const text = stringValue(value, "");
+            if (!text) return "";
+            const normalized = text === "％" ? "%" : text.toLowerCase();
+            return new Set(["%", "sec", "원", "건", "개", "명", "회", "hex", "점"]).has(normalized)
+              ? normalized
+              : "";
+          }
+
+          function readVariables(hostElement) {
+            const direct =
+              window.__hyperframes && typeof window.__hyperframes.getVariables === "function"
+                ? window.__hyperframes.getVariables()
+                : {};
+            const scoped = typeof __hyperframes === "undefined" ? {} : __hyperframes.getVariables?.() ?? {};
+            const runtimeId = hostElement?.getAttribute("data-composition-id") || "";
+            const authoredId = hostElement?.getAttribute("data-hf-original-composition-id") || "quote";
+            const registry = {
+              ...(globalThis.__hfVariablesByComp?.[authoredId] || {}),
+              ...(globalThis.__hfVariablesByComp?.[runtimeId] || {}),
+              ...(globalThis.__hfVariablesByComp?.quote || {})
+            };
+            return { ...readHostVariables(hostElement), ...registry, ...direct, ...scoped };
+          }
+
+          function readHostVariables(element) {
+            let node = element;
+            while (node) {
+              if (node.getAttribute && node.hasAttribute("data-variable-values")) {
+                try {
+                  const parsed = JSON.parse(node.getAttribute("data-variable-values"));
+                  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+                } catch {
+                  return {};
+                }
+              }
+              node = node.parentElement;
+            }
+            return {};
+          }
+
+          function timelineIds(hostElement, rootElement) {
+            const runtimeId = typeof __hfTimelineCompId !== "undefined" && __hfTimelineCompId ? __hfTimelineCompId : "";
+            if (runtimeId) return new Set([runtimeId]);
+            return new Set([
+              hostElement?.getAttribute("data-composition-id") || "",
+              hostElement?.getAttribute("data-hf-original-composition-id") || "",
+              rootElement?.getAttribute("data-composition-id") || "",
+              rootElement?.getAttribute("data-hf-original-composition-id") || "",
+              "quote"
+            ]);
+          }
+
+          function ariaLabel(labelTitle, labelQuote, labelSource) {
+            return labelSource ? `${labelTitle}: ${labelQuote}. ${labelSource}` : `${labelTitle}: ${labelQuote}`;
+          }
+
+          function safeColor(value) {
+            const text = stringValue(value, "");
+            return /^[A-Za-z]+$|^#[0-9A-Fa-f]{3,8}$|^var\(--[A-Za-z0-9_-]+\)$|^color-mix\(.+\)$/.test(text)
+              ? text
+              : "var(--rf-accent, var(--rf-text, currentColor))";
+          }
+
+          function blockDuration(element, fallback) {
+            let node = element.parentElement;
+            while (node) {
+              const value = Number(node.getAttribute?.("data-duration"));
+              if (Number.isFinite(value) && value > 0) return value;
+              node = node.parentElement;
+            }
+            const own = Number(element.getAttribute("data-duration"));
+            return Number.isFinite(own) && own > 0 ? own : fallback;
+          }
+        })();
+      </script>
+    </template>
+  </body>
+</html>

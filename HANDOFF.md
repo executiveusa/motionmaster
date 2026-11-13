@@ -106,7 +106,7 @@ disk and appeared nowhere.
   cannot drift apart again.
 - **HTTP API**: `/api/v1` with an OpenAPI document at `/api/v1/openapi.json`.
   Optional bearer auth via `MOTION_MASTER_API_KEY`.
-- **Plug-in**: 47 skills, with the Claude, Codex and Cursor marketplaces
+- **Plug-in**: 60 skills, with the Claude, Codex and Cursor marketplaces
   updated.
 
 ### The talking-head reel skill (2026-11-10)
@@ -234,6 +234,24 @@ Four layers, built in that order:
   `target: "remote"` posts to another instance's `/api/v1/films`.
   `queue_status` and `GET /api/v1/queue`.
 
+### The ten repos (2026-11-13)
+
+Ten repositories were named in a video and every one was checked here before
+anything went in — licence from the licence file, contents cloned and read.
+Seven were new. What came in: **thirteen skills, thirty-five HyperFrames
+compositions and one handwriting engine**, each with its licence and an
+`UPSTREAM.md`.
+
+The compositions were measured by our own gate, the way the registry blocks
+were: **24 of 27 motion-library templates pass; none of the 8 reelforge
+blocks do** — their failure is structural, not craft. The house library went
+from **75 scenes to 99**, and the `data` role from 5 to 20, which was the
+thin spot.
+
+`scripts/import-hf-video-repos.mjs` is the import and the record of what was
+taken from where. `scripts/qualify-compositions.mjs` is the measurement.
+See [`docs/28-THE-TEN-REPOS.md`](docs/28-THE-TEN-REPOS.md).
+
 ### Verification — all green as of `0215adc`
 
 | check | result |
@@ -242,12 +260,12 @@ Four layers, built in that order:
 | overflow at 320/375/390/430/768/1024/1440 | **0** |
 | `mcp: npm test` | **218/218** |
 | `clips: npm test` | **20/20** |
-| plugin skills | **47** |
+| plugin skills | **60** |
 | `mcp: node scripts/verify-tools.mjs` | **47/47** |
 | `mcp: node scripts/proof-studio.mjs` | **30/30** — the kits, the scenes and the queue, against the real server |
 | `clips: npm run typecheck` | clean |
 | `mcp: npm run typecheck` | clean |
-| `node scripts/completion-gates.mjs` | **13/13** |
+| `node scripts/completion-gates.mjs` | **14/14** |
 | hero film | 55.4 s, 1920×1080, 30 fps, h264 + AAC 48 kHz stereo, −18.5 LUFS, −1.5 dBTP |
 | blind gauntlet | measurable half ours (1 signal vs 5); taste half **lost round one**, fixes in |
 | external requests | **0** |
