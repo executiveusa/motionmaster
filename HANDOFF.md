@@ -438,15 +438,30 @@ remain are the push and the redeploy, and then the founder's decisions.
       Stories variant (9:16 with a different bottom furniture), the in-stream
       16:9 crop of a vertical ad, and the carousel card. Meta's numbers for
       those need reading from the Ads Guide, not guessed.
-9. **Redeploy the site.** The live URL still serves the old structure, which
+9. **Six high-severity dependency advisories, assessed.** GitHub's
+   Dependabot flags 6 high, 13 moderate and 5 low on `main`. They are
+   **not** being blind-bumped here, because two of the three fixes are not
+   one-liners and the whole suite has to be re-run after any of them.
+
+   | advisory | installed | fix | how risky |
+   |---|---|---|---|
+   | `vite` — `server.fs.deny` bypass, arbitrary file read via the dev-server WebSocket, `launch-editor` bypass | 7.3.6 | **7.3.8**, not a major bump | **low.** Dev-server only; the deployed site is static. `npm audit fix` in `site/` |
+   | `body-parser` — DoS via trailing bytes after a compressed body | 2.3.0 (transitive) | available | **low.** Lockfile bump in `mcp/`; re-run the 218 MCP tests |
+   | `zod` — memory exhaustion validating oversized constrained collections | 3.25.76 | **4.6.7 — a major migration** | **medium.** Every one of the 47 tool schemas is written in zod v3. Do this as its own task: bump, fix the schema API, re-run `mcp/test/*.mjs` and `scripts/completion-gates.mjs` |
+
+   The exposure is bounded: the server binds to loopback by default and the
+   HTTP API's bearer key is optional. `zod` is the one worth doing properly
+   — it validates every request body the API and the MCP transport accept.
+
+10. **Redeploy the site.** The live URL still serves the old structure, which
    includes a Pricing section — forbidden while the offer is not on sale.
    The current build is ready, measured and gated; it needs the founder's
    word because the deployment is public.
-10. **Push local `main` to `executiveusa/motionmaster`.** It needs the
-    founder's browser for the device-flow code — see §8. **The founder has to
+11. ~~**Push local `main` to `executiveusa/motionmaster`.**~~ **Done**
+    (2026-11-14). The remote is at `be569ab`; local and remote are level. **The founder has to
     enter the newest device code every time; an approval against an expired
     code does not count, and the codes expire in about fifteen minutes.**
-11. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
+12. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
     server fallback), the public surface, popebot fork-vs-configure (Phase 2
     — ships labelled unverified, no Docker here), a render machine, and
     whether to keep the old remote.
