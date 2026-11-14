@@ -446,20 +446,16 @@ remain are the push and the redeploy, and then the founder's decisions.
       Stories variant (9:16 with a different bottom furniture), the in-stream
       16:9 crop of a vertical ad, and the carousel card. Meta's numbers for
       those need reading from the Ads Guide, not guessed.
-9. **Six high-severity dependency advisories, assessed.** GitHub's
-   Dependabot flags 6 high, 13 moderate and 5 low on `main`. They are
-   **not** being blind-bumped here, because two of the three fixes are not
-   one-liners and the whole suite has to be re-run after any of them.
-
-   | advisory | installed | fix | how risky |
-   |---|---|---|---|
-   | `vite` — `server.fs.deny` bypass, arbitrary file read via the dev-server WebSocket, `launch-editor` bypass | 7.3.6 | **7.3.8**, not a major bump | **low.** Dev-server only; the deployed site is static. `npm audit fix` in `site/` |
-   | `body-parser` — DoS via trailing bytes after a compressed body | 2.3.0 (transitive) | available | **low.** Lockfile bump in `mcp/`; re-run the 218 MCP tests |
-   | `zod` — memory exhaustion validating oversized constrained collections | 3.25.76 | **4.6.7 — a major migration** | **medium.** Every one of the 47 tool schemas is written in zod v3. Do this as its own task: bump, fix the schema API, re-run `mcp/test/*.mjs` and `scripts/completion-gates.mjs` |
-
-   The exposure is bounded: the server binds to loopback by default and the
-   HTTP API's bearer key is optional. `zod` is the one worth doing properly
-   — it validates every request body the API and the MCP transport accept.
+9. ~~**Six high-severity dependency advisories.**~~ **Done** (2026-11-14).
+   The Dependabot branch was merged and the one real break was fixed: zod
+   v4 requires a key schema on `z.record()`, and **14 call sites** in
+   `mcp/src/tools.ts` did not have one. Nothing else moved — the MCP SDK
+   already accepted `^3.25 || ^4.0`, the tool count is still 47, and the
+   server's answers are byte-identical to v3's. **218 MCP tests pass, all
+   fourteen gates pass, and `npm audit` now reports zero high or critical
+   advisories in `mcp/` and zero advisories of any severity in `site/`.**
+   The lesson is worth keeping: this looked like a migration across 47 tool
+   schemas and it was 14 mechanical edits. Measure before you dread.
 
 10. **Redeploy the site.** The live URL still serves the old structure, which
    includes a Pricing section — forbidden while the offer is not on sale.

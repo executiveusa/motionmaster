@@ -418,15 +418,15 @@ export function registerTools(server: McpServer, config: Config): void {
         id: z.string().describe("Lowercase id, letters digits and dashes."),
         name: z.string().describe("The name people will read."),
         notes: z.string().optional().describe("What this kit is for."),
-        palette: z.record(z.string()).optional().describe("Token name to hex colour."),
-        typography: z.record(z.any()).optional().describe("Typography overrides, by token."),
-        easing: z.record(z.any()).optional(),
-        duration: z.record(z.any()).optional(),
-        durationRanges: z.record(z.any()).optional(),
-        styleDurations: z.record(z.any()).optional(),
-        spring: z.record(z.any()).optional(),
-        stagger: z.record(z.any()).optional(),
-        motion: z.record(z.any()).optional(),
+        palette: z.record(z.string(), z.string()).optional().describe("Token name to hex colour."),
+        typography: z.record(z.string(), z.any()).optional().describe("Typography overrides, by token."),
+        easing: z.record(z.string(), z.any()).optional(),
+        duration: z.record(z.string(), z.any()).optional(),
+        durationRanges: z.record(z.string(), z.any()).optional(),
+        styleDurations: z.record(z.string(), z.any()).optional(),
+        spring: z.record(z.string(), z.any()).optional(),
+        stagger: z.record(z.string(), z.any()).optional(),
+        motion: z.record(z.string(), z.any()).optional(),
       },
     },
     async (args) => {
@@ -559,7 +559,7 @@ export function registerTools(server: McpServer, config: Config): void {
       inputSchema: {
         id: z.string().describe("The scene id."),
         brief: z.string().describe("What the scene is about."),
-        values: z.record(z.any()).optional().describe("Explicit values by variable id. These always win."),
+        values: z.record(z.string(), z.any()).optional().describe("Explicit values by variable id. These always win."),
         headline: z.string().optional().describe("Override the headline."),
         brand_kit: BRAND_KIT_SCHEMA,
       },
@@ -1107,7 +1107,7 @@ export function registerTools(server: McpServer, config: Config): void {
             duration: z
               .object({ seconds: z.number().optional(), frames: z.number().optional() })
               .optional(),
-            doctrine: z.record(z.any()).optional(),
+            doctrine: z.record(z.string(), z.any()).optional(),
             beats: z
               .array(
                 z.object({
@@ -1150,7 +1150,7 @@ export function registerTools(server: McpServer, config: Config): void {
                       clamped: z.boolean().optional(),
                     })
                     .optional(),
-                  transition: z.record(z.any()).optional(),
+                  transition: z.record(z.string(), z.any()).optional(),
                   notes: z.array(z.string()).optional(),
                 }),
               )
@@ -1589,7 +1589,7 @@ server.registerTool(
         block: z.string().optional().describe("The block id. Omit to let the matcher choose one."),
         tag: z.string().optional().describe("Prefer blocks with this tag."),
         values: z
-          .record(z.any())
+          .record(z.string(), z.any())
           .optional()
           .describe("Explicit values by variable id. These always win."),
         headline: z.string().optional().describe("Override the headline."),
@@ -2254,7 +2254,7 @@ server.registerTool(
         brief: z.string().describe("What the film is about."),
         count: z.number().int().positive().max(8).optional().describe("How many blocks (default 3)."),
         tags: z.array(z.string()).optional().describe("Require these tags."),
-        values: z.record(z.any()).optional().describe("Explicit values by variable id."),
+        values: z.record(z.string(), z.any()).optional().describe("Explicit values by variable id."),
         brand_kit: BRAND_KIT_SCHEMA,
       },
     },
