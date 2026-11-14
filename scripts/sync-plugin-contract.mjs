@@ -235,6 +235,17 @@ for (const relative of ["plugin.json", ".codex-plugin/plugin.json"]) {
   files.push({ path, current, next });
 }
 
+/* The Claude Code manifest. It is a different shape — a plain description,
+   not an interface block — and it is the one that was left saying "33 motion
+   skills" long after the count changed. */
+{
+  const path = join(pluginRoot, ".claude-plugin", "plugin.json");
+  const { current, next } = jsonFile(path, (data) => {
+    data.description = `Motion design for AI agents: ${facts.skills} motion skills, the Motion Master doctrine and tokens, a deterministic storyboard planner, and a Meta ad studio that composes for the placement.`;
+  });
+  files.push({ path, current, next });
+}
+
 /* the brand asset: the rendering promise, generated from the same file */
 {
   const path = join(pluginRoot, "assets", "brand.json");

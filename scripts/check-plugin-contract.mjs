@@ -129,7 +129,14 @@ if (existsSync(deliverablePath)) {
   const skills = readdirSync(join(repoRoot, "plugins", "motion-master", "skills"), { withFileTypes: true }).filter((e) => e.isDirectory()).length;
   const source = readFileSync(join(repoRoot, "mcp", "src", "index.ts"), "utf8");
   const tools = (source.match(/const TOOL_NAMES = \[([\s\S]*?)\]/) ?? ["", ""])[1].match(/"[a-z_]+"/g)?.length ?? 0;
-  const manifests = [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", ".cursor-plugin/marketplace.json", "plugins/motion-master/plugin.json", "plugins/motion-master/.codex-plugin/plugin.json"];
+  const manifests = [
+    ".agents/plugins/marketplace.json",
+    ".claude-plugin/marketplace.json",
+    ".cursor-plugin/marketplace.json",
+    "plugins/motion-master/plugin.json",
+    "plugins/motion-master/.codex-plugin/plugin.json",
+    "plugins/motion-master/.claude-plugin/plugin.json",
+  ];
   let stale = 0;
   for (const manifest of manifests) {
     const path = join(repoRoot, manifest);

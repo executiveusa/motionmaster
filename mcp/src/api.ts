@@ -85,6 +85,17 @@ import { exportProjectSource, importProjectSource } from "./project-source-bundl
 import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } from "./shots.js";
 import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
 import { getBrandKit, listBrandKits, resolveTokens, saveBrandKit } from "./brandkit.js";
+import {
+  PLACEMENTS,
+  placement,
+  checkCopy,
+  cropLoss,
+  safeAreaOf,
+  safeZoneFractions,
+  preflight,
+  type PlacementId,
+} from "./meta.js";
+import { execFileSync } from "node:child_process";
 import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
 import { queueState, reconcileJobs } from "./queue.js";
 
@@ -364,6 +375,37 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           summary: "Build a Remotion composition from a storyboard.",
           requestBody: { required: true, content: json(obj) },
           responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/placements`]: {
+        get: { summary: "Meta's placements: the sizes, the safe zones and the text limits.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/meta/copy/check`]: {
+        post: {
+          summary: "Check a primary text and a headline against a placement's character limits.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/plan`]: {
+        post: {
+          summary: "Plan an ad for a placement: the frame, the safe area and where the type goes.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/build`]: {
+        post: {
+          summary: "Build the ad: a composition authored at the placement's own size.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/preflight`]: {
+        post: {
+          summary: "Measure a rendered file against its placement.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) }, 422: { description: "outside the contract", content: json(obj) } },
         },
       },
       [`${API_PREFIX}/sfx/kinds`]: {
@@ -970,6 +1012,202 @@ export async function handleApi(
       return true;
     }
     writeJson(res, 200, found);
+    return true;
+  }
+
+  /* ------------------------------------------------------------- the ads */
+
+  if (route === "/meta/placements" && method === "GET") {
+    writeJson(res, 200, {
+      placements: PLACEMENTS.map((p) => ({
+        id: p.id,
+        name: p.name,
+        aspect: p.aspect,
+        master: { width: p.width, height: p.height },
+        where: p.placements,
+        aspectTolerance: `${p.aspectTolerance * 100}%`,
+        safeZone: safeZoneFractions(p),
+        safeArea: safeAreaOf(p),
+        text: p.text,
+        duration: p.duration,
+        minWidth: p.minWidth,
+        encoding: p.encoding,
+        maxFileBytes: p.maxFileBytes,
+        source: p.source,
+        readOn: p.readOn,
+        cropLoss: cropLoss(p),
+      })),
+      source: "Meta Ads Guide, read 2026-11-13",
+    });
+    return true;
+  }
+
+  if (route === "/meta/copy/check" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      primaryText?: string;
+      headline?: string;
+      description?: string;
+      label?: string;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const copy = {
+      primaryText: body.primaryText ?? "",
+      headline: body.headline ?? "",
+      description: body.description ?? "",
+      label: body.label ?? "",
+    };
+    const problems = checkCopy(copy, p);
+    writeJson(res, 200, {
+      ok: problems.length === 0,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+      measured: {
+        primaryText: { length: copy.primaryText.length, min: p.text.primaryMin, max: p.text.primaryMax },
+        headline: { length: copy.headline.length, max: p.text.headlineMax },
+      },
+      problems,
+    });
+    return true;
+  }
+
+  if (route === "/meta/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      claim?: string;
+      eyebrow?: string;
+      brand?: string;
+      primaryText?: string;
+      headline?: string;
+      durationSeconds?: number;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const safe = safeAreaOf(p);
+    const problems = checkCopy(
+      { primaryText: body.primaryText ?? "", headline: body.headline ?? "", description: "", label: "" },
+      p,
+    );
+    writeJson(res, 200, {
+      ok: true,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height }, where: p.placements },
+      frame: {
+        safeArea: safe,
+        safeZone: safeZoneFractions(p),
+        typeFloorPx: Math.round(Math.min(p.width, p.height) * 0.026),
+      },
+      content: {
+        claim: body.claim ?? "",
+        eyebrow: body.eyebrow ?? null,
+        brand: body.brand ?? "",
+        primaryText: body.primaryText ?? "",
+        headline: body.headline ?? "",
+      },
+      durationSeconds: body.durationSeconds ?? 6,
+      copyProblems: problems,
+      theAlternative: { cropLoss: cropLoss(p) },
+    });
+    return true;
+  }
+
+  if (route === "/meta/build" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      claim?: string;
+      eyebrow?: string;
+      brand?: string;
+      primaryText?: string;
+      headline?: string;
+      accent?: string;
+      out?: string;
+      durationSeconds?: number;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const outDir = body.out ?? join(config.repoRoot, "studio", "ads", "build");
+    const args = [
+      join(config.repoRoot, "scripts", "build-meta-ad.mjs"),
+      "--placement", p.id,
+      "--claim", body.claim ?? "",
+      "--brand", body.brand ?? "",
+      "--out", outDir,
+      "--primary-text", body.primaryText ?? "",
+      "--headline", body.headline ?? "",
+      "--duration", String(body.durationSeconds ?? 6),
+    ];
+    if (body.eyebrow) args.push("--eyebrow", body.eyebrow);
+    if (body.accent) args.push("--accent", body.accent);
+    let stdout = "";
+    try {
+      stdout = execFileSync("node", args, { cwd: config.repoRoot, encoding: "utf8" });
+    } catch (error) {
+      const e = error as { stdout?: string; stderr?: string };
+      fail(res, 500, "The build failed.", { stdout: e.stdout ?? "", stderr: e.stderr ?? "" });
+      return true;
+    }
+    writeJson(res, 200, {
+      ok: true,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+      outDir,
+      adJson: join(outDir, "ad.json"),
+      report: stdout.trim().split("\n").slice(-20).join("\n"),
+    });
+    return true;
+  }
+
+  if (route === "/meta/preflight" && method === "POST") {
+    const body = (await readJson(req)) as { placement?: string; file?: string };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    if (!body.file) {
+      fail(res, 400, "Give the file to check.");
+      return true;
+    }
+    const path = body.file.startsWith("/") ? body.file : join(config.repoRoot, body.file);
+    if (!existsSync(path)) {
+      fail(res, 404, `There is no file at ${body.file}.`);
+      return true;
+    }
+    const raw = execFileSync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate:format=duration,size", "-of", "json", path],
+      { encoding: "utf8" },
+    );
+    const probed = JSON.parse(raw) as {
+      streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number; r_frame_rate?: string }[];
+      format?: { duration?: string; size?: string };
+    };
+    const video = (probed.streams ?? []).find((s) => s.codec_type === "video");
+    const audio = (probed.streams ?? []).find((s) => s.codec_type === "audio");
+    if (!video) {
+      fail(res, 400, "That file has no video stream.");
+      return true;
+    }
+    const [num, den] = String(video.r_frame_rate ?? "0/1").split("/").map(Number);
+    const result = preflight(body.placement as PlacementId, {
+      file: body.file,
+      width: video.width,
+      height: video.height,
+      durationSeconds: probed.format?.duration ? Number(probed.format.duration) : undefined,
+      bytes: statSync(path).size,
+      codec: video.codec_name,
+      audioCodec: audio?.codec_name,
+      fps: den ? num / den : undefined,
+      hasAudio: Boolean(audio),
+    });
+    writeJson(res, result.ok ? 200 : 422, result);
     return true;
   }
 

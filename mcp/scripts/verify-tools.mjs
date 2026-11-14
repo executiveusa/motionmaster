@@ -113,6 +113,7 @@ const main = async () => {
       "list_sfx_kinds", "browse_sfx", "search_sfx", "get_sfx", "plan_sound",
       "enhance_prompt",
       "board_sync_check", "board_sync_start", "board_sync_status", "board_sync_cancel",
+      "list_meta_placements", "check_ad_copy", "plan_meta_ad", "build_meta_ad", "preflight_ad",
       "list_shots", "get_shot", "plan_shots",
       "list_motion_effects", "get_motion_effect",
     ];

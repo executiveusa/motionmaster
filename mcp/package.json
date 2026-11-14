@@ -9,7 +9,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "motion-master-mcp": "dist/index.js"
+    "motion-master-mcp": "dist/index.js",
+    "motion-master-mcp-stdio": "dist/stdio.js"
   },
   "files": [
     "dist"

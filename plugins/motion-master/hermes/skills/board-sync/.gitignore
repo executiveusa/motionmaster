@@ -1,0 +1,4 @@
+assets/gsap.min.js
+.venv/
+__pycache__/
+out/

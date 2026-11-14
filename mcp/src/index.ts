@@ -27,7 +27,7 @@ import { queueState, reconcileJobs } from "./queue.js";
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
 
-const TOOL_NAMES = [
+export const TOOL_NAMES = [
   "list_skills",
   "get_motion_tokens",
   "list_brand_kits",
@@ -70,6 +70,11 @@ const TOOL_NAMES = [
   "board_sync_start",
   "board_sync_status",
   "board_sync_cancel",
+  "list_meta_placements",
+  "check_ad_copy",
+  "plan_meta_ad",
+  "build_meta_ad",
+  "preflight_ad",
 ] as const;
 
 export function createMcpServer(config: Config): McpServer {

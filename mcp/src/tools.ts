@@ -30,6 +30,18 @@ import {
 } from "./library.js";
 import { enhance, type TokenShape } from "./enhancer.js";
 import {
+  PLACEMENTS,
+  placement,
+  checkCopy,
+  cropLoss,
+  safeAreaOf,
+  safeZoneFractions,
+  preflight,
+  type PlacementId,
+} from "./meta.js";
+import { execFileSync } from "node:child_process";
+import { statSync } from "node:fs";
+import {
   fillBlock,
   headlineFrom,
   matchBlocks,
@@ -2559,6 +2571,259 @@ server.registerTool(
           "The Montage instance holds the timeline; the render happens on your own machine.",
         ],
       });
+    },
+  );
+
+  /* ------------------------------------------------------------- the ads */
+
+  server.registerTool(
+    "list_meta_placements",
+    {
+      title: "List Meta's placements",
+      description:
+        "Meta's placements with the real numbers: the aspect ratio, the master size, the safe zone, the " +
+        "aspect-ratio tolerance and the character limits on the primary text and the headline. Read this " +
+        "before making an ad — the numbers come from Meta, they are not guessed, and they change. " +
+        "The safe zone on a full-screen vertical placement covers roughly half the frame, and Facebook " +
+        "Reels accepts zero per cent aspect-ratio tolerance.",
+      inputSchema: {},
+    },
+    async () => {
+      return ok({
+        placements: PLACEMENTS.map((p) => ({
+          id: p.id,
+          name: p.name,
+          aspect: p.aspect,
+          master: { width: p.width, height: p.height },
+          where: p.placements,
+          aspectTolerance: `${p.aspectTolerance * 100}%`,
+          safeZone: safeZoneFractions(p),
+          safeArea: safeAreaOf(p),
+          text: p.text,
+          duration: p.duration,
+          minWidth: p.minWidth,
+          encoding: p.encoding,
+          maxFileBytes: p.maxFileBytes,
+          source: p.source,
+          readOn: p.readOn,
+          cropLoss: cropLoss(p),
+        })),
+        note:
+          "The words live in the platform, not in the picture. The creative carries the brand; the primary " +
+          "text and the headline are fields in the ad's JSON.",
+        source: "Meta Ads Guide, read 2026-11-13",
+      });
+    },
+  );
+
+  server.registerTool(
+    "check_ad_copy",
+    {
+      title: "Check an ad's copy",
+      description:
+        "Check a primary text and a headline against a placement's character limits. Both fields live in " +
+        "the platform rather than in the creative, and both are bounded: a primary text of forty to a " +
+        "hundred and fifty characters, a headline of twenty-seven on Feed or fifty-five on Reels. A copy " +
+        "that is too short is as wrong as one that is too long.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        description: z.string().default("").describe("The description field, if there is one."),
+        label: z.string().default("").describe("The label field, if there is one."),
+      },
+    },
+    async ({ placement: placementId, primaryText, headline, description, label }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({
+          ok: false,
+          error: `There is no placement called "${placementId}".`,
+          placements: PLACEMENTS.map((x) => x.id),
+        });
+      }
+      const problems = checkCopy({ primaryText, headline, description, label }, p);
+      return ok({
+        ok: problems.length === 0,
+        placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+        measured: {
+          primaryText: { length: primaryText.length, min: p.text.primaryMin, max: p.text.primaryMax },
+          headline: { length: headline.length, max: p.text.headlineMax },
+        },
+        problems,
+        note: problems.length === 0 ? "The copy fits the placement." : "The copy does not fit the placement.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_meta_ad",
+    {
+      title: "Plan a Meta ad",
+      description:
+        "Plan an ad for a placement: what the frame is, where the safe area is, where every piece of type " +
+        "goes, what the copy says, and what the alternative would have cost. This is the plan, not the " +
+        "build — it is the thing a person reads before the pixels exist.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        claim: z.string().describe("The claim, in the creator's words. One line, and true."),
+        eyebrow: z.string().optional().describe("A short label above the claim. Optional, and short."),
+        brand: z.string().describe("The brand mark shown on the frame."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        durationSeconds: z.number().int().positive().max(60).optional(),
+      },
+    },
+    async ({ placement: placementId, claim, eyebrow, brand, primaryText, headline, durationSeconds }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const safe = safeAreaOf(p);
+      const loss = cropLoss(p);
+      const problems = checkCopy({ primaryText, headline, description: "", label: "" }, p);
+      return ok({
+        ok: true,
+        placement: {
+          id: p.id,
+          name: p.name,
+          aspect: p.aspect,
+          master: { width: p.width, height: p.height },
+          where: p.placements,
+        },
+        frame: {
+          safeArea: safe,
+          safeZone: safeZoneFractions(p),
+          typeFloorPx: Math.round(Math.min(p.width, p.height) * 0.026),
+        },
+        content: { claim, eyebrow: eyebrow ?? null, brand, primaryText, headline },
+        durationSeconds: durationSeconds ?? 6,
+        copyProblems: problems,
+        theAlternative: {
+          note: "What a sixteen-by-nine scene cropped to this placement would have kept.",
+          cropLoss: loss,
+        },
+        nextSteps: [
+          `build_meta_ad with the same placement and the same words`,
+          "gate the composition with npx hyperframes check",
+          "render with bash generator/render.sh <dir> <dir>/ad.mp4",
+          `preflight_ad with the placement and the rendered file`,
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "build_meta_ad",
+    {
+      title: "Build a Meta ad",
+      description:
+        "Build the ad: a HyperFrames composition authored at the placement's own size, with the type stack " +
+        "inside the safe area by construction, plus the ad's JSON holding the copy and the measurements. " +
+        "This writes files; it does not render. The gate and the render are separate steps.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        claim: z.string().describe("The claim on the frame. One line, and true."),
+        eyebrow: z.string().optional().describe("A short label above the claim."),
+        brand: z.string().describe("The brand mark on the frame."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        accent: z.string().optional().describe("The accent, as a hex. One accent, never a surface."),
+        out: z.string().optional().describe("Where to write the build. Defaults to studio/ads/build."),
+        durationSeconds: z.number().int().positive().max(60).optional(),
+      },
+    },
+    async ({ placement: placementId, claim, eyebrow, brand, primaryText, headline, accent, out, durationSeconds }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const repoRoot = config.repoRoot;
+      const outDir = out ?? join(repoRoot, "studio", "ads", "build");
+      const args = [
+        join(repoRoot, "scripts", "build-meta-ad.mjs"),
+        "--placement", p.id,
+        "--claim", claim,
+        "--brand", brand,
+        "--out", outDir,
+        "--primary-text", primaryText,
+        "--headline", headline,
+        "--duration", String(durationSeconds ?? 6),
+      ];
+      if (eyebrow) args.push("--eyebrow", eyebrow);
+      if (accent) args.push("--accent", accent);
+      let stdout = "";
+      let failed = false;
+      try {
+        stdout = execFileSync("node", args, { cwd: repoRoot, encoding: "utf8" });
+      } catch (error) {
+        failed = true;
+        stdout = String((error as { stdout?: string; stderr?: string }).stdout ?? "") +
+          String((error as { stderr?: string }).stderr ?? "");
+      }
+      const adJson = join(outDir, "ad.json");
+      return ok({
+        ok: !failed,
+        placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+        outDir,
+        adJson: existsSync(adJson) ? adJson : null,
+        report: stdout.trim().split("\n").slice(-20).join("\n"),
+        nextSteps: [
+          `npx hyperframes check ${outDir}`,
+          `bash generator/render.sh ${outDir} ${outDir}/ad.mp4`,
+          `preflight_ad with the placement and the rendered file`,
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "preflight_ad",
+    {
+      title: "Preflight a rendered ad",
+      description:
+        "Measure a rendered file against its placement and report what Meta will crop or reject: the aspect " +
+        "ratio and its tolerance, the minimum width, the duration, the encoding and the file size. Every " +
+        "number is measured out of the file with ffprobe, not assumed.",
+      inputSchema: {
+        placement: z.string().describe("The placement id."),
+        file: z.string().describe("The rendered file to check."),
+      },
+    },
+    async ({ placement: placementId, file }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const path = file.startsWith("/") ? file : join(config.repoRoot, file);
+      if (!existsSync(path)) {
+        return ok({ ok: false, error: `There is no file at ${file}.` });
+      }
+      const raw = execFileSync(
+        "ffprobe",
+        ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate:format=duration,size", "-of", "json", path],
+        { encoding: "utf8" },
+      );
+      const probed = JSON.parse(raw) as {
+        streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number; r_frame_rate?: string }[];
+        format?: { duration?: string; size?: string };
+      };
+      const video = (probed.streams ?? []).find((s) => s.codec_type === "video");
+      const audio = (probed.streams ?? []).find((s) => s.codec_type === "audio");
+      if (!video) return ok({ ok: false, error: "That file has no video stream." });
+      const [num, den] = String(video.r_frame_rate ?? "0/1").split("/").map(Number);
+      const result = preflight(placementId as PlacementId, {
+        file,
+        width: video.width,
+        height: video.height,
+        durationSeconds: probed.format?.duration ? Number(probed.format.duration) : undefined,
+        bytes: statSync(path).size,
+        codec: video.codec_name,
+        audioCodec: audio?.codec_name,
+        fps: den ? num / den : undefined,
+        hasAudio: Boolean(audio),
+      });
+      return ok(result);
     },
   );
 }

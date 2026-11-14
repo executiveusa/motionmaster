@@ -1,0 +1,9 @@
+name: motion-master
+version: 1.0.0
+description: >-
+  Motion Master — an in-house motion design studio. Every skill in the pack
+  (film, cutdowns, explainers, sound and the Meta ad studio), read-only under
+  the motion-master namespace, plus a /motion command that points at the
+  folder for a job.
+provides_tools: []
+provides_hooks: []
