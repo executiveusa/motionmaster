@@ -2,8 +2,8 @@
 
 **Read this first. It is everything another agent needs to pick this up cold.**
 
-Written 2026-10-24. Repository: **`executiveusa/motionmaster`** (final home).
-Local clone: `/workspace/motion-master`. `main` = `65af542`.
+Written 2026-10-24, updated 2026-11-13. Repository: **`executiveusa/motionmaster`** (final home).
+Local clone: `/workspace/motion-master`. `main` = `44aeac9`.
 
 ---
 
@@ -106,7 +106,7 @@ disk and appeared nowhere.
   cannot drift apart again.
 - **HTTP API**: `/api/v1` with an OpenAPI document at `/api/v1/openapi.json`.
   Optional bearer auth via `MOTION_MASTER_API_KEY`.
-- **Plug-in**: 60 skills, with the Claude, Codex and Cursor marketplaces
+- **Plug-in**: 61 skills, with the Claude, Codex and Cursor marketplaces
   updated.
 
 ### The talking-head reel skill (2026-11-10)
@@ -252,6 +252,79 @@ thin spot.
 taken from where. `scripts/qualify-compositions.mjs` is the measurement.
 See [`docs/28-THE-TEN-REPOS.md`](docs/28-THE-TEN-REPOS.md).
 
+### The Meta ad studio and the ICM workspace (2026-11-13)
+
+The founder's ask: make Motion Master the motion-graphic studio for big
+brands and for Meta/Facebook ads, callable by any LLM through a file-and-
+folder structure, on ChatGPT, Codex, Hermes and Claude Code, with the API
+and the MCP.
+
+**The ICM workspace — `studio/`.** A folder tree an agent of any kind can
+walk. `studio/AGENTS.md` is the map and says which folder to open for a job.
+Every pipeline and every stage has a `CONTEXT.md` saying what it reads, what
+it writes and what a person checks. A campaign is a **copy of a stamp**
+(`studio/_templates/campaign/`), never a blank page; a brand is a **record**
+(`studio/records/<brand>/`) with its kit, its voice and its campaigns. State
+is the files on disk — nothing hidden in a database or a framework.
+
+```
+studio/
+├─ AGENTS.md            the map
+├─ CONTEXT.md           which folder for which job
+├─ _shared/             house-style, ad-specs, copy-rules, brand-voice
+├─ _templates/campaign/ the stamp
+├─ _index/log.md        the catalog
+├─ 01_meta-ad/          01_brief 02_copy 03_design 04_produce 05_deliver
+├─ 02_brand-film/       a brand film or a commercial
+├─ 03_cutdown/          cut a recording into shorts
+├─ 04_explainer/        a diagram that draws itself
+└─ records/acme-coffee/ the worked example
+```
+
+**The ad business.** A Meta ad is three things — the file, the copy and the
+placement — and **the copy lives in the platform, not in the picture**. The
+placements, the safe zones and the character limits are Meta's own numbers,
+read on 2026-11-13, and they live in one file rather than in anyone's memory:
+`studio/_shared/ad-specs.md` and `mcp/src/meta.ts`.
+
+The finding that shaped the work: **Facebook Reels accepts zero per cent
+aspect-ratio tolerance**, and the safe zone on a full-screen vertical
+placement covers roughly half the frame. A sixteen-by-nine scene cropped to
+nine-by-sixteen keeps **thirty-two per cent of its width**. The first
+attempt reframed a landscape scene and the maths was right and the picture
+was wrong — a slice, the headline half off the canvas. So the ad is
+**authored at the placement's own size**, with the type stack inside the safe
+area by construction.
+
+The rendered ad: 1440×2560, six seconds, gate clean at 0 errors and 9/9
+contrast checks. The gate caught two real defects — a wordmark at 3.56:1
+against the canvas, and an empty first frame (which on a social player is the
+thumbnail).
+
+**The surfaces.**
+- Five MCP tools: `list_meta_placements`, `check_ad_copy`, `plan_meta_ad`,
+  `build_meta_ad`, `preflight_ad`. **47 tools in total.**
+- Five HTTP routes under `/api/v1/meta/*`, sharing the one implementation.
+- **A stdio transport** (`mcp/src/stdio.ts`, bin `motion-master-mcp-stdio`)
+  — the same server, same tools, one factory. For the hosts that launch a
+  server as a child process.
+- Hermes: a **native plugin** at `plugins/motion-master/hermes/`
+  (`plugin.yaml` + `register(ctx)`) that loads the pack under the
+  `motion-master:` namespace and registers a `/motion` command. It finds the
+  pack beside it in the repo, and falls back to a generated copy of the
+  studio's own five skills if the plugin folder was copied on its own.
+- ChatGPT and Codex: the OpenAI interface block. Claude Code:
+  `.claude-plugin/plugin.json` and `.mcp.json`. The Agent Plugins v1
+  package (`plugin.json` + `mcp.json`) is the Hermes-shaped one.
+- The `meta-ads` skill (skill 61) teaches the whole line.
+
+**Two real defects fixed on the way.** The Claude Code manifest still said
+**"33 motion skills"** — it was not in the generator's list, so it had been
+wrong for a long time without anybody noticing; it is now generated and
+gated. And the server advertised 24 tools while registering 35; that had
+already been caught once and came back, so the banner is now checked against
+the same list the live server is checked against.
+
 ### Verification — all green as of `0215adc`
 
 | check | result |
@@ -287,6 +360,13 @@ curl http://127.0.0.1:8787/api/v1/openapi.json # the API description
 
 # the media
 scripts/rebuild-media.sh                        # clips → frames → hero film (≈45 min)
+
+# the ads
+node scripts/check-ad-copy.mjs --placement reels-9x16 --primary-text "…" --headline "…"
+node scripts/build-meta-ad.mjs --placement reels-9x16 --brief campaigns/<id>/brief.json --out campaigns/<id>/produce
+npx hyperframes check campaigns/<id>/produce
+bash generator/render.sh campaigns/<id>/produce campaigns/<id>/produce/ad.mp4
+node scripts/preflight-ad.mjs --placement reels-9x16 --file campaigns/<id>/produce/ad.mp4
 
 # the proof
 node scripts/overflow.mjs 320                  # needs chrome on :9222
@@ -325,64 +405,51 @@ These cost hours. Read them once.
 
 ## 7. What is open, and the order I would do it in
 
-1. ~~**Qualify the whole 448-block pool against the gate.**~~ **Done**
-   (2026-11-11). Every block was installed, mounted and checked: **75 of the
-   210 mountable compositions pass; 135 fail; the other 238 are snippets,
-   not compositions, and are never mounted.** The matcher now refuses a
-   rejected block and prefers a passed one over an unmeasured one, and
-   `fill_block` refuses a rejected block even when it is named. See
-   `docs/23-THE-QUALIFIED-POOL.md`.
-2. **Give `enhance_prompt` a shot plan**, so the matcher chooses instead of
-   guessing. (`enhance_prompt` now takes `plan_shots` and `max_shots`, so the
-   enhancer writes a plan into the brief instead of guessing a shape.)
-3. ~~**Qualify the blocks against the gate, by role.**~~ **Done**
-   (2026-11-11). `scripts/map-block-roles.mjs` reads the registry tags and
-   maps every gate-passing block to the shot roles it can serve; the plan
-   writes the roles into the brief, the matcher reads them back, and each
-   shot is filled with a block that serves its role **and** has passed the
-   gate. The table is in `scripts/map-block-roles.mjs`, written down so it
-   can be argued with. The pool is uneven — 54 blocks can serve
-   `ui-entrance`, only 6 can serve `opening` — so the roles that are scarce
-   are where the next work is.
+**The state as of 2026-11-13.** Items 1–7 below are done. The two that
+remain are the push and the redeploy, and then the founder's decisions.
+
+1. ~~**Qualify the whole 448-block pool against the gate.**~~ **Done.**
+   75 of the 210 mountable compositions pass; 135 fail; the other 238 are
+   snippets and are never mounted. `docs/23-THE-QUALIFIED-POOL.md`.
+2. ~~**Give `enhance_prompt` a shot plan.**~~ **Done.**
+3. ~~**Qualify the blocks against the gate, by role.**~~ **Done.**
+   `scripts/map-block-roles.mjs`; the pool is uneven — 54 blocks can serve
+   `ui-entrance`, only 6 can serve `opening`.
 4. ~~**Run the gauntlet blind.**~~ **Done — and we lost the first round.**
-   (2026-11-11). `motionvideo.xyz` resolves from this sandbox now, so the
-   visual half ran for the first time. `scripts/blind-capture.mjs` captures both
-   pages at 1440 and 390, **hides the brand on both**, and assigns `A`/`B` at
-   random; a fresh agent session with no history of this project judged them.
-   The measurable half is ours (1 signal against 5, 0 high on both). The taste
-   half went to the bar, and three of the critic's findings were true of our
-   page: title cards cut mid-word in the hero, a phone hero that was a shrunk
-   desktop with a card cutting the headline, and a collage whose cards cropped
-   the footage. All three are fixed. See `docs/24-THE-BLIND-GAUNTLET.md`.
-   **Round two: WE WON.** A second fresh critic, blind, picked ours at medium
-   confidence — on hierarchy, on craft and taste, and on the phone being its own
-   composition rather than a shrink. Its complaints about our hero (a card
-   covering another's thumbnail, a crowded wordmark, the same artwork twice, a
-   caption block that did not line up with the headline) were all true and all
-   fixed; the whiteboard demo's copy changed to "Shot by shot." so the two films
-   no longer say the same thing. See `docs/26-THE-ROUND-TWO-VERDICT.md`.
+   Fixed all three of the critic's findings. `docs/24-THE-BLIND-GAUNTLET.md`.
 5. ~~**Close the visual half of the motionvideo.xyz gauntlet.**~~ **Done.**
-   Same run as item 4. The bar is fetched live; the reconstruction script was
-   not needed.
-6. ~~**Shorten the hero film.**~~ **Done.**
-   (2026-11-11). **55.4 seconds**, cut with an edit decision list — a slow
-   opening, a fast middle, a held ending — and the footage clock runs at real
-   speed so a clip is never seen sped up. It now has a **score**: sixteen cues
-   and a bed, every sound from our own shelf, written down with a role and a
-   reason. −18.5 LUFS integrated, −1.5 dBTP. The cut also exposed that the
-   film had been showing the empty opening of two clips, and that a frame index
-   was resolved twice. See `docs/25-THE-HERO-FILM.md`.
-7. **Redeploy the site.** The live URL still serves the old structure, which
+6. ~~**Shorten the hero film.**~~ **Done.** 55.4 seconds, with a score.
+   `docs/25-THE-HERO-FILM.md`.
+7. **Build the ICM workspace and the four plugins.** **Done**
+   (2026-11-13). `studio/`, the native Hermes plugin, the stdio transport,
+   the ad studio, the five MCP tools and the five HTTP routes. See §4.
+8. **The ad studio still needs three things** — and they are the next work,
+   in this order:
+   a. **Sound.** The rendered ad has **no audio track**, and the preflight
+      says so out loud ("Meta recommends sound on an ad"). The shelf has
+      1,470 sounds and the hero film already has a score
+      (`hero/score.mjs`, `hero/sound-kit.json`) — the ad needs the same
+      treatment: a bed and one or two accents, mixed to −18 LUFS.
+   b. **A real brand.** `studio/records/acme-coffee/` is a worked example
+      with no assets. A real record needs a wordmark, a kit and one real
+      campaign run end to end, so the stamp has been used for something
+      that was not invented.
+   c. **More placements.** Four are covered. The ones that are not: the
+      Stories variant (9:16 with a different bottom furniture), the in-stream
+      16:9 crop of a vertical ad, and the carousel card. Meta's numbers for
+      those need reading from the Ads Guide, not guessed.
+9. **Redeploy the site.** The live URL still serves the old structure, which
    includes a Pricing section — forbidden while the offer is not on sale.
-   The current build is ready, measured and 10/10 gated; it needs the founder's
+   The current build is ready, measured and gated; it needs the founder's
    word because the deployment is public.
-8. **Push local `main` to `executiveusa/motionmaster`.** Local `main` is ahead
-   of the remote by ten commits and the push is a clean fast-forward. It needs
-   the founder's browser for the device-flow code — see §8.
-9. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a server
-   fallback), the public surface, popebot fork-vs-configure (Phase 2 — ships
-   labelled unverified, no Docker here), a render machine, and whether to keep
-   the old remote.
+10. **Push local `main` to `executiveusa/motionmaster`.** It needs the
+    founder's browser for the device-flow code — see §8. **The founder has to
+    enter the newest device code every time; an approval against an expired
+    code does not count, and the codes expire in about fifteen minutes.**
+11. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
+    server fallback), the public surface, popebot fork-vs-configure (Phase 2
+    — ships labelled unverified, no Docker here), a render machine, and
+    whether to keep the old remote.
 
 ## 8. Do not
 
@@ -427,6 +494,11 @@ These cost hours. Read them once.
   AGPL-3.0 Montage agent, kept isolated in its own process.
 
 ## 9. If the working tree is lost
+
+**The bundle is stale.** It was last rebuilt at `8ed15eb`; this round added
+`44aeac9` on top, so `git bundle` and the push zip must be rebuilt before
+anyone relies on them. The rebuild is `scripts/rebuild-bundle.sh` (or the
+steps in `git log` history) and it is slow — do it once, last.
 
 The whole repository is one git bundle, and it has been verified to restore:
 
