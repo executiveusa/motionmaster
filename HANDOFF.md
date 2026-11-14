@@ -7,6 +7,14 @@ Local clone: `/workspace/motion-master`. `main` = `44aeac9`.
 
 ---
 
+> **If you are here to take this to a real product, read
+> [`docs/29-THE-PRODUCTION-LOOP.md`](docs/29-THE-PRODUCTION-LOOP.md) first.**
+> It is the blueprint: what is real today and what is not, the loop's
+> architecture, the four levels of "done", the remediation table that lets
+> the gate teach the loop to fix itself, and six phases — each with the
+> command that proves it is finished. This document is the map; that one is
+> the work.
+
 ## 1. What this is
 
 Motion Master is a motion-design agent product. You describe a video in a
@@ -461,7 +469,22 @@ remain are the push and the redeploy, and then the founder's decisions.
     (2026-11-14). The remote is at `be569ab`; local and remote are level. **The founder has to
     enter the newest device code every time; an approval against an expired
     code does not count, and the codes expire in about fifteen minutes.**
-12. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
+12. **Build the production loop.** **This is the whole remaining job.**
+    The blueprint is `docs/29-THE-PRODUCTION-LOOP.md`. The short version:
+    the renders, the gate, the queue, the job state machine, the block pool
+    and the house library are **real and tested**; what is missing is the
+    thing that makes it a product rather than a tool — a **supervisor** that
+    picks work up on its own, and a **remediation table** that turns a gate
+    failure into a repair instead of a dead end. Six phases, in order:
+    P0 remediation (a rule per gate finding, proved by re-gating) →
+    P1 the supervisor (three jobs, one passes, one repaired, one failed
+    with its budget spent) → P2 durability (kill it mid-job, restart,
+    reconcile) → P3 the clock (a brief arrives on a schedule) → P4 identity
+    (tenants, quotas, audit) → P5 operations (logs, metrics, alerts, a
+    Dockerfile) → P6 the surface (the console, end to end).
+    **Do P0 and P1 before anything else.** Without them the loop fails on
+    the first bad render and needs a human every time.
+13. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
     server fallback), the public surface, popebot fork-vs-configure (Phase 2
     — ships labelled unverified, no Docker here), a render machine, and
     whether to keep the old remote.

@@ -1,0 +1,14 @@
+{
+  "$comment": "The campaign stamp. A new campaign is a copy of this file, not a blank page. Every field that states a fact about the offer comes from the founder — none of them are invented here.",
+  "id": "",
+  "brand": "",
+  "placement": "reels-9x16",
+  "offer": "",
+  "audience": "",
+  "claim": "",
+  "eyebrow": "",
+  "brandMark": "",
+  "primaryText": "",
+  "headline": "",
+  "durationSeconds": 6
+}
