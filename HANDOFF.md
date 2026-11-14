@@ -495,12 +495,17 @@ remain are the push and the redeploy, and then the founder's decisions.
 
 ## 9. If the working tree is lost
 
-**The bundle is stale.** It was last rebuilt at `8ed15eb`; this round added
-`44aeac9` on top, so `git bundle` and the push zip must be rebuilt before
-anyone relies on them. The rebuild is `scripts/rebuild-bundle.sh` (or the
-steps in `git log` history) and it is slow — do it once, last.
+**The bundle is current.** It was rebuilt at `dd66d99` and verified by
+restoring it: 348 commits, 4,342 files, 61 skills, 18 studio contracts, 47
+MCP tools, HEAD `dd66d99`.
 
-The whole repository is one git bundle, and it has been verified to restore:
+- `/workspace/motion-master.bundle` — sha256
+  `3012f6410e6efb66e70c7837851026a9a017263bc08b1d7b623b3d13e9ad398e`
+- `/workspace/motion-master-push.zip` — sha256
+  `d54c3323540e28fa1bc0c3953ba2fc7bf8959bd05a482d75e1a087121118781d`
+- `/workspace/bundle-parts/` — the bundle in seven 32 MB pieces,
+  `motion-master.bundle.part-00` … `part-06`
+- `/workspace/SHA256SUMS.txt` — the checksums for all of it
 
 ```bash
 git clone motion-master.bundle recovered
@@ -508,12 +513,39 @@ cd recovered && git checkout main
 git remote set-url origin https://github.com/executiveusa/motionmaster.git
 ```
 
-The bundle travels as five parts in the Drive (`motion-master.bundle.part00`
-… `part04`, ~32 MB each):
+Or, from the parts:
 
 ```bash
-cat motion-master.bundle.part* > motion-master.bundle
+cat bundle-parts/motion-master.bundle.part-* > motion-master.bundle
 sha256sum -c SHA256SUMS.txt
 ```
 
-The remote is the real backup. If the remote is reachable, `git clone` it.
+**The push is done.** `executiveusa/motionmaster` is at `dd66d99` and the
+remote is level with local `main` — 0 commits ahead on either side.
+
+### The credential helper bites after a sandbox recycle
+
+The push failed once with `could not read Username for 'https://github.com'`
+even though `gh` was authenticated and working. The cause: git's credential
+helper in `/workspace/.home/.gitconfig` pointed at the **mount path of an
+earlier session** (`/run/csi/mount-root/nas/<hash>/.home/bin/gh`), which
+stops existing when the sandbox is recycled. The fix is a helper that does
+not name a session-specific path:
+
+```bash
+git config --global --replace-all credential.https://github.com.helper "!gh auth git-credential"
+```
+
+That resolves `gh` on `PATH`, and `gh` itself lives at
+`/workspace/.home/bin/gh` so it survives the next recycle. Put that on
+`PATH` in every shell that pushes.
+
+### And never wrap `gh auth login` in `timeout`
+
+`gh auth login --web` prints a code and then **polls** GitHub's device
+endpoint. If the process is killed — by a `timeout`, or by a shell that
+dies — the code is never exchanged and the token in `hosts.yml` stays the
+old dead one. The symptom is identical to "the founder approved the wrong
+thing": `gh api user` → `Bad credentials`. Run it as a background task with
+a long window and report the code immediately.
+
