@@ -510,14 +510,19 @@ remain are the push and the redeploy, and then the founder's decisions.
 
 ## 9. If the working tree is lost
 
-**The bundle is current.** It was rebuilt at `bff25bc` and verified by
-restoring it: 350 commits, 4,342 files, 61 skills, 18 studio contracts, 47
-MCP tools, HEAD `bff25bc`.
+**The bundle is current.** It was rebuilt after the last commit and verified
+by restoring it: 350+ commits, 4,342 files, 61 skills, 18 studio contracts,
+47 MCP tools. It carries the final `main`, so check it rather than trusting a
+hash written down here:
 
-- `/workspace/motion-master.bundle` — sha256
-  `7bfcb11db85282888a88160d86eb808bfa0c0a4c2f954efdf170f7dbc879575e`
-- `/workspace/motion-master-push.zip` — sha256
-  `b5029881b4e1544c1c8d8530acb8215cf5f0b1c424487415a76e29f8ba07b168`
+```bash
+git bundle list-heads motion-master.bundle | grep refs/heads/main
+# it must equal: git rev-parse main
+```
+
+- `/workspace/motion-master.bundle` — the git bundle, every branch and tag
+- `/workspace/motion-master-push.zip` — the bundle, the parts, the checksums,
+  `HANDOFF.md` and `scripts/push-to-final-home.sh`
 - `/workspace/bundle-parts/` — the bundle in seven 32 MB pieces,
   `motion-master.bundle.part-00` … `part-06`
 - `/workspace/SHA256SUMS.txt` — the checksums for all of it
@@ -535,7 +540,7 @@ cat bundle-parts/motion-master.bundle.part-* > motion-master.bundle
 sha256sum -c SHA256SUMS.txt
 ```
 
-**The push is done.** `executiveusa/motionmaster` is at `bff25bc` and the
+**The push is done.** `executiveusa/motionmaster` is at the tip of `main` and the
 remote is level with local `main` — 0 commits ahead on either side.
 
 ### The credential helper bites after a sandbox recycle
