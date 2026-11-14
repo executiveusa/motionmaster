@@ -113,50 +113,9 @@ function variablesOf(html) {
 
 /* --------------------------------------------------------------- the patching */
 
-const FONT_STACK = /font-family\s*:\s*([^;{}]+)/g;
-
-/**
- * The font families a document names that the renderer cannot supply.
- *
- * The renderer resolves a family from its own list; anything else falls back
- * to a generic font and the typography is quietly wrong. These compositions
- * name CJK system fonts, so the fix is a `@font-face` with `src: local(...)`:
- * it declares the family honestly and tells the renderer where to find it.
- */
-function undeclaredFamilies(html) {
-  const declared = new Set(
-    [...html.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*['"]([^'"]+)['"]/g)].map((m) =>
-      m[1].toLowerCase(),
-    ),
-  );
-  const families = new Set();
-  for (const match of html.matchAll(FONT_STACK)) {
-    for (const raw of match[1].split(",")) {
-      const name = raw.trim().replace(/^['"]|['"]$/g, "");
-      if (!name || /^(sans-serif|serif|monospace|system-ui|-apple-system|inherit|initial|unset|cursive|fantasy)$/i.test(name)) {
-        continue;
-      }
-      if (declared.has(name.toLowerCase())) continue;
-      /* A generic family in a stack is a fallback, not a request. */
-      if (/\b(sans|serif|mono|system)\b/i.test(name) && name.split(/\s+/).length === 1) continue;
-      families.add(name);
-    }
-  }
-  return [...families];
-}
-
-function declareFonts(html) {
-  const families = undeclaredFamilies(html);
-  if (!families.length) return { html, declared: [] };
-  const faces = families
-    .map(
-      (family) =>
-        `      @font-face { font-family: '${family}'; src: local('${family.replace(/'/g, "\\'")}'); }`,
-    )
-    .join("\n");
-  const patched = html.replace(/<style>/, `<style>\n${faces}`);
-  return { html: patched, declared: families };
-}
+const { declareFonts, undeclaredFamilies } = await import(
+  `file://${join(ROOT, "scripts", "lib", "declare-fonts.mjs")}`
+);
 
 /** Point the GSAP CDN reference at the copy the generator ships. */
 function localiseGsap(html, prefix) {

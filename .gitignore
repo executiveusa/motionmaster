@@ -70,3 +70,5 @@ __pycache__/
 # Transient completion-loop validation evidence
 .completion-proof/
 generator/qualify-compositions
+studio/ads/build/
+studio/ads/render/

@@ -1,0 +1,248 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"eyebrow","type":"string","label":"Eyebrow","default":"NEW"},
+    {"id":"claim","type":"string","label":"Claim","default":"Slow mornings, delivered"},
+    {"id":"brand","type":"string","label":"Brand","default":"MOTION MASTER"},
+    {"id":"accent","type":"color","label":"Accent","default":"#FF4A1C"},
+    {"id":"canvas","type":"color","label":"Canvas","default":"#111113"},
+    {"id":"ink","type":"color","label":"Ink","default":"#F4F4F2"},
+    {"id":"muted","type":"color","label":"Muted ink","default":"#7C7C80"},
+    {"id":"safeTop","type":"number","label":"Safe top","default":0},
+    {"id":"safeBottom","type":"number","label":"Safe bottom","default":0},
+    {"id":"safeLeft","type":"number","label":"Safe left","default":0},
+    {"id":"safeRight","type":"number","label":"Safe right","default":0},
+    {"id":"duration","type":"number","label":"Duration in seconds","default":6},
+    {"id":"showGuide","type":"boolean","label":"Show the safe-zone guide","default":false}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" width="1440" height="2560" />
+    <script src="./gsap-3.14.2.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+        font-weight: 400; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+        font-weight: 600; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        src: url("./fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2");
+        font-weight: 700; font-style: normal; font-display: block;
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        src: url("./fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+        font-weight: 500; font-style: normal; font-display: block;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; overflow: hidden; background: #111113; }
+      #root { position: relative; overflow: hidden; }
+
+      .canvas { position: absolute; inset: 0; display: flex; align-items: center; }
+
+      /* The type stack lives inside the safe area, by construction. */
+      .stack {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 0;
+      }
+
+      .eyebrow {
+        font: 600 var(--eyebrow-size, 26px)/1 "IBM Plex Mono", ui-monospace, monospace;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 44px;
+      }
+
+      .claim {
+        font: 700 var(--claim-size, 132px)/0.96 "IBM Plex Sans", system-ui, sans-serif;
+        letter-spacing: -0.035em;
+        color: var(--ink);
+        max-width: 100%;
+        text-wrap: balance;
+      }
+
+      .rule {
+        width: 128px;
+        height: 10px;
+        background: var(--accent);
+        margin: 56px 0 0;
+        transform-origin: left center;
+      }
+
+      .brand {
+        position: absolute;
+        font: 500 var(--brand-size, 24px)/1 "IBM Plex Mono", ui-monospace, monospace;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .guide { position: absolute; pointer-events: none; display: none; }
+      .guide__area { position: absolute; border: 3px dashed rgba(255, 74, 28, 0.9); }
+      .guide__label {
+        position: absolute;
+        font: 600 26px/1 "IBM Plex Mono", ui-monospace, monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 74, 28, 0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="6" data-width="1440" data-height="2560">
+      <div class="canvas" id="canvas">
+        <div class="stack" id="stack">
+          <div class="eyebrow" id="eyebrow"></div>
+          <div class="claim" id="claim"></div>
+          <div class="rule" id="rule"></div>
+        </div>
+        <div class="brand" id="brand"></div>
+        <div class="guide" id="guide">
+          <div class="guide__area" id="guide-area"></div>
+          <div class="guide__label" id="guide-label">SAFE AREA</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      /*
+       * The ad, composed for its placement.
+       *
+       * This composition is not a landscape scene with the sides cut off.
+       * A sixteen-by-nine frame cropped to nine-by-sixteen keeps a third of
+       * its width, and what survives is a slice: the headline ends up half
+       * off the canvas and the caption in the wrong place. So the ad is
+       * authored at the placement's own size, with the type stack inside the
+       * safe area by construction — the safe area is read out of the
+       * placement, not guessed at.
+       *
+       * The copy that the platform shows — primary text, headline — is not
+       * in here. It lives in the ad's JSON, where it can be translated and
+       * read by a screen reader.
+       */
+      (function () {
+        var values = {};
+        var host = document.getElementById("root");
+        try {
+          values = JSON.parse(host.getAttribute("data-variable-values") || "{}");
+        } catch (e) {
+          values = {};
+        }
+        var v = function (id, fallback) {
+          var value = values[id];
+          return value === undefined || value === null ? fallback : value;
+        };
+
+        var canvas = document.getElementById("canvas");
+        var stack = document.getElementById("stack");
+        var claim = document.getElementById("claim");
+        var eyebrow = document.getElementById("eyebrow");
+        var rule = document.getElementById("rule");
+        var brand = document.getElementById("brand");
+        var guide = document.getElementById("guide");
+
+        var W = Number(host.getAttribute("data-width")) || 1440;
+        var H = Number(host.getAttribute("data-height")) || 2560;
+        var duration = Number(v("duration", Number(host.getAttribute("data-duration")) || 6));
+
+        var accent = v("accent", "#FF4A1C");
+        var paper = v("canvas", "#111113");
+        var ink = v("ink", "#F4F4F2");
+        var muted = v("muted", "#7C7C80");
+
+        canvas.style.background = paper;
+        stack.style.color = ink;
+        eyebrow.style.color = accent;
+        rule.style.background = accent;
+        brand.style.color = muted;
+
+        /* The safe area, in pixels, straight from the placement. */
+        var safeTop = Number(v("safeTop", 0));
+        var safeBottom = Number(v("safeBottom", 0));
+        var safeLeft = Number(v("safeLeft", 0));
+        var safeRight = Number(v("safeRight", 0));
+        var safeX = Math.round(W * safeLeft);
+        var safeY = Math.round(H * safeTop);
+        var safeW = Math.round(W * (1 - safeLeft - safeRight));
+        var safeH = Math.round(H * (1 - safeTop - safeBottom));
+
+        /* The type scales with the safe width, so a 1:1 card and a 9:16
+           story carry the same optical weight. */
+        var pad = Math.round(safeW * 0.06);
+        var typeWidth = safeW - pad * 2;
+        var claimSize = Math.round(typeWidth * 0.104);
+
+        /* Every piece of reading type clears the type floor: two and a half
+           per cent of the short side, which is what a phone can read. The
+           floor is measured on the short side, so a square card and a
+           vertical story carry the same weights. */
+        var shortSide = Math.min(W, H);
+        var typeFloor = Math.round(shortSide * 0.026);
+        var eyebrowSize = Math.max(typeFloor, Math.round(typeWidth * 0.021));
+        var brandSize = Math.max(typeFloor, Math.round(shortSide * 0.019));
+
+        stack.style.left = safeX + pad + "px";
+        stack.style.top = safeY + "px";
+        stack.style.width = typeWidth + "px";
+        stack.style.height = safeH + "px";
+
+        claim.style.fontSize = claimSize + "px";
+        eyebrow.style.fontSize = eyebrowSize + "px";
+        eyebrow.style.marginBottom = Math.round(claimSize * 0.34) + "px";
+        rule.style.height = Math.max(6, Math.round(claimSize * 0.075)) + "px";
+        rule.style.marginTop = Math.round(claimSize * 0.42) + "px";
+
+        brand.style.fontSize = brandSize + "px";
+        brand.style.left = safeX + pad + "px";
+        brand.style.bottom = Math.round(safeH * 0.04) + "px";
+
+        eyebrow.textContent = v("eyebrow", "NEW");
+        claim.textContent = v("claim", "");
+        brand.textContent = v("brand", "");
+
+        if (v("showGuide", false)) {
+          guide.style.display = "block";
+          var area = document.getElementById("guide-area");
+          area.style.left = safeX + "px";
+          area.style.top = safeY + "px";
+          area.style.width = safeW + "px";
+          area.style.height = safeH + "px";
+          var label = document.getElementById("guide-label");
+          label.style.left = safeX + 18 + "px";
+          label.style.top = safeY + 18 + "px";
+        }
+
+        window.__timelines = window.__timelines || {};
+        /*
+         * Frame zero is the thumbnail.
+         *
+         * On a social player the first frame is what the viewer sees before
+         * they press play, so the claim is on screen at zero — it does not
+         * fade in from nothing. What moves is the rule, the wordmark, and a
+         * small settle of the stack. A title that enters from an empty frame
+         * is a title the thumbnail does not have.
+         */
+        var tl = gsap.timeline({ paused: true });
+        tl.fromTo(eyebrow, { y: 10 }, { y: 0, duration: 0.7, ease: "power2.out" }, 0);
+        tl.fromTo(claim, { y: 22 }, { y: 0, duration: 0.9, ease: "power3.out" }, 0.05);
+        tl.fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power2.inOut" }, 0.45);
+        tl.fromTo(brand, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, 0.9);
+        tl.to({}, { duration: Math.max(0.1, duration - 1.6) }, 1.6);
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>
