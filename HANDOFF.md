@@ -465,21 +465,29 @@ remain are the push and the redeploy, and then the founder's decisions.
     (2026-11-14). The remote is at `be569ab`; local and remote are level. **The founder has to
     enter the newest device code every time; an approval against an expired
     code does not count, and the codes expire in about fifteen minutes.**
-12. **Build the production loop.** **This is the whole remaining job.**
-    The blueprint is `docs/29-THE-PRODUCTION-LOOP.md`. The short version:
-    the renders, the gate, the queue, the job state machine, the block pool
-    and the house library are **real and tested**; what is missing is the
-    thing that makes it a product rather than a tool — a **supervisor** that
-    picks work up on its own, and a **remediation table** that turns a gate
-    failure into a repair instead of a dead end. Six phases, in order:
-    P0 remediation (a rule per gate finding, proved by re-gating) →
-    P1 the supervisor (three jobs, one passes, one repaired, one failed
-    with its budget spent) → P2 durability (kill it mid-job, restart,
-    reconcile) → P3 the clock (a brief arrives on a schedule) → P4 identity
-    (tenants, quotas, audit) → P5 operations (logs, metrics, alerts, a
-    Dockerfile) → P6 the surface (the console, end to end).
-    **Do P0 and P1 before anything else.** Without them the loop fails on
-    the first bad render and needs a human every time.
+12. **Build the production loop.** **P0 and P1 are done** (2026-11-14).
+    See `docs/30-THE-LOOP-IS-BUILT.md`. The remediation table has eleven
+    rules, each proved by re-gating a real composition in a real browser;
+    the supervisor takes the oldest queued job, claims it before working,
+    gates it, repairs what it can inside a budget of three rounds, renders
+    it, publishes it, and escalates with the findings that survived.
+    **50 MCP tools**, three HTTP routes under `/api/v1/supervisor/`, an
+    append-only ledger, and two new completion gates (sixteen in all).
+
+    **Still open, in order:**
+    - **The seven unattended days.** The product-level definition of done
+      says the loop runs for a week without a restart, every job resolved,
+      every failure legible. That is the next measurement, and it is the
+      only one that proves this is a product rather than a demonstration.
+    - **P2 durability** — the ledger and the projects outside the tree a
+      redeploy wipes, and a backup. (The startup reconciliation is already
+      in the supervisor.)
+    - **P3 the clock** — a way for a brief to *arrive*: a watched directory,
+      a webhook, a recurring brief file.
+    - **P4 identity** — real auth, tenants, quotas, audit.
+    - **P5 operations** — structured logs, metrics, alerts, a Dockerfile.
+      The ledger is the raw material; nothing is built on it yet.
+    - **P6 the surface** — the console driving the loop end to end.
 13. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
     server fallback), the public surface, popebot fork-vs-configure (Phase 2
     — ships labelled unverified, no Docker here), a render machine, and

@@ -40,6 +40,12 @@ import {
   type PlacementId,
 } from "./meta.js";
 import { execFileSync } from "node:child_process";
+import {
+  Supervisor,
+  defaultLedgerPath,
+  readLedger,
+  supervisorMain,
+} from "./supervisor.js";
 import { statSync } from "node:fs";
 import {
   fillBlock,
@@ -2824,6 +2830,117 @@ server.registerTool(
         hasAudio: Boolean(audio),
       });
       return ok(result);
+    },
+  );
+
+  /* --------------------------------------------------------- the loop -- */
+
+  server.registerTool(
+    "run_supervisor",
+    {
+      title: "Run the studio loop",
+      description:
+        "Run the studio's loop: it takes the oldest queued job, checks it, repairs what the gate can " +
+        "repair, renders it, and publishes it — or says clearly why it could not. A gate failure is a " +
+        "finding, not a crash: the loop repairs it and re-gates, inside a budget of three rounds. When " +
+        "the budget is spent the job fails with the findings that survived, and the loop does not spin. " +
+        "One tick runs one job. Call it repeatedly to drain the queue.",
+      inputSchema: {
+        ticks: z.number().int().positive().max(50).optional().describe("How many jobs to attempt. One by default."),
+        dryRun: z.boolean().optional().describe("Do everything except publish. For a rehearsal."),
+        budget: z.number().int().positive().max(10).optional().describe("Gate rounds per job before it escalates."),
+      },
+    },
+    async ({ ticks, dryRun, budget }) => {
+      const supervisor = new Supervisor({
+        repoRoot: config.repoRoot,
+        budget: budget ?? 3,
+        dryRun: dryRun ?? false,
+      });
+      const results = [];
+      for (let i = 0; i < (ticks ?? 1); i += 1) {
+        const result = await supervisor.tick();
+        results.push({
+          action: result.action,
+          jobId: result.jobId,
+          state: result.state,
+          ok: result.outcome?.ok,
+          error: result.outcome?.error,
+          findings: result.outcome?.findings,
+          artifact: result.outcome?.artifact,
+          rounds: result.outcome?.rounds,
+        });
+        if (result.action === "idle") break;
+      }
+      return ok({
+        ran: results.length,
+        ledger: defaultLedgerPath(config.repoRoot),
+        results,
+        note:
+          "A job that ends in `failed` carries the findings that survived the budget. A finding with no " +
+          "repair rule needs a person — that is a decision, not a gap.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "supervisor_status",
+    {
+      title: "What the loop is doing",
+      description:
+        "The state of the queue: the jobs waiting, the job that was interrupted, and the last lines of " +
+        "the ledger. The ledger is append-only and it is the studio's memory — without it there is no " +
+        "answer to 'why did this fail'.",
+      inputSchema: {
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ limit }) => {
+      const supervisor = new Supervisor({ repoRoot: config.repoRoot });
+      const ledgerPath = defaultLedgerPath(config.repoRoot);
+      const ledger = readLedger(ledgerPath);
+      return ok({
+        ledgerPath,
+        totalEvents: ledger.length,
+        events: ledger.slice(-(limit ?? 20)),
+        byEvent: ledger.reduce<Record<string, number>>((counts, entry) => {
+          counts[entry.event] = (counts[entry.event] ?? 0) + 1;
+          return counts;
+        }, {}),
+        queued: supervisor.queuedJobs().map((job) => ({
+          jobId: job.id,
+          projectId: job.projectId,
+          revision: job.revision,
+          createdAt: job.createdAt,
+        })),
+        interrupted: supervisor.interruptedJobs().map((job) => ({
+          jobId: job.id,
+          projectId: job.projectId,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "start_supervisor",
+    {
+      title: "Start the loop on a clock",
+      description:
+        "Start the supervisor as a long-running process that ticks on a clock until it is stopped. This " +
+        "is the persistent mode: once it is running, work is picked up without anybody asking. It runs " +
+        "one job per tick, oldest first.",
+      inputSchema: {
+        tickSeconds: z.number().int().positive().max(3600).optional().describe("Seconds between ticks. Thirty by default."),
+        dryRun: z.boolean().optional().describe("Do everything except publish."),
+      },
+    },
+    async ({ tickSeconds, dryRun }) => {
+      await supervisorMain({
+        repoRoot: config.repoRoot,
+        tickMs: (tickSeconds ?? 30) * 1000,
+        dryRun: dryRun ?? false,
+      });
+      return ok({ stopped: true });
     },
   );
 }

@@ -71,7 +71,15 @@ function assertId(id: string): void {
   }
 }
 
-function projectDir(repoRoot: string, id: string): string {
+/**
+ * A project's directory.
+ *
+ * Exported because the supervisor has to put the finished film somewhere the
+ * job record can name. The job contract is strict on purpose: the artifact
+ * has to be a project-local `artifacts/<name>.mp4`, and ffprobe has to
+ * confirm it holds a real video stream. A non-empty file is not a film.
+ */
+export function projectDir(repoRoot: string, id: string): string {
   assertId(id);
   return join(projectsRoot(repoRoot), id);
 }

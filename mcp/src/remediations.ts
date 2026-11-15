@@ -122,14 +122,16 @@ export function passingColor(
 
 /* ------------------------------------------------------------- findings --- */
 
-export interface GateFinding {
-  code: string;
-  severity: "error" | "warning";
-  message: string;
-  sourceFile?: string;
-  /** The full finding, as the gate wrote it. */
-  raw?: Record<string, unknown>;
-}
+/**
+ * The finding, as the gate writes it.
+ *
+ * There is one definition of this and it lives with the gate that produces
+ * it. Two definitions is how a repair ends up reading a field the gate never
+ * set — which is exactly what happened here the first time.
+ */
+export type { GateFinding } from "./render.js";
+
+import type { GateFinding } from "./render.js";
 
 export interface Repair {
   applied: boolean;

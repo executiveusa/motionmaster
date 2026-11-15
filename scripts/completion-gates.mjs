@@ -24,6 +24,12 @@ const checks = [
   { name: "mcp-tool-policy", cwd: "mcp", command: "node", args: ["scripts/verify-tools.mjs"], timeoutMs: 240_000 },
   { name: "mcp-qualified-pool", cwd: "mcp", command: "node", args: ["scripts/proof-qualified-pool.mjs"], timeoutMs: 240_000 },
   { name: "mcp-studio-surfaces", cwd: "mcp", command: "node", args: ["scripts/proof-studio.mjs"], timeoutMs: 240_000 },
+  /* The two proofs of the loop. The remediation proof runs a real browser
+     and a real gate, so it is not a quick check. */
+  { name: "loop-supervisor", cwd: ".", command: "node", args: ["scripts/proof-supervisor.mjs"], timeoutMs: 240_000 },
+  ...(quick ? [] : [
+    { name: "loop-remediation", cwd: ".", command: "node", args: ["scripts/proof-remediation.mjs"], timeoutMs: 900_000 },
+  ]),
   { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   { name: "clips-typecheck", cwd: "clips", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "clips-tests", cwd: "clips", command: "npm", args: ["test"], timeoutMs: 240_000 },

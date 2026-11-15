@@ -27,6 +27,19 @@ const argv = process.argv.slice(2);
 const only = argv.includes("--only") ? argv[argv.indexOf("--only") + 1] : null;
 const keep = argv.includes("--keep");
 
+/* The gate runs a real browser. Find it the way the rest of the repo does,
+   so the proof works from a gate run without the environment being set. */
+if (!process.env.HYPERFRAMES_BROWSER_PATH) {
+  const candidates = [
+    "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell",
+    "/usr/local/bin/chrome-headless-shell",
+    "/usr/bin/chromium",
+    "/usr/bin/google-chrome",
+  ];
+  const found = candidates.find((path) => existsSync(path));
+  if (found) process.env.HYPERFRAMES_BROWSER_PATH = found;
+}
+
 const { gateProject } = await import(`file://${join(ROOT, "mcp", "dist", "render.js")}`);
 const { applyRemediation, planRemediation } = await import(`file://${join(ROOT, "mcp", "dist", "remediations.js")}`);
 

@@ -75,6 +75,9 @@ export const TOOL_NAMES = [
   "plan_meta_ad",
   "build_meta_ad",
   "preflight_ad",
+  "run_supervisor",
+  "supervisor_status",
+  "start_supervisor",
 ] as const;
 
 export function createMcpServer(config: Config): McpServer {

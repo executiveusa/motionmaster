@@ -96,6 +96,7 @@ import {
   type PlacementId,
 } from "./meta.js";
 import { execFileSync } from "node:child_process";
+import { Supervisor, defaultLedgerPath, readLedger } from "./supervisor.js";
 import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
 import { queueState, reconcileJobs } from "./queue.js";
 
@@ -374,6 +375,19 @@ export function openApiDocument(config: Config): Record<string, unknown> {
         post: {
           summary: "Build a Remotion composition from a storyboard.",
           requestBody: { required: true, content: json(obj) },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/supervisor/status`]: {
+        get: { summary: "The queue, the interrupted jobs and the ledger's counts.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/supervisor/ledger`]: {
+        get: { summary: "The ledger: one line per event, append-only.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/supervisor/tick`]: {
+        post: {
+          summary: "Run the loop: take the oldest queued job, gate it, repair it, render it, publish it.",
+          requestBody: { required: false, content: { "application/json": { schema: obj } } },
           responses: { 200: { description: "ok", content: json(obj) } },
         },
       },
@@ -1012,6 +1026,63 @@ export async function handleApi(
       return true;
     }
     writeJson(res, 200, found);
+    return true;
+  }
+
+  /* --------------------------------------------------------- the loop -- */
+
+  if (route === "/supervisor/status" && method === "GET") {
+    const supervisor = new Supervisor({ repoRoot: config.repoRoot });
+    const ledgerPath = defaultLedgerPath(config.repoRoot);
+    const ledger = readLedger(ledgerPath);
+    writeJson(res, 200, {
+      ledgerPath,
+      totalEvents: ledger.length,
+      byEvent: ledger.reduce<Record<string, number>>((counts, entry) => {
+        counts[entry.event] = (counts[entry.event] ?? 0) + 1;
+        return counts;
+      }, {}),
+      events: ledger.slice(-num(query.get("limit"), 20)),
+      queued: supervisor.queuedJobs().map((job) => ({
+        jobId: job.id, projectId: job.projectId, revision: job.revision, createdAt: job.createdAt,
+      })),
+      interrupted: supervisor.interruptedJobs().map((job) => ({
+        jobId: job.id, projectId: job.projectId,
+      })),
+    });
+    return true;
+  }
+
+  if (route === "/supervisor/ledger" && method === "GET") {
+    const ledgerPath = defaultLedgerPath(config.repoRoot);
+    const ledger = readLedger(ledgerPath);
+    const limit = num(query.get("limit"), 50);
+    writeJson(res, 200, { ledgerPath, total: ledger.length, events: ledger.slice(-limit) });
+    return true;
+  }
+
+  if (route === "/supervisor/tick" && method === "POST") {
+    const body = (await readJson(req)) as { ticks?: number; dryRun?: boolean; budget?: number };
+    const supervisor = new Supervisor({
+      repoRoot: config.repoRoot,
+      dryRun: body.dryRun ?? false,
+      budget: body.budget ?? 3,
+    });
+    const results = [];
+    for (let i = 0; i < (body.ticks ?? 1); i += 1) {
+      const result = await supervisor.tick();
+      results.push({
+        action: result.action,
+        jobId: result.jobId,
+        state: result.state,
+        ok: result.outcome?.ok,
+        error: result.outcome?.error,
+        findings: result.outcome?.findings,
+        artifact: result.outcome?.artifact,
+      });
+      if (result.action === "idle") break;
+    }
+    writeJson(res, 200, { ran: results.length, results, ledger: defaultLedgerPath(config.repoRoot) });
     return true;
   }
 

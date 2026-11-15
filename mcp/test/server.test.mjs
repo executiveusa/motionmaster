@@ -120,8 +120,11 @@ test("the server advertises every tool", async () => {
     "preflight_ad",
     "queue_status",
     "render_film",
+    "run_supervisor",
     "save_brand_kit",
     "search_sfx",
+    "start_supervisor",
+    "supervisor_status",
   ]);
   for (const tool of tools) {
     assert.ok(tool.description && tool.description.length > 20, `${tool.name} needs a description`);

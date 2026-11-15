@@ -5,6 +5,12 @@
 Written 2026-11-14. Read this with `HANDOFF.md`. This document is the
 blueprint; `HANDOFF.md` says where everything is.
 
+> **P0 and P1 are done.** The remediation table and the supervisor are built,
+> and both are proved — see
+> [`docs/30-THE-LOOP-IS-BUILT.md`](30-THE-LOOP-IS-BUILT.md) for what was
+> built, what the work turned up that this blueprint did not know, and what
+> is still missing (P2 to P6, and the seven unattended days).
+
 ---
 
 ## 0. What is real today, and what is not
