@@ -1,0 +1,181 @@
+/* The loop panel.
+ *
+ * A lab instrument, not a dashboard. No cards, no grid of statistics, no
+ * cheerful tick. A row of figures, a short ledger, and one box to put a
+ * brief in.
+ *
+ * The classes are `loop__*`. Nothing else on the page owns them — the
+ * console owns `console__*`, the film owns `showcase__*`, and two
+ * stylesheets owning the same class is how a designed thing quietly dies.
+ */
+
+.loop {
+  border-top: 1px solid var(--hairline);
+  margin-top: 32px;
+  padding-top: 28px;
+}
+
+.loop__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.loop__title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.loop__lede {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 6px 0 0;
+  max-width: 52ch;
+}
+
+.loop__figures {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin: 22px 0 0;
+}
+
+.loop__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loop__figure-value {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.loop__figure-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.loop__events {
+  margin: 22px 0 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.loop__event {
+  display: grid;
+  grid-template-columns: 64px 120px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+.loop__event-when {
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.loop__event-what {
+  font-family: var(--mono);
+  color: var(--ink);
+}
+
+.loop__event-detail {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.loop__empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 16px 0 0;
+  max-width: 52ch;
+}
+
+.loop__note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+.loop__note--warn {
+  color: var(--accent);
+}
+
+.loop__status {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.loop__status--off {
+  color: var(--accent);
+}
+
+.loop__form {
+  margin: 26px 0 0;
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.loop__input,
+.loop__textarea {
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.loop__input:focus-visible,
+.loop__textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.loop__textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.loop__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.loop__sent {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .loop__event {
+    grid-template-columns: 56px 1fr;
+  }
+  .loop__event-detail {
+    grid-column: 1 / -1;
+  }
+  .loop__figures {
+    gap: 20px;
+  }
+}

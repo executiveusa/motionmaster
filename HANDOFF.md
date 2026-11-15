@@ -481,20 +481,28 @@ remain are the push and the redeploy, and then the founder's decisions.
     or a script. A brief that cannot be read is refused with a reason and the
     loop keeps going. **51 MCP tools, four HTTP routes, seventeen gates.**
 
+    **P2, P4, P5 and P6 are built too** (2026-11-15). The data directory
+    lives outside the tree a redeploy wipes, and the backup is verified by
+    restoring it. A key decides who you are, which tenant you are and how
+    many films you may make today; the quota is counted from the ledger, and
+    the audit trail never writes the key. There are metrics, one alert (three
+    failures with the same finding — a broken rule, not a bad brief), a
+    Dockerfile and a compose file. And the front door: a loop panel on the
+    console section that shows the queue and the ledger and takes a brief —
+    and that says plainly when the studio is not running, rather than
+    showing zeroes. **52 MCP tools, nineteen gates, five of them proofs of
+    the loop.**
+
     **Still open, in order:**
     - **The seven unattended days.** The product-level definition of done
       says the loop runs for a week without a restart, every job resolved,
       every failure legible. That is the next measurement, and it is the
       only one that proves this is a product rather than a demonstration.
-    - **P2 durability** — the ledger and the projects outside the tree a
-      redeploy wipes, and a backup. (The startup reconciliation is already
-      in the supervisor.)
+    - **The image has never been built.** There is no Docker in this
+      sandbox, so `Dockerfile` and `docker-compose.yml` are reviewed rather
+      than run. Treat the first build as untested.
     - **P3's source** — the inbox works, but nothing writes into it yet on a
       schedule. A webhook or a recurring brief file is the missing half.
-    - **P4 identity** — real auth, tenants, quotas, audit.
-    - **P5 operations** — structured logs, metrics, alerts, a Dockerfile.
-      The ledger is the raw material; nothing is built on it yet.
-    - **P6 the surface** — the console driving the loop end to end.
 13. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
     server fallback), the public surface, popebot fork-vs-configure (Phase 2
     — ships labelled unverified, no Docker here), a render machine, and

@@ -111,6 +111,7 @@ test("the server advertises every tool", async () => {
     "list_sfx_kinds",
     "list_shots",
     "list_skills",
+    "loop_metrics",
     "mix_footage",
     "plan_house_template",
     "plan_meta_ad",

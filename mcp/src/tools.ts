@@ -47,6 +47,7 @@ import {
   supervisorMain,
 } from "./supervisor.js";
 import { inboxDir, submitBrief } from "./inbox.js";
+import { readMetrics } from "./metrics.js";
 import { statSync } from "node:fs";
 import {
   fillBlock,
@@ -2971,5 +2972,19 @@ server.registerTool(
           "on its own.",
       });
     },
+  );
+
+  server.registerTool(
+    "loop_metrics",
+    {
+      title: "How the loop is doing",
+      description:
+        "The loop's counters, counted from the ledger: jobs by state, what the gate is failing on, what " +
+        "the remediation table fixed, and the findings that survived the budget. Every number traces back " +
+        "to a line in the ledger, so none of them can drift. Three consecutive failures with the same " +
+        "finding is reported as `repeatedFailure` — that is a broken repair rule, not a bad brief.",
+      inputSchema: {},
+    },
+    async () => ok(readMetrics(config.repoRoot)),
   );
 }

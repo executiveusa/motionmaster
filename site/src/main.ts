@@ -18,6 +18,7 @@ import './styles/sections.css';
 import './styles/scenes.css';
 import './styles/responsive.css';
 import './styles/film.css';
+import './styles/loop.css';
 
 import { initClips } from './modules/clips';
 import { initFilm, initHeroFilms, initFilmSound } from './modules/film';
@@ -30,6 +31,7 @@ import { initPricing } from './modules/pricing';
 import { initLibrary } from './modules/library';
 import { initSound } from './modules/sound';
 import { initConsole } from './modules/chat';
+import { initLoop } from './modules/loop';
 import { initLocale } from './modules/locale';
 import { initProjectEditor } from './modules/project-editor';
 import { initProductShell } from './modules/product-shell';
@@ -51,6 +53,7 @@ function boot(): void {
   initLibrary();
   initSound();
   initConsole();
+  initLoop();
   initProjectEditor();
   initProductShell();
   initMobileBar();

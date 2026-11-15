@@ -79,6 +79,15 @@ export interface Config {
   sfxPath: string;
   /** The brand kits: per-project overrides of the canonical tokens. */
   brandKitsPath: string;
+  /**
+   * Where the work in progress lives: the projects, the jobs, the briefs and
+   * the ledger.
+   *
+   * It defaults to inside the repository, which is right for development and
+   * wrong for production, because a redeploy replaces the tree. Point it
+   * somewhere durable and the studio survives being replaced.
+   */
+  dataDir: string;
   /** How many renders may run at once. One, unless the machine can take more. */
   renderConcurrency: number;
   /** Where a render runs: here, or on another instance. */
@@ -124,6 +133,8 @@ export function loadConfig(): Config {
       env("MOTION_MASTER_SFX_PATH") ?? join(repoRoot, "library", "sfx.json"),
     brandKitsPath:
       env("MOTION_MASTER_BRAND_KITS_PATH") ?? join(repoRoot, "studio", "kits"),
+    dataDir:
+      env("MOTION_MASTER_DATA_DIR") ?? join(repoRoot, "workspace"),
     renderConcurrency: intEnv("MOTION_MASTER_RENDER_CONCURRENCY", 1),
     renderTarget: (env("MOTION_MASTER_RENDER_TARGET") ?? "local") === "remote" ? "remote" : "local",
     renderRemoteUrl: env("MOTION_MASTER_RENDER_REMOTE_URL"),

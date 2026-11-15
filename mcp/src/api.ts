@@ -40,7 +40,7 @@
  * open, which is the right thing for a server running on your own machine.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createReadStream, existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { appendFileSync, createReadStream, existsSync, lstatSync, mkdirSync, realpathSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import type { Config } from "./config.js";
 import { listSkills } from "./skills.js";
@@ -75,7 +75,7 @@ import {
   writeJob,
   type RenderJob,
 } from "./render.js";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { cancelRunningProjectJob, processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 import {
@@ -98,6 +98,8 @@ import {
 import { execFileSync } from "node:child_process";
 import { Supervisor, defaultLedgerPath, readLedger } from "./supervisor.js";
 import { inboxDir, submitBrief } from "./inbox.js";
+import { readMetrics } from "./metrics.js";
+import { loadTenants, tenantForKey, withinQuota, type Tenant } from "./tenants.js";
 import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
 import { queueState, reconcileJobs } from "./queue.js";
 
@@ -155,6 +157,55 @@ async function readSourceArchive(req: IncomingMessage): Promise<Buffer> {
  * Is this request allowed? An unset key means the API is open, which is the
  * right default for a server on somebody's own machine.
  */
+/**
+ * Who is making this request?
+ *
+ * Three modes, and which one is in force is decided by configuration rather
+ * than by a default:
+ *
+ *   - **No tenants file and no API key** — one studio, open. That is
+ *     development, and it is honest about being development.
+ *   - **An API key** — one studio, one key. The key is compared and never
+ *     logged.
+ *   - **A tenants file** — several studios, one key each, and a key is
+ *     **required**. A tenants file that exists and the studio still lets
+ *     anybody in would be a mistake, not a convenience.
+ */
+export interface RequestIdentity {
+  authorised: boolean;
+  /** The tenant, when there is one. */
+  tenant?: Tenant;
+  /** The reason it was refused, when it was. */
+  reason?: string;
+}
+
+export function identify(req: IncomingMessage, repoRoot: string): RequestIdentity {
+  const header = req.headers.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+
+  const { tenants, error } = loadTenants(repoRoot);
+  if (error) {
+    return { authorised: false, reason: error };
+  }
+
+  if (tenants.length > 0) {
+    if (!token) {
+      return { authorised: false, reason: "A bearer key is required: this studio has tenants." };
+    }
+    const tenant = tenantForKey(repoRoot, token);
+    if (!tenant) {
+      return { authorised: false, reason: "That key does not belong to a tenant." };
+    }
+    return { authorised: true, tenant };
+  }
+
+  const key = process.env.MOTION_MASTER_API_KEY?.trim();
+  if (!key) return { authorised: true };
+  if (token.length > 0 && token === key) return { authorised: true };
+  return { authorised: false, reason: "A valid bearer key is required." };
+}
+
+/** The old boolean check, kept for the one place that only needs a yes. */
 export function authorised(req: IncomingMessage): boolean {
   const key = process.env.MOTION_MASTER_API_KEY?.trim();
   if (!key) return true;
@@ -385,6 +436,12 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       [`${API_PREFIX}/supervisor/ledger`]: {
         get: { summary: "The ledger: one line per event, append-only.", responses: { 200: { description: "ok", content: json(obj) } } },
       },
+      [`${API_PREFIX}/supervisor/metrics`]: {
+        get: {
+          summary: "The loop's counters, counted from the ledger. Every number traces back to a line in it.",
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
       [`${API_PREFIX}/supervisor/brief`]: {
         post: {
           summary: "Put a brief in the inbox. The loop takes it on its next tick.",
@@ -571,12 +628,38 @@ export async function handleApi(
   const method = req.method ?? "GET";
   const query = new URL(req.url ?? "/", "http://localhost").searchParams;
 
-  if (!authorised(req)) {
-    fail(res, 401, "This API needs a bearer token.", {
-      hint: "Set MOTION_MASTER_API_KEY on the server and send Authorization: Bearer <key>.",
+  const identity = identify(req, config.repoRoot);
+  if (!identity.authorised) {
+    fail(res, 401, identity.reason ?? "This API needs a bearer token.", {
+      hint:
+        "Send Authorization: Bearer <key>. With tenants configured the key decides which tenant you " +
+        "are; with a single API key it decides whether you may be here at all.",
     });
     return true;
   }
+  const tenantId = identity.tenant?.id;
+
+  /**
+   * The audit trail.
+   *
+   * One line per mutating request: who, what, and when. The key is never
+   * written down — only the tenant it belongs to — because an audit log
+   * that holds secrets is a place to leak them from.
+   */
+  const audit = (action: string, detail?: string): void => {
+    if (method === "GET" || method === "HEAD") return;
+    try {
+      const dir = join(config.repoRoot, "workspace", "audit");
+      mkdirSync(dir, { recursive: true });
+      appendFileSync(
+        join(dir, "audit.jsonl"),
+        `${JSON.stringify({ at: new Date().toISOString(), action, tenant: tenantId ?? null, detail: detail ?? null, route })}\n`,
+        "utf8",
+      );
+    } catch {
+      /* An audit that cannot be written must not take the request down. */
+    }
+  };
 
   const route = path.slice(API_PREFIX.length) || "/";
 
@@ -1040,8 +1123,8 @@ export async function handleApi(
   /* --------------------------------------------------------- the loop -- */
 
   if (route === "/supervisor/status" && method === "GET") {
-    const supervisor = new Supervisor({ repoRoot: config.repoRoot });
-    const ledgerPath = defaultLedgerPath(config.repoRoot);
+    const supervisor = new Supervisor({ repoRoot: config.repoRoot, tenantId });
+    const ledgerPath = defaultLedgerPath(config.repoRoot, tenantId);
     const ledger = readLedger(ledgerPath);
     writeJson(res, 200, {
       ledgerPath,
@@ -1062,10 +1145,15 @@ export async function handleApi(
   }
 
   if (route === "/supervisor/ledger" && method === "GET") {
-    const ledgerPath = defaultLedgerPath(config.repoRoot);
+    const ledgerPath = defaultLedgerPath(config.repoRoot, tenantId);
     const ledger = readLedger(ledgerPath);
     const limit = num(query.get("limit"), 50);
     writeJson(res, 200, { ledgerPath, total: ledger.length, events: ledger.slice(-limit) });
+    return true;
+  }
+
+  if (route === "/supervisor/metrics" && method === "GET") {
+    writeJson(res, 200, readMetrics(config.repoRoot, tenantId));
     return true;
   }
 
@@ -1075,15 +1163,27 @@ export async function handleApi(
       fail(res, 400, "A brief needs a title and a brief.");
       return true;
     }
-    const path = submitBrief(config.repoRoot, { title: body.title, brief: body.brief }, body.name);
-    writeJson(res, 201, { path, inbox: inboxDir(config.repoRoot) });
+    const path = submitBrief(config.repoRoot, { title: body.title, brief: body.brief }, body.name, tenantId);
+    audit("brief.submitted", body.title);
+    writeJson(res, 201, { path, inbox: inboxDir(config.repoRoot, tenantId), tenant: tenantId ?? null });
     return true;
   }
 
   if (route === "/supervisor/tick" && method === "POST") {
     const body = (await readJson(req)) as { ticks?: number; dryRun?: boolean; budget?: number };
+    /* A tenant's quota is checked before the work is queued, not after. */
+    if (identity.tenant) {
+      const quota = withinQuota(config.repoRoot, identity.tenant);
+      if (!quota.ok) {
+        fail(res, 429, `The daily quota is spent: ${quota.used} of ${quota.limit} publishes today.`, {
+          resetsAt: "midnight, local time",
+        });
+        return true;
+      }
+    }
     const supervisor = new Supervisor({
       repoRoot: config.repoRoot,
+      tenantId,
       dryRun: body.dryRun ?? false,
       budget: body.budget ?? 3,
     });
@@ -1101,7 +1201,13 @@ export async function handleApi(
       });
       if (result.action === "idle") break;
     }
-    writeJson(res, 200, { ran: results.length, results, ledger: defaultLedgerPath(config.repoRoot) });
+    audit("supervisor.tick", `${results.length} tick(s)`);
+    writeJson(res, 200, {
+      ran: results.length,
+      results,
+      tenant: tenantId ?? null,
+      ledger: defaultLedgerPath(config.repoRoot, tenantId),
+    });
     return true;
   }
 

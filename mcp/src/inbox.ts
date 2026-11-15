@@ -29,15 +29,16 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createProject, createProjectJob, type ProjectJob } from "./projects.js";
+import { dataDir } from "./datadir.js";
 
 /** Where briefs arrive. */
-export function inboxDir(repoRoot: string): string {
-  return join(repoRoot, "workspace", "briefs");
+export function inboxDir(repoRoot: string, tenantId?: string): string {
+  return join(dataDir(repoRoot, tenantId), "briefs");
 }
 
 /** Where briefs go once they have been taken. */
-export function importedDir(repoRoot: string): string {
-  return join(inboxDir(repoRoot), "imported");
+export function importedDir(repoRoot: string, tenantId?: string): string {
+  return join(inboxDir(repoRoot, tenantId), "imported");
 }
 
 export interface Brief {
@@ -89,9 +90,9 @@ export interface InboxResult {
  * Called on every supervisor tick. It is safe to call twice: a brief is only
  * taken once, because the file is moved as soon as it has been taken.
  */
-export function takeBriefs(repoRoot: string): InboxResult {
-  const dir = inboxDir(repoRoot);
-  const imported = importedDir(repoRoot);
+export function takeBriefs(repoRoot: string, tenantId?: string): InboxResult {
+  const dir = inboxDir(repoRoot, tenantId);
+  const imported = importedDir(repoRoot, tenantId);
   const result: InboxResult = { created: [], rejected: [], dir };
 
   if (!existsSync(dir)) {
@@ -129,8 +130,8 @@ export function takeBriefs(repoRoot: string): InboxResult {
         title: brief.title,
         brief: brief.brief,
         shots: [],
-      });
-      const job = createProjectJob(repoRoot, project.project.id, 1);
+      }, tenantId);
+      const job = createProjectJob(repoRoot, project.project.id, 1, tenantId);
       renameSync(source, join(imported, name));
       result.created.push({ job, source });
     } catch (caught) {
@@ -145,8 +146,8 @@ export function takeBriefs(repoRoot: string): InboxResult {
 }
 
 /** Write a brief into the inbox. What a person or another model would do. */
-export function submitBrief(repoRoot: string, brief: Brief, name?: string): string {
-  const dir = inboxDir(repoRoot);
+export function submitBrief(repoRoot: string, brief: Brief, name?: string, tenantId?: string): string {
+  const dir = inboxDir(repoRoot, tenantId);
   mkdirSync(dir, { recursive: true });
   const slug =
     (name ?? brief.title)

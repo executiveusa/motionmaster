@@ -72,3 +72,6 @@ __pycache__/
 generator/qualify-compositions
 studio/ads/build/
 studio/ads/render/
+backups/
+data/
+docker-compose.override.yml

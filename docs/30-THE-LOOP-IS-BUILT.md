@@ -17,15 +17,26 @@ Written 2026-11-14.
 | `scripts/proof-supervisor.mjs` | the proof of the loop: three jobs, one passes, one is repaired, one exhausts its budget |
 | `mcp/src/inbox.ts` | the brief inbox: work arrives on its own |
 | `scripts/proof-inbox.mjs` | the proof of the arrival: a brief is taken once, and a bad one says why |
+| `mcp/src/tenants.ts` | identity: a key decides who you are and how much you may make |
+| `mcp/src/metrics.ts` | the counters, counted from the ledger |
+| `scripts/proof-identity.mjs` | the proof of the identity layer, against a real server |
+| `scripts/proof-loop-panel.mjs` | the proof of the front door, in a real browser |
+| `scripts/backup-data.mjs` | a verified backup of the data directory |
+| `scripts/alert-loop.mjs` | the one alert worth having |
+| `Dockerfile`, `docker-compose.yml` | the studio as two processes and a volume |
 | `mcp/test/remediation.test.mjs` | sixteen unit tests for the arithmetic and the refusals |
 | `run_supervisor`, `supervisor_status`, `start_supervisor`, `submit_brief` | four MCP tools — **51 tools in total** |
 | `/api/v1/supervisor/{status,ledger,tick,brief}` | four HTTP routes |
-| `scripts/completion-gates.mjs` | **seventeen gates**, three of which are the loop's own proofs |
+| `scripts/completion-gates.mjs` | **nineteen gates**, five of which are the loop's own proofs |
 
 ```bash
 node scripts/proof-remediation.mjs    # 8 rules, each proved on the gate
 node scripts/proof-supervisor.mjs      # 24 checks on the loop's behaviour
 node scripts/proof-inbox.mjs           # 16 checks on the arrival
+node scripts/proof-identity.mjs        # 15 checks on who may use the studio
+node scripts/proof-loop-panel.mjs      # 10 checks on the front door
+node scripts/alert-loop.mjs            # exits 1 when the loop needs a person
+node scripts/backup-data.mjs           # a backup, verified by restoring it
 ```
 
 ---
@@ -203,24 +214,108 @@ a fake artifact, the job could not be marked ready, and the next tick
 reconciled it. The same defect as the swallowed transition error — caught
 again, because a proof that is allowed to lie is not a proof.
 
+## P2 — durability (done)
+
+**The data directory is outside the tree a redeploy wipes.**
+`MOTION_MASTER_DATA_DIR` says where; without it, `workspace/` inside the
+repository, which is what development wants. The projects, the jobs, the
+briefs and the ledger all live under it, so replacing the code does not
+replace the work.
+
+**The backup is verified, not hoped for.** `scripts/backup-data.mjs` copies
+the data directory and then compares every file's checksum against the
+source. A backup that was not checked is a hope.
+
+```bash
+node scripts/backup-data.mjs --to /var/backups/motion-master
+```
+
+The startup reconciliation was already in the supervisor: a job left
+`rendering` by a dead process is marked failed on the first tick, with the
+reason, rather than sitting there forever.
+
+## P4 — identity (done)
+
+**Three modes, and configuration decides which one is in force.**
+
+- **No tenants file, no API key** — one studio, open. Development.
+- **An API key** — one studio, one key.
+- **A tenants file** — several studios, one key each, and **a key is
+  required**. A studio that has tenants and still lets anybody in would be
+  a mistake, not a convenience.
+
+```json
+{
+  "tenants": {
+    "acme":   { "key": "…", "rendersPerDay": 20 },
+    "globex": { "key": "…", "rendersPerDay": 5 }
+  }
+}
+```
+
+The file lives **outside** the repository (`MOTION_MASTER_TENANTS_PATH`),
+because a key in a file that goes to a public remote is a key in a public
+remote.
+
+**A tenant is a separate studio.** Its own projects, its own jobs, its own
+briefs, its own ledger, its own metrics. One tenant's work is invisible to
+another, and the proof checks that they are not the same path.
+
+**The quota is counted, not remembered.** It is the number of publishes in
+the tenant's own ledger today — so it survives a restart, and it cannot be
+quietly edited. A quota kept in memory resets when the process restarts,
+which is not a quota.
+
+**The audit trail never writes the key.** One line per mutating request:
+who, what, when. The tenant's name, never the key — because an audit log
+that holds secrets is a place to leak them from.
+
+## P5 — operations (done, with one caveat)
+
+**Metrics.** `/api/v1/supervisor/metrics` and the `loop_metrics` tool. The
+counters are arithmetic over the ledger: jobs by state, what the gate is
+failing on, what the remediation table fixed, and the findings that
+survived the budget. **Every number traces back to a line in the ledger**, so
+none of them can drift.
+
+**One alert, and only one.** `scripts/alert-loop.mjs` exits non-zero when
+**three consecutive failures share a finding**. That is a broken repair
+rule, not a bad brief. A job that failed once is a composition; a render
+that was slow is in the metrics; neither is an emergency.
+
+**A container.** `Dockerfile` and `docker-compose.yml`: the API, the worker
+on a clock, and the data volume. The caveat: **there is no Docker in this
+sandbox, so the image has never been built here.** The compose file is
+reviewed, not run. Treat the first build as untested.
+
+**The structured logs are the ledger.** One JSON object per line, append
+only, with the job id in every line. There is no separate log pipeline
+because there does not need to be one.
+
+## P6 — the front door (done)
+
+The loop panel on the console section: the queue, the films, the last eight
+lines of the ledger, and **one box to put a brief in**.
+
+It is a lab instrument, not a dashboard. No cards, no grid of statistics, no
+cheerful tick. And it is **honest when it cannot reach the studio**: it says
+*"The studio is not running. Start it with: cd mcp && npm start"*, and it
+does **not** show zeroes, because zeroes look like a truth.
+
+The proof checks that in a real browser at 1440, 390 and 320, and that the
+brief box reports what happened rather than failing silently.
+
 ## What is still missing
 
-**P0, P1 and P3 are done.** P2, P4, P5 and P6 are not. In the order the
-blueprint sets:
+**P0, P1, P2, P3, P4, P5 and P6 are built.** Two things are not:
 
-| phase | what it is | why it is not done |
-|---|---|---|
-| **P2** Durability | the ledger and the projects live outside the tree a redeploy wipes; a startup reconciliation pass; a backup | the reconciliation is **already there** — the supervisor reconciles on its first tick. The rest is a deployment decision. |
-| **P3** The clock | briefs arrive on a schedule | **Done.** The inbox takes briefs from a watched directory; the supervisor ticks. What is still missing is the *source*: a webhook or a recurring brief file that writes into the inbox. |
-| **P4** Identity | real auth, tenants, quotas, audit | the bearer key is still optional and unset. |
-| **P5** Operations | structured logs, metrics, alerts, a Dockerfile | the ledger is the raw material for all of it. Nothing has been built on top of it yet. |
-| **P6** The surface | the console, end to end | the chat console exists and calls the same tools; it does not yet drive the loop. |
+| what | why it is not done |
+|---|---|
+| **The image has never been built.** There is no Docker in this sandbox. | The compose file is reviewed, not run. The first build is untested. |
+| **The seven unattended days.** | The product-level definition of done in `docs/29` §3.3 says the loop runs for a week without a restart, every job resolved, every failure legible. **That is the next measurement, and it is the only one that proves this is a product rather than a demonstration.** |
 
-**And one thing the blueprint did not mention, which matters more than any of
-them: the loop has never run unattended for seven days.** The product-level
-definition of done in `docs/29` §3.3 says seven days, every job resolved, every
-failure legible. That is the next measurement, and it is the only one that
-proves this is a product rather than a demonstration.
+Everything else in the blueprint is built and proved. What is left is
+running it.
 
 ---
 
