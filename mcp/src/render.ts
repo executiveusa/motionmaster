@@ -26,6 +26,16 @@ export interface GateFinding {
   message: string;
   /** The file the finding came from, relative to the project. */
   sourceFile?: string;
+  /**
+   * The finding as the gate wrote it.
+   *
+   * This was thrown away, and it cost the remediation table everything it
+   * needed. A contrast failure carries the foreground, the background, the
+   * measured ratio, the required ratio and a suggested colour; keep only the
+   * code and the message and none of that survives. The rule that repairs a
+   * contrast failure cannot be written without it.
+   */
+  raw?: Record<string, unknown>;
 }
 
 export interface GateResult {
@@ -233,6 +243,7 @@ export function readGateFindings(projectDir: string): GateFinding[] {
           severity: "error",
           message: f.message ?? "",
           sourceFile: f.sourceFile,
+          raw: f as unknown as Record<string, unknown>,
         });
       }
     }
