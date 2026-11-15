@@ -5,11 +5,16 @@
 Written 2026-11-14. Read this with `HANDOFF.md`. This document is the
 blueprint; `HANDOFF.md` says where everything is.
 
-> **P0 and P1 are done.** The remediation table and the supervisor are built,
-> and both are proved — see
+> **Every phase is built: P0, P1, P2, P3, P4, P5, P6.** The remediation
+> table, the supervisor, the data directory, the brief inbox, the identity
+> layer, the metrics and the alert, and the front door — each with a proof
+> that runs in the gate suite. See
 > [`docs/30-THE-LOOP-IS-BUILT.md`](30-THE-LOOP-IS-BUILT.md) for what was
-> built, what the work turned up that this blueprint did not know, and what
-> is still missing (P2 to P6, and the seven unattended days).
+> built, what the work turned up that this blueprint did not know, and the
+> two things that are still missing: the container has never been built, and
+> **the loop has never run unattended for seven days** — which is the next
+> measurement, and the only one that proves this is a product rather than a
+> demonstration.
 
 ---
 
