@@ -46,6 +46,7 @@ import {
   readLedger,
   supervisorMain,
 } from "./supervisor.js";
+import { inboxDir, submitBrief } from "./inbox.js";
 import { statSync } from "node:fs";
 import {
   fillBlock,
@@ -2941,6 +2942,34 @@ server.registerTool(
         dryRun: dryRun ?? false,
       });
       return ok({ stopped: true });
+    },
+  );
+
+  server.registerTool(
+    "submit_brief",
+    {
+      title: "Put a brief in the inbox",
+      description:
+        "Put a brief in the studio's inbox. The loop takes it on its next tick: it plans the shots, " +
+        "builds the composition, gates it, repairs what the gate can repair, renders it, and publishes " +
+        "it — or says clearly why it could not. This is how work arrives without anybody waiting for it. " +
+        "The brief is plain text that goes into the planner; it cannot carry a file path, a script or a " +
+        "URL.",
+      inputSchema: {
+        title: z.string().describe("What the film is called."),
+        brief: z.string().describe("The brief. What the film is for, and what it has to say."),
+        name: z.string().optional().describe("The file name to use. Derived from the title if omitted."),
+      },
+    },
+    async ({ title, brief, name }) => {
+      const path = submitBrief(config.repoRoot, { title, brief }, name);
+      return ok({
+        path,
+        inbox: inboxDir(config.repoRoot),
+        note:
+          "The brief is queued. Run the loop with run_supervisor to work it, or let the supervisor tick " +
+          "on its own.",
+      });
     },
   );
 }

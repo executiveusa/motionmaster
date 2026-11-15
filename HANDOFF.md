@@ -474,6 +474,13 @@ remain are the push and the redeploy, and then the founder's decisions.
     **50 MCP tools**, three HTTP routes under `/api/v1/supervisor/`, an
     append-only ledger, and two new completion gates (sixteen in all).
 
+    **P3 is done too.** Work now arrives on its own: `workspace/briefs/` is
+    a watched directory, a brief is a JSON file, and the supervisor takes it
+    on its next tick — once, and never twice. `submit_brief` (an MCP tool)
+    and `POST /api/v1/supervisor/brief` put work in the inbox from an agent
+    or a script. A brief that cannot be read is refused with a reason and the
+    loop keeps going. **51 MCP tools, four HTTP routes, seventeen gates.**
+
     **Still open, in order:**
     - **The seven unattended days.** The product-level definition of done
       says the loop runs for a week without a restart, every job resolved,
@@ -482,8 +489,8 @@ remain are the push and the redeploy, and then the founder's decisions.
     - **P2 durability** — the ledger and the projects outside the tree a
       redeploy wipes, and a backup. (The startup reconciliation is already
       in the supervisor.)
-    - **P3 the clock** — a way for a brief to *arrive*: a watched directory,
-      a webhook, a recurring brief file.
+    - **P3's source** — the inbox works, but nothing writes into it yet on a
+      schedule. A webhook or a recurring brief file is the missing half.
     - **P4 identity** — real auth, tenants, quotas, audit.
     - **P5 operations** — structured logs, metrics, alerts, a Dockerfile.
       The ledger is the raw material; nothing is built on it yet.

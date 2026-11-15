@@ -15,14 +15,17 @@ Written 2026-11-14.
 | `mcp/src/supervisor.ts` | the loop: claim, gate, repair, re-gate, render, publish, escalate, ledger |
 | `scripts/proof-remediation.mjs` | the proof of every rule, on a real gate, in a real browser |
 | `scripts/proof-supervisor.mjs` | the proof of the loop: three jobs, one passes, one is repaired, one exhausts its budget |
+| `mcp/src/inbox.ts` | the brief inbox: work arrives on its own |
+| `scripts/proof-inbox.mjs` | the proof of the arrival: a brief is taken once, and a bad one says why |
 | `mcp/test/remediation.test.mjs` | sixteen unit tests for the arithmetic and the refusals |
-| `run_supervisor`, `supervisor_status`, `start_supervisor` | three MCP tools — **50 tools in total** |
-| `/api/v1/supervisor/{status,ledger,tick}` | three HTTP routes |
-| `scripts/completion-gates.mjs` | **sixteen gates**, two of which are the loop's own proofs |
+| `run_supervisor`, `supervisor_status`, `start_supervisor`, `submit_brief` | four MCP tools — **51 tools in total** |
+| `/api/v1/supervisor/{status,ledger,tick,brief}` | four HTTP routes |
+| `scripts/completion-gates.mjs` | **seventeen gates**, three of which are the loop's own proofs |
 
 ```bash
 node scripts/proof-remediation.mjs    # 8 rules, each proved on the gate
 node scripts/proof-supervisor.mjs      # 24 checks on the loop's behaviour
+node scripts/proof-inbox.mjs           # 16 checks on the arrival
 ```
 
 ---
@@ -169,14 +172,46 @@ curl http://127.0.0.1:8787/api/v1/supervisor/status
 
 ---
 
+## P3 — the brief inbox (done)
+
+The loop needs work to arrive on its own, or it is a tool with a very good
+keyboard. The inbox is a directory: `workspace/briefs/`. A brief is a JSON
+file. The supervisor takes every new brief on its tick, makes a project and
+a queued job out of it, and moves the file to `imported/` so the same brief is
+never taken twice.
+
+```json
+{ "title": "ACME — slow mornings", "brief": "A coffee subscription that arrives the night before." }
+```
+
+```bash
+submit_brief { "title": "ACME — slow mornings", "brief": "…" }
+curl -X POST http://127.0.0.1:8787/api/v1/supervisor/brief -d '{"title":"…","brief":"…"}'
+```
+
+**The brief is not trusted.** It is a string that goes into the planner, and
+that is all it is. It cannot carry a file path, a script or a URL, and the
+planner never reads it as anything but text.
+
+**A brief that cannot be read is refused with a reason.** It is moved to
+`imported/<name>.rejected.json` with the reason written beside it, so
+somebody can see what happened without opening anything, and the loop keeps
+going. A brief with no title, or no brief, is refused the same way.
+
+The inbox found a real bug in the proof of the loop: the fake runner returned
+a fake artifact, the job could not be marked ready, and the next tick
+reconciled it. The same defect as the swallowed transition error — caught
+again, because a proof that is allowed to lie is not a proof.
+
 ## What is still missing
 
-P0 and P1 are done. **P2 to P6 are not.** In the order the blueprint sets:
+**P0, P1 and P3 are done.** P2, P4, P5 and P6 are not. In the order the
+blueprint sets:
 
 | phase | what it is | why it is not done |
 |---|---|---|
 | **P2** Durability | the ledger and the projects live outside the tree a redeploy wipes; a startup reconciliation pass; a backup | the reconciliation is **already there** — the supervisor reconciles on its first tick. The rest is a deployment decision. |
-| **P3** The clock | briefs arrive on a schedule | the supervisor ticks on a clock; what is missing is a way for a brief to *arrive* — a watched directory, a webhook, a recurring brief file. |
+| **P3** The clock | briefs arrive on a schedule | **Done.** The inbox takes briefs from a watched directory; the supervisor ticks. What is still missing is the *source*: a webhook or a recurring brief file that writes into the inbox. |
 | **P4** Identity | real auth, tenants, quotas, audit | the bearer key is still optional and unset. |
 | **P5** Operations | structured logs, metrics, alerts, a Dockerfile | the ledger is the raw material for all of it. Nothing has been built on top of it yet. |
 | **P6** The surface | the console, end to end | the chat console exists and calls the same tools; it does not yet drive the loop. |

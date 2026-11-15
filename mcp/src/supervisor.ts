@@ -43,6 +43,9 @@ import {
   type ProjectJob,
 } from "./projects.js";
 import { applyRemediation, planRemediation, type GateFinding } from "./remediations.js";
+import { buildRevisionComposition } from "./project-worker.js";
+import { readRevision } from "./projects.js";
+import { takeBriefs, inboxDir } from "./inbox.js";
 import { gateProject, renderProject } from "./render.js";
 
 /* ---------------------------------------------------------------- ledger -- */
@@ -230,6 +233,42 @@ export const renderRunner: JobRunner = async (ctx) => {
   return { ok: true, artifact: relative, rounds };
 };
 
+/**
+ * The runner for a real project.
+ *
+ * It builds the composition, and then it does what the studio is for: gates
+ * it, repairs what the gate can repair, gates it again, renders it, and
+ * copies the film into the project's artifact directory where the job record
+ * can name it.
+ */
+export const projectRunner: JobRunner = async (ctx) => {
+  const { repoRoot, job, workDir } = ctx;
+  const revision = readRevision(repoRoot, job.projectId, job.revision);
+  if (!revision) {
+    return { ok: false, error: `The revision ${job.revision} of ${job.projectId} could not be read.` };
+  }
+
+  try {
+    buildRevisionComposition(
+      {
+        repoRoot,
+        blocksPath: join(repoRoot, "library", "blocks.json"),
+        tokensPath: join(repoRoot, "plugins", "motion-master", "assets", "motion-tokens.json"),
+        blockRolesPath: join(repoRoot, "library", "block-roles.json"),
+      },
+      revision,
+      workDir,
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      error: `The composition could not be built: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+
+  return renderRunner(ctx);
+};
+
 /* ------------------------------------------------------------- supervisor -- */
 
 export interface SupervisorOptions {
@@ -269,9 +308,12 @@ export class Supervisor {
     this.ledgerPath = options.ledgerPath ?? defaultLedgerPath(options.repoRoot);
     this.budget = options.budget ?? 3;
     this.dryRun = options.dryRun ?? false;
-    this.runner = options.runner ?? renderRunner;
+    this.runner = options.runner ?? projectRunner;
     this.workDirFor = options.workDirFor ?? ((job) => join(this.repoRoot, "workspace", "projects", job.projectId, "work"));
     this.now = options.now ?? (() => new Date());
+    /* The loop owns its inbox. A brief has to have somewhere to arrive
+       before the first one does. */
+    mkdirSync(inboxDir(this.repoRoot), { recursive: true });
   }
 
   /** Every queued job, oldest first. */
@@ -315,7 +357,33 @@ export class Supervisor {
    * so that three agents firing at once do not take the machine with them.
    */
   async tick(): Promise<TickResult> {
-    /* First: reconcile. A job that says 'rendering' but has no live process
+    /* First: take any brief that has arrived. Work has to arrive on its own,
+       or the loop is a tool with a very good keyboard. */
+    const inbox = takeBriefs(this.repoRoot);
+    if (inbox.created.length > 0) {
+      for (const taken of inbox.created) {
+        writeLedger(this.ledgerPath, {
+          at: this.now().toISOString(),
+          event: "claimed",
+          jobId: taken.job.id,
+          projectId: taken.job.projectId,
+          attempt: 0,
+          detail: `A brief arrived: ${taken.source}`,
+        });
+      }
+    }
+    for (const rejected of inbox.rejected) {
+      writeLedger(this.ledgerPath, {
+        at: this.now().toISOString(),
+        event: "failed",
+        jobId: "-",
+        projectId: "-",
+        attempt: 0,
+        detail: `A brief was refused: ${rejected.error}`,
+      });
+    }
+
+    /* Second: reconcile. A job that says 'rendering' but has no live process
        is a job whose supervisor died. It has to be marked, or it sits there
        forever and the queue stops. */
     const interrupted = this.interruptedJobs();

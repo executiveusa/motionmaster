@@ -97,6 +97,7 @@ import {
 } from "./meta.js";
 import { execFileSync } from "node:child_process";
 import { Supervisor, defaultLedgerPath, readLedger } from "./supervisor.js";
+import { inboxDir, submitBrief } from "./inbox.js";
 import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
 import { queueState, reconcileJobs } from "./queue.js";
 
@@ -383,6 +384,13 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       },
       [`${API_PREFIX}/supervisor/ledger`]: {
         get: { summary: "The ledger: one line per event, append-only.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/supervisor/brief`]: {
+        post: {
+          summary: "Put a brief in the inbox. The loop takes it on its next tick.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 201: { description: "queued", content: json(obj) } },
+        },
       },
       [`${API_PREFIX}/supervisor/tick`]: {
         post: {
@@ -1058,6 +1066,17 @@ export async function handleApi(
     const ledger = readLedger(ledgerPath);
     const limit = num(query.get("limit"), 50);
     writeJson(res, 200, { ledgerPath, total: ledger.length, events: ledger.slice(-limit) });
+    return true;
+  }
+
+  if (route === "/supervisor/brief" && method === "POST") {
+    const body = (await readJson(req)) as { title?: string; brief?: string; name?: string };
+    if (!body.title || !body.brief) {
+      fail(res, 400, "A brief needs a title and a brief.");
+      return true;
+    }
+    const path = submitBrief(config.repoRoot, { title: body.title, brief: body.brief }, body.name);
+    writeJson(res, 201, { path, inbox: inboxDir(config.repoRoot) });
     return true;
   }
 

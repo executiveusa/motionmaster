@@ -27,6 +27,7 @@ const checks = [
   /* The two proofs of the loop. The remediation proof runs a real browser
      and a real gate, so it is not a quick check. */
   { name: "loop-supervisor", cwd: ".", command: "node", args: ["scripts/proof-supervisor.mjs"], timeoutMs: 240_000 },
+  { name: "loop-inbox", cwd: ".", command: "node", args: ["scripts/proof-inbox.mjs"], timeoutMs: 240_000 },
   ...(quick ? [] : [
     { name: "loop-remediation", cwd: ".", command: "node", args: ["scripts/proof-remediation.mjs"], timeoutMs: 900_000 },
   ]),

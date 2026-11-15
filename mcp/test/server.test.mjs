@@ -124,6 +124,7 @@ test("the server advertises every tool", async () => {
     "save_brand_kit",
     "search_sfx",
     "start_supervisor",
+    "submit_brief",
     "supervisor_status",
   ]);
   for (const tool of tools) {
