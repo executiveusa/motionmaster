@@ -106,8 +106,12 @@ function saveVerdicts(file) {
   writeFileSync(VERDICTS, `${JSON.stringify({
     generated: 'scripts/qualify-blocks.mjs',
     note:
-      'What the HyperFrames gate said about each block, measured on this machine. A block ' +
-      'marked ok:false is not used to build a film. Delete the file to measure them again.',
+      'What the HyperFrames gate measured on this machine, and what it found. This is a record ' +
+      'of measurements: ok:true means the gate found no errors. It is not the last word — the ' +
+      'house refuses some things the gate only warns about (text below the type floor, an ' +
+      'empty first frame, contrast, unreadable lines), so a block can be ok:true here and still ' +
+      'be refused. That decision lives in mcp/src/verdicts.ts, in one place. Delete the file to ' +
+      'measure them again.',
     verdicts: sorted,
   }, null, 2)}\n`, 'utf8');
 }

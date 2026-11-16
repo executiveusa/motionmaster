@@ -58,7 +58,7 @@ import { fillBlock, headlineFrom, matchBlocks, type MotionBlock } from "./blocks
 import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxKinds } from "./sfx.js";
-import { loadVerdicts } from "./verdicts.js";
+import { isQualified, loadVerdicts } from "./verdicts.js";
 import { loadBlockRoles } from "./roles.js";
 import {
   copyKitFiles,
@@ -999,7 +999,7 @@ export async function handleApi(
        * is the same gate either way.
        */
       const verdict = verdicts[chosen.id];
-      if (verdict && !verdict.ok) {
+      if (verdict && !isQualified(verdict)) {
         fail(res, 400, `The block "${chosen.id}" did not pass the house gate on this machine.`, {
           reasons: verdict.reasons,
           hint: "Ask for a block by brief instead of by name, and the matcher will pick a qualified one.",

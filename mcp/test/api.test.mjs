@@ -7,6 +7,7 @@
  * test about both.
  */
 import test from "node:test";
+import { isQualified } from "../dist/verdicts.js";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -161,7 +162,7 @@ test("filling without a brief is a 400, not a crash", async () => {
  */
 test("naming a block the house gate rejected is refused, with the reason", async () => {
   const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
-  const rejected = Object.entries(verdicts).find(([, v]) => v && v.ok === false && v.reasons?.length);
+  const rejected = Object.entries(verdicts).find(([, v]) => !isQualified(v) && v.reasons?.length);
   assert.ok(rejected, "the pool has no rejected block to test with");
   const [id, verdict] = rejected;
   const { status, body } = await post("/api/v1/blocks/fill", { brief: "anything", block: id });
@@ -173,7 +174,8 @@ test("naming a block the house gate rejected is refused, with the reason", async
 
 test("naming a block that passed the house gate still works", async () => {
   const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
-  const passed = Object.entries(verdicts).find(([, v]) => v && v.ok === true);
+  /* Qualified the house's way, not merely "the gate found no errors". */
+  const passed = Object.entries(verdicts).find(([, v]) => isQualified(v));
   assert.ok(passed, "the pool has no qualified block to test with");
   const { status, body } = await post("/api/v1/blocks/fill", { brief: "a clean lower third", block: passed[0] });
   assert.equal(status, 200);
@@ -182,7 +184,7 @@ test("naming a block that passed the house gate still works", async () => {
 
 test("the matcher only ever offers blocks that passed the gate", async () => {
   const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
-  const rejected = new Set(Object.entries(verdicts).filter(([, v]) => v && v.ok === false).map(([id]) => id));
+  const rejected = new Set(Object.entries(verdicts).filter(([, v]) => !isQualified(v)).map(([id]) => id));
   const { status, body } = await post("/api/v1/blocks/fill", { brief: "a bold kinetic type title card" });
   assert.equal(status, 200);
   const offered = [body.block?.id, ...(body.matched ?? []).map((m) => m.id)].filter(Boolean);

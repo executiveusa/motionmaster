@@ -9,6 +9,7 @@
  *   cd mcp && node scripts/proof-qualified-pool.mjs
  */
 import { spawn } from "node:child_process";
+import { isQualified } from "../dist/verdicts.js";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -27,8 +28,10 @@ const port = Number(process.env.MOTION_MASTER_VERIFY_PORT ?? 8800 + Math.floor(M
 const baseUrl = `http://127.0.0.1:${port}`;
 
 const verdicts = JSON.parse(readFileSync(resolve(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
-const passing = new Set(Object.entries(verdicts).filter(([, v]) => v.ok).map(([id]) => id));
-const failing = Object.entries(verdicts).filter(([, v]) => !v.ok).map(([id]) => id);
+/* Passing means the house will publish it, not merely that the gate found
+   no errors: the house refuses a warning the gate would have let through. */
+const passing = new Set(Object.entries(verdicts).filter(([, v]) => isQualified(v)).map(([id]) => id));
+const failing = Object.entries(verdicts).filter(([, v]) => !isQualified(v)).map(([id]) => id);
 
 let failures = 0;
 function check(name, condition, detail = "") {
