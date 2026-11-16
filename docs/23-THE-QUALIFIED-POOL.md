@@ -24,9 +24,35 @@ every block, so the run can be interrupted and resumed.
 | Mountable compositions | 210 |
 | Snippets — pasted into a composition, never mounted | 238 |
 | Measured | 448 |
-| Pass the gate | 75 |
-| Fail the gate | 135 |
+| Pass the gate | 94 |
+| Fail the gate | 354 |
 | Not yet measured | 0 |
+| **Pass the house's own policy** | **64** |
+
+The last row is the one that matters, and it is lower than the row above
+it on purpose. The gate rates a finding "error" or "warning"; the house
+has rules of its own (docs/11, docs/29) and is stricter on the things it
+cares about — reading type clears 2.6% of the short side, contrast clears
+AA, a line a reader cannot read is not a line a reader can read. The gate
+calls those warnings. The house decides for itself, and the decision lives
+in one place: `mcp/src/verdicts.ts`.
+
+The frame-zero rule is deliberately **not** in that list for a block. A
+finished film must carry its claim on frame zero, because frame zero is the
+thumbnail on a social player. A block is mounted into a composition, and
+the mount is what puts the claim on screen — so a block that enters from
+nothing is not a broken block. Refusing them took away ten of the twelve
+blocks that could carry editable text and left the matcher answering every
+brief with the same block. The rule stays on the artifact.
+
+**Re-measured in full on 2026-11-16.** The first measurement had two
+faults: the verdict came from the CLI's exit code rather than the gate's
+report, so a block could be recorded as a pass while its report held an
+error; and a browser that died was recorded as a verdict on the
+composition. Both are fixed — the report decides, and a browser that died
+gets the block measured again on its own. Nineteen blocks that had been
+written down as broken passed once they were measured properly, and the
+number the gate was too generous with went down.
 
 **A snippet is not a defect.** 238 of the 448 entries are fragments —
 markup and CSS to paste into a composition. The matcher already refuses
