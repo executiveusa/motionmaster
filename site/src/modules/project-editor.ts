@@ -10,7 +10,12 @@ type OpenProject = { project: Project; revision: Revision };
 type Job = { id: string; status: string; revision: number; error?: string };
 type Variable = { id: string; type: string; label: string; default?: unknown };
 type Block = { id: string; duration: number | null; variables: Variable[] };
-const TEMPLATE = 'lt-neon-border';
+/* What the server says when you ask it to fill a block by brief. */
+type Filled = {
+  block?: { id: string; title?: string; tags?: string[]; duration?: number };
+  matched?: { id: string; title?: string; score?: number }[];
+  values?: Record<string, unknown>;
+};
 const q = <T extends Element>(root: ParentNode, selector: string): T | null => root.querySelector<T>(selector);
 const localHost = (name: string): boolean => ['localhost', '127.0.0.1', '[::1]'].includes(name);
 function safeEndpoint(input: string): string {
@@ -479,15 +484,42 @@ export function initProjectEditor(): void {
   createForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void action(async () => {
-      const block = await getBlock(TEMPLATE);
-      const variable = block.variables.find((entry) => entry.type === 'string');
-      if (!variable) throw new Error('The verified template is unavailable.');
       const title = q<HTMLInputElement>(root, '[data-project-new-title]')!.value.trim();
       const brief = q<HTMLTextAreaElement>(root, '[data-project-new-brief]')!.value.trim();
       const text = q<HTMLInputElement>(root, '[data-project-new-text]')!.value.trim();
+      /*
+       * Ask the server which block to use.
+       *
+       * This used to name one block — lt-neon-border — and hope it still
+       * qualified. It did not: the gate had rejected it, the render
+       * refused it, and the editor showed "the render stopped" with no
+       * way forward. The server knows which blocks passed the house gate,
+       * so the server chooses. A block that is disqualified tomorrow does
+       * not break the editor today.
+       */
+      const filled = await request<Filled>('/blocks/fill', {
+        method: 'POST',
+        body: JSON.stringify({ brief }),
+      });
+      const candidates = [filled.block?.id, ...(filled.matched ?? []).map((m) => m.id)]
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+      let chosen: { id: string; variable: string } | null = null;
+      for (const id of candidates) {
+        const block = await getBlock(id);
+        const variable = block.variables.find((entry) => entry.type === 'string');
+        if (variable) {
+          chosen = { id, variable: variable.id };
+          break;
+        }
+      }
+      if (!chosen) throw new Error('No qualified template with editable text is available.');
       const created = await request<OpenProject>('/projects', {
         method: 'POST',
-        body: JSON.stringify({ title, brief, shots: [{ id: TEMPLATE, title: 'Lower-third', duration: 3.5, values: { [variable.id]: text } }] }),
+        body: JSON.stringify({
+          title,
+          brief,
+          shots: [{ id: chosen.id, title: 'Lower-third', duration: 3.5, values: { [chosen.variable]: text } }],
+        }),
       });
       await refresh();
       await openProject(created.project.id);

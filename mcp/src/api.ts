@@ -983,17 +983,34 @@ export async function handleApi(
 
     let chosen: MotionBlock | undefined;
     let matched: { block: MotionBlock; score: number }[] = [];
+    const verdicts = loadVerdicts(config.repoRoot);
     if (body.block) {
       chosen = file.blocks.find((b) => b.id === body.block);
       if (!chosen) {
         fail(res, 404, `No motion block with id "${body.block}".`);
         return true;
       }
+      /*
+       * Naming a block does not excuse it.
+       *
+       * The matcher refuses a block the gate rejected, but this path used to
+       * take the name at face value — so a disqualified block could be
+       * filled and handed to a render that would then refuse it. The gate
+       * is the same gate either way.
+       */
+      const verdict = verdicts[chosen.id];
+      if (verdict && !verdict.ok) {
+        fail(res, 400, `The block "${chosen.id}" did not pass the house gate on this machine.`, {
+          reasons: verdict.reasons,
+          hint: "Ask for a block by brief instead of by name, and the matcher will pick a qualified one.",
+        });
+        return true;
+      }
     } else {
       matched = matchBlocks(file, body.brief, {
         limit: 5,
         requireVariables: true,
-        verdicts: loadVerdicts(config.repoRoot),
+        verdicts,
       });
       if (matched.length === 0) {
         fail(res, 400, "No motion block matched that brief.", {

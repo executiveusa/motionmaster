@@ -184,7 +184,9 @@ try {
     return true;
   })()`);
   await evaluate(`(() => {
-    document.querySelector("[data-shot-variable]").value = "Ana Ruiz";
+    /* The on-screen text field, not just the first field: a block may put a
+       colour variable first, and a colour input cannot hold a name. */
+    document.querySelector('[data-shot-variable][type="text"]').value = "Ana Ruiz";
     document.querySelector("[data-shot-duration]").value = "3";
     document.querySelector("[data-project-render]").click();
     return true;
@@ -201,8 +203,11 @@ try {
   report.checks.push('Chromium continues monitoring a long render after 80 status polls');
   await until('["editorComplete", "editorFailed"].includes(document.querySelector("[data-project-status]")?.dataset.i18n)',
     'default-worker MP4 render', 200000);
-  assert.equal(await evaluate('document.querySelector("[data-project-status]").dataset.i18n'),
-    'editorComplete', 'Default worker failed or did not publish the browser render');
+  const finalState = await evaluate('document.querySelector("[data-project-status]")?.dataset.i18n');
+  assert.equal(finalState, 'editorComplete',
+    'Default worker failed or did not publish the browser render' +
+    ' | job error: ' + JSON.stringify((await api('projects/' + projectId + '/jobs'))[0]?.error ?? null) +
+    ' | server: ' + serverTail.join('').slice(-1200));
   const jobs = await api('projects/' + projectId + '/jobs');
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].status, 'ready');

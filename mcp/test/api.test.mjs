@@ -9,8 +9,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
-import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -149,6 +149,47 @@ test("filling without a brief is a 400, not a crash", async () => {
   const { status, body } = await post("/api/v1/blocks/fill", {});
   assert.equal(status, 400);
   assert.match(body.error, /brief/i);
+});
+
+/*
+ * The gate is the same gate whether you name a block or ask for one.
+ *
+ * Naming a block used to take the name at face value, so a block the house
+ * had disqualified could be filled and handed to a render that would then
+ * refuse it — the editor said "the render stopped" and the person had no
+ * way forward.
+ */
+test("naming a block the house gate rejected is refused, with the reason", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  const rejected = Object.entries(verdicts).find(([, v]) => v && v.ok === false && v.reasons?.length);
+  assert.ok(rejected, "the pool has no rejected block to test with");
+  const [id, verdict] = rejected;
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "anything", block: id });
+  assert.equal(status, 400);
+  assert.match(body.error, /did not pass the house gate/i);
+  assert.ok(JSON.stringify(body.reasons ?? body.detail ?? "").includes(verdict.reasons[0].split(":")[0]),
+    "the refusal does not say what the gate found");
+});
+
+test("naming a block that passed the house gate still works", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  const passed = Object.entries(verdicts).find(([, v]) => v && v.ok === true);
+  assert.ok(passed, "the pool has no qualified block to test with");
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "a clean lower third", block: passed[0] });
+  assert.equal(status, 200);
+  assert.equal(body.block.id, passed[0]);
+});
+
+test("the matcher only ever offers blocks that passed the gate", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  const rejected = new Set(Object.entries(verdicts).filter(([, v]) => v && v.ok === false).map(([id]) => id));
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "a bold kinetic type title card" });
+  assert.equal(status, 200);
+  const offered = [body.block?.id, ...(body.matched ?? []).map((m) => m.id)].filter(Boolean);
+  assert.ok(offered.length > 0, "the matcher offered nothing");
+  for (const id of offered) {
+    assert.ok(!rejected.has(id), `the matcher offered ${id}, which the house gate rejected`);
+  }
 });
 
 test("the sound shelf answers with its vocabulary", async () => {
