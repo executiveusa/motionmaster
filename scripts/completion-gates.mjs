@@ -7,7 +7,7 @@
  * Usage: node scripts/completion-gates.mjs [--quick]
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -46,6 +46,31 @@ const checks = [
     { name: "montage-bridge-typecheck", cwd: "bridge", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   ]),
 ];
+/**
+ * Install what the gates need.
+ *
+ * A clean checkout has no node_modules anywhere, and a gate that fails
+ * because a dependency is missing is not testing anything — it is
+ * reporting the shape of the machine. The workflow installs mcp, site and
+ * bridge; the clips package was left out, so the suite installs it here.
+ *
+ * It is skipped when the dependencies are already there, so the common
+ * case costs nothing.
+ */
+const PACKAGES = ["mcp", "site", "bridge", "clips"];
+for (const pkg of PACKAGES) {
+  const dir = join(root, pkg);
+  if (existsSync(join(dir, "node_modules"))) continue;
+  if (!existsSync(join(dir, "package.json"))) continue;
+  process.stdout.write(`installing ${pkg} dependencies\n`);
+  const install = spawnSync("npm", ["ci", "--no-audit", "--no-fund"], {
+    cwd: dir, encoding: "utf8", maxBuffer: 8 * 1024 * 1024, shell: false, timeout: 600_000,
+  });
+  if (install.status !== 0) {
+    process.stderr.write(`could not install ${pkg}:\n${(install.stderr ?? "").slice(-800)}\n`);
+  }
+}
+
 const results = [];
 for (const check of checks) {
   const start = Date.now();

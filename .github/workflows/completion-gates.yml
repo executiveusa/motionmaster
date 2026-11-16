@@ -57,7 +57,6 @@ jobs:
           npm ci --prefix mcp --no-audit --no-fund
           npm ci --prefix site --no-audit --no-fund
           npm ci --prefix bridge --no-audit --no-fund
-          npm ci --prefix clips --no-audit --no-fund
       - name: Verify FFmpeg and FFprobe for real encoding
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
