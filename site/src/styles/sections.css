@@ -1006,7 +1006,9 @@
   margin-right: 6px;
 }
 .console__starter {
-  height: 32px;
+  /* A touch target is 44px, on every screen — the house rule, the same one
+     the film controls follow. */
+  height: 44px;
   padding: 0 13px;
   font: inherit;
   font-size: 13px;

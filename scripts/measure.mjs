@@ -120,12 +120,23 @@ try {
           .sort((a,b) => (b.scrollWidth-b.clientWidth) - (a.scrollWidth-a.clientWidth))
           .slice(0, 10)
           .map(e => label(e) + ' client=' + e.clientWidth + ' scroll=' + e.scrollWidth + ' overflow=' + getComputedStyle(e).overflowX);
-        const small = [...document.querySelectorAll('a,button,[role=button]')]
+        /* Every small target, not the first four. It reported four, and the
+           other fourteen stayed hidden behind the four until these were
+           fixed — whack-a-mole with a blindfold on. */
+        const smallAll = [...document.querySelectorAll('a,button,[role=button]')]
           .filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && b.height < 44 && !e.closest('nav,ul,ol'); })
-          .slice(0, 4)
           .map(e => e.tagName + '.' + (typeof e.className === 'string' ? e.className.split(' ').slice(0,2).join('.') : '') + '@' + Math.round(e.getBoundingClientRect().height));
-        const vids = [...document.querySelectorAll('video')].map(v => ({ src: v.getAttribute('src'), poster: v.getAttribute('poster') }));
-        return { sw: de.scrollWidth, iw: window.innerWidth, bodyScroll: document.body.scrollWidth, over, scrollers, small, vids };
+        const small = smallAll.slice(0, 12);
+        const smallCount = smallAll.length;
+        /* Only a player the reader can actually see matters. A video inside a
+           hidden container has nothing to show yet, so it is not a broken
+           player — it is a player that has not been given its film. The
+           check counts what is visible, and names it when it complains. */
+        const vids = [...document.querySelectorAll('video')]
+          .filter(v => { const b = v.getBoundingClientRect(); return b.width > 0 && b.height > 0; })
+          .map(v => ({ src: v.getAttribute('src'), poster: v.getAttribute('poster'),
+                       cls: (typeof v.className === 'string' ? v.className.split(' ').slice(0,2).join('.') : 'video') }));
+        return { sw: de.scrollWidth, iw: window.innerWidth, bodyScroll: document.body.scrollWidth, over, scrollers, small, smallCount, vids };
       })())`,
       returnByValue: true,
     });
@@ -139,10 +150,14 @@ try {
     }
     if (v.small.length) {
       console.log('      small targets:', v.small);
-      problems.push(`${w}px touch target under 44px: ${JSON.stringify(v.small)}`);
+      problems.push(`${w}px touch target under 44px (${v.smallCount}): ${JSON.stringify(v.small)}`);
     }
-    const noSrc = v.vids.filter((x) => !x.src).length;
-    if (noSrc) problems.push(`${w}px: ${noSrc} video elements without a src`);
+    const bare = v.vids.filter((x) => !x.src);
+    if (bare.length) {
+      /* Name the element. "1 video elements without a src" sent me looking
+         in the wrong place for an hour; "clip__video" would have said it. */
+      problems.push(`${w}px: ${bare.length} visible video elements without a src: ${JSON.stringify(bare.map((x) => x.cls))}`);
+    }
   }
   console.log('\n' + (problems.length ? 'PROBLEMS:\n' + problems.map((p) => ' - ' + p).join('\n') : 'no layout problems'));
   if (problems.length) process.exitCode = 1;
