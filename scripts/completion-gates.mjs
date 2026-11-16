@@ -29,13 +29,16 @@ const checks = [
   { name: "loop-supervisor", cwd: ".", command: "node", args: ["scripts/proof-supervisor.mjs"], timeoutMs: 240_000 },
   { name: "loop-inbox", cwd: ".", command: "node", args: ["scripts/proof-inbox.mjs"], timeoutMs: 240_000 },
   { name: "loop-identity", cwd: ".", command: "node", args: ["scripts/proof-identity.mjs"], timeoutMs: 240_000 },
+  /* The site is built before the panel proof, because the panel proof
+     serves the built site. A proof that measures an empty page is worse
+     than no proof. */
+  { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   ...(quick ? [] : [
     { name: "loop-panel", cwd: ".", command: "node", args: ["scripts/proof-loop-panel.mjs"], timeoutMs: 420_000 },
   ]),
   ...(quick ? [] : [
     { name: "loop-remediation", cwd: ".", command: "node", args: ["scripts/proof-remediation.mjs"], timeoutMs: 900_000 },
   ]),
-  { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   { name: "clips-typecheck", cwd: "clips", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "clips-tests", cwd: "clips", command: "npm", args: ["test"], timeoutMs: 240_000 },
   ...(quick ? [] : [
@@ -62,6 +65,12 @@ for (const check of checks) {
     tail: details.slice(-1200),
   });
   process.stdout.write(`${ok ? "PASS" : "FAIL"} ${check.name} (${results.at(-1).seconds}s)\n`);
+  /* A failing gate that does not say why is a gate you have to go and
+     reproduce by hand. The last twenty lines are right there. */
+  if (!ok) {
+    const tail = details.trim().split("\n").slice(-20).join("\n");
+    process.stderr.write(`\n--- ${check.name} failed ---\n${tail}\n--- end ${check.name} ---\n\n`);
+  }
 }
 const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout?.trim() ?? "unknown";
 const report = {

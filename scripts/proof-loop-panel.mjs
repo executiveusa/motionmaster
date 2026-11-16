@@ -15,14 +15,40 @@
  *
  *   node scripts/proof-loop-panel.mjs
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const CHROME = process.env.HYPERFRAMES_BROWSER_PATH ||
-  "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell";
+/**
+ * Find a browser.
+ *
+ * The house's own order: an explicit path first, then the binaries on PATH.
+ * A CI runner has google-chrome; this sandbox has a headless shell in a
+ * place nobody would guess. Both have to work, or the proof only runs on
+ * the machine that wrote it.
+ */
+function findChrome() {
+  const named = [
+    process.env.HYPERFRAMES_BROWSER_PATH,
+    process.env.CHROME_BIN,
+    "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell",
+    "/usr/local/bin/chrome-headless-shell",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ].filter(Boolean);
+  for (const candidate of named) {
+    if (existsSync(candidate)) return candidate;
+  }
+  for (const binary of ["google-chrome", "chromium", "chromium-browser", "chrome-headless-shell"]) {
+    const found = spawnSync("which", [binary], { encoding: "utf8" }).stdout?.trim();
+    if (found) return found;
+  }
+  return null;
+}
+const CHROME = findChrome();
 const PORT = 8861;
 
 let pass = 0;
@@ -37,8 +63,15 @@ function check(name, condition, detail = "") {
   }
 }
 
-if (!existsSync(CHROME)) {
-  console.error(`No browser at ${CHROME}. Set HYPERFRAMES_BROWSER_PATH.`);
+if (!CHROME) {
+  console.error("No browser found. Set HYPERFRAMES_BROWSER_PATH or CHROME_BIN.");
+  process.exit(1);
+}
+
+/* The panel is served from the built site. A proof that silently measures an
+   empty page is worse than no proof. */
+if (!existsSync(join(ROOT, "site", "dist", "index.html"))) {
+  console.error("The site is not built. Run: cd site && npm run build");
   process.exit(1);
 }
 
@@ -95,7 +128,7 @@ try {
 
   /* The house's own browser harness: raw CDP, no dependency. */
   const chrome = spawn(CHROME, [
-    "--remote-debugging-port=9222",
+    "--remote-debugging-port=9333",
     "--remote-allow-origins=*",
     "--headless",
     "--no-sandbox",
@@ -109,7 +142,7 @@ try {
   let list = null;
   for (let i = 0; i < 40; i += 1) {
     try {
-      const response = await fetch("http://127.0.0.1:9222/json/list");
+      const response = await fetch("http://127.0.0.1:9333/json/list");
       const targets = await response.json();
       list = targets.find((t) => t.type === "page");
       if (list) break;
