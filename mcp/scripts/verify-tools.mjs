@@ -114,7 +114,7 @@ const main = async () => {
       "enhance_prompt",
       "board_sync_check", "board_sync_start", "board_sync_status", "board_sync_cancel",
       "list_meta_placements", "check_ad_copy", "plan_meta_ad", "build_meta_ad", "preflight_ad",
-      "run_supervisor", "supervisor_status", "start_supervisor", "submit_brief",
+      "run_supervisor", "supervisor_status", "start_supervisor", "submit_brief", "loop_metrics",
       "list_shots", "get_shot", "plan_shots",
       "list_motion_effects", "get_motion_effect",
     ];

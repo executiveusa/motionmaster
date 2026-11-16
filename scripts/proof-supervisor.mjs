@@ -28,13 +28,14 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const WORK = join(ROOT, "workspace", "proof-supervisor");
+/* The temporary directory goes in the system temp, not in the repository:
+   the repository's workspace/ does not exist in a clean checkout, and a
+   proof that fails because a directory is missing is not a proof. */
+const WORK = mkdtempSync(join(tmpdir(), "mm-supervisor-"));
 
 const { Supervisor, readLedger } = await import(`file://${join(ROOT, "mcp", "dist", "supervisor.js")}`);
 const { createProject, createProjectJob } = await import(`file://${join(ROOT, "mcp", "dist", "projects.js")}`);
 
-rmSync(WORK, { recursive: true, force: true });
-mkdtempSync(WORK);
 
 let pass = 0;
 let fail = 0;

@@ -46,6 +46,7 @@ import { applyRemediation, planRemediation, type GateFinding } from "./remediati
 import { buildRevisionComposition } from "./project-worker.js";
 import { readRevision } from "./projects.js";
 import { takeBriefs, inboxDir } from "./inbox.js";
+import { dataDir, ledgerPath } from "./datadir.js";
 import { gateProject, renderProject } from "./render.js";
 
 /* ---------------------------------------------------------------- ledger -- */
@@ -75,8 +76,8 @@ export interface LedgerEntry {
 }
 
 /** Where the ledger lives. It must not be inside a directory a redeploy wipes. */
-export function defaultLedgerPath(repoRoot: string): string {
-  return join(repoRoot, "workspace", "ledger", "ledger.jsonl");
+export function defaultLedgerPath(repoRoot: string, tenantId?: string): string {
+  return ledgerPath(repoRoot, tenantId);
 }
 
 /**
@@ -133,6 +134,8 @@ export interface RunContext {
   signal?: AbortSignal;
   /** How many gate rounds this job may spend before it escalates. */
   budget?: number;
+  /** The tenant this job belongs to. */
+  tenantId?: string;
   /** Called after each gate round, so the ledger can record it. */
   onEvent?: (event: Omit<LedgerEntry, "at" | "jobId" | "projectId" | "attempt">) => void;
 }
@@ -223,7 +226,7 @@ export const renderRunner: JobRunner = async (ctx) => {
      `artifacts/<name>.mp4` that ffprobe says holds a video stream. So the
      finished film is moved into the project's artifact directory and the
      job is told the relative name. */
-  const artifacts = join(projectDir(repoRoot, ctx.job.projectId), "artifacts");
+  const artifacts = join(projectDir(repoRoot, ctx.job.projectId, ctx.tenantId), "artifacts");
   mkdirSync(artifacts, { recursive: true });
   const name = "film.mp4";
   const relative = `artifacts/${name}`;
@@ -243,7 +246,7 @@ export const renderRunner: JobRunner = async (ctx) => {
  */
 export const projectRunner: JobRunner = async (ctx) => {
   const { repoRoot, job, workDir } = ctx;
-  const revision = readRevision(repoRoot, job.projectId, job.revision);
+  const revision = readRevision(repoRoot, job.projectId, job.revision, ctx.tenantId);
   if (!revision) {
     return { ok: false, error: `The revision ${job.revision} of ${job.projectId} could not be read.` };
   }
@@ -282,6 +285,8 @@ export interface SupervisorOptions {
   runner?: JobRunner;
   /** Where a job's working directory is. */
   workDirFor?: (job: ProjectJob) => string;
+  /** The tenant this supervisor works for. One studio, unless there are more. */
+  tenantId?: string;
   now?: () => Date;
 }
 
@@ -301,30 +306,34 @@ export class Supervisor {
   private readonly dryRun: boolean;
   private readonly runner: JobRunner;
   private readonly workDirFor: (job: ProjectJob) => string;
+  private readonly tenantId?: string;
   private readonly now: () => Date;
 
   constructor(options: SupervisorOptions) {
     this.repoRoot = options.repoRoot;
-    this.ledgerPath = options.ledgerPath ?? defaultLedgerPath(options.repoRoot);
+    this.ledgerPath = options.ledgerPath ?? defaultLedgerPath(options.repoRoot, options.tenantId);
     this.budget = options.budget ?? 3;
     this.dryRun = options.dryRun ?? false;
     this.runner = options.runner ?? projectRunner;
-    this.workDirFor = options.workDirFor ?? ((job) => join(this.repoRoot, "workspace", "projects", job.projectId, "work"));
+    this.tenantId = options.tenantId;
+    this.workDirFor =
+      options.workDirFor ??
+      ((job) => join(dataDir(this.repoRoot, this.tenantId), "projects", job.projectId, "work"));
     this.now = options.now ?? (() => new Date());
     /* The loop owns its inbox. A brief has to have somewhere to arrive
        before the first one does. */
-    mkdirSync(inboxDir(this.repoRoot), { recursive: true });
+    mkdirSync(inboxDir(this.repoRoot, this.tenantId), { recursive: true });
   }
 
   /** Every queued job, oldest first. */
   queuedJobs(): ProjectJob[] {
     const jobs: ProjectJob[] = [];
-    for (const project of listProjects(this.repoRoot)) {
-      const dir = join(this.repoRoot, "workspace", "projects", project.id, "jobs");
+    for (const project of listProjects(this.repoRoot, this.tenantId)) {
+      const dir = join(dataDir(this.repoRoot, this.tenantId), "projects", project.id, "jobs");
       if (!existsSync(dir)) continue;
       for (const name of readdirSync(dir).sort()) {
         if (!name.endsWith(".json")) continue;
-        const job = readProjectJob(this.repoRoot, project.id, name.replace(/\.json$/, ""));
+        const job = readProjectJob(this.repoRoot, project.id, name.replace(/\.json$/, ""), this.tenantId);
         if (job && job.status === "queued") jobs.push(job);
       }
     }
@@ -337,12 +346,12 @@ export class Supervisor {
   /** Jobs left mid-flight by a supervisor that died. They are reconciled, not lost. */
   interruptedJobs(): ProjectJob[] {
     const jobs: ProjectJob[] = [];
-    for (const project of listProjects(this.repoRoot)) {
-      const dir = join(this.repoRoot, "workspace", "projects", project.id, "jobs");
+    for (const project of listProjects(this.repoRoot, this.tenantId)) {
+      const dir = join(dataDir(this.repoRoot, this.tenantId), "projects", project.id, "jobs");
       if (!existsSync(dir)) continue;
       for (const name of readdirSync(dir).sort()) {
         if (!name.endsWith(".json")) continue;
-        const job = readProjectJob(this.repoRoot, project.id, name.replace(/\.json$/, ""));
+        const job = readProjectJob(this.repoRoot, project.id, name.replace(/\.json$/, ""), this.tenantId);
         if (job && job.status === "rendering") jobs.push(job);
       }
     }
@@ -359,7 +368,7 @@ export class Supervisor {
   async tick(): Promise<TickResult> {
     /* First: take any brief that has arrived. Work has to arrive on its own,
        or the loop is a tool with a very good keyboard. */
-    const inbox = takeBriefs(this.repoRoot);
+    const inbox = takeBriefs(this.repoRoot, this.tenantId);
     if (inbox.created.length > 0) {
       for (const taken of inbox.created) {
         writeLedger(this.ledgerPath, {
@@ -391,7 +400,7 @@ export class Supervisor {
       try {
         transitionProjectJob(this.repoRoot, job.projectId, job.id, "fail", {
           error: "Interrupted: the supervisor that owned this job stopped.",
-        });
+        }, this.tenantId);
         writeLedger(this.ledgerPath, {
           at: this.now().toISOString(),
           event: "reconciled",
@@ -431,8 +440,8 @@ export class Supervisor {
        rendered, so a crash leaves a trace. */
     let claimed: ProjectJob;
     try {
-      transitionProjectJob(this.repoRoot, job.projectId, job.id, "start");
-      claimed = readProjectJob(this.repoRoot, job.projectId, job.id) ?? job;
+      transitionProjectJob(this.repoRoot, job.projectId, job.id, "start", {}, this.tenantId);
+      claimed = readProjectJob(this.repoRoot, job.projectId, job.id, this.tenantId) ?? job;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeLedger(this.ledgerPath, {
@@ -461,6 +470,7 @@ export class Supervisor {
         job: claimed,
         workDir: this.workDirFor(claimed),
         budget: this.budget,
+        tenantId: this.tenantId,
         onEvent: (event) =>
           writeLedger(this.ledgerPath, {
             at: this.now().toISOString(),
@@ -484,7 +494,7 @@ export class Supervisor {
       try {
         transitionProjectJob(this.repoRoot, job.projectId, job.id, "complete", {
           artifact: outcome.artifact,
-        });
+        }, this.tenantId);
         published = true;
       } catch (error) {
         /* This must not be swallowed. A job that ran to success and could
@@ -517,7 +527,7 @@ export class Supervisor {
     }
 
     try {
-      transitionProjectJob(this.repoRoot, job.projectId, job.id, "fail", { error: outcome.error });
+      transitionProjectJob(this.repoRoot, job.projectId, job.id, "fail", { error: outcome.error }, this.tenantId);
     } catch {
       /* Already cancelled. */
     }

@@ -35,6 +35,28 @@ const opt = (n, d) => {
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d;
 };
 
+/*
+ * --help must never fall through into a run.
+ *
+ * This script takes no --help branch, so `node scripts/qualify-blocks.mjs
+ * --help` measured all 448 blocks and wrote the verdicts file. Three of
+ * those ran at once, each one killing the others' browsers, and the
+ * verdicts file ended up with real compositions marked as failures because
+ * the browser had been killed by a sibling run. A tool that runs a
+ * four-hour job when you ask it for help is a trap.
+ */
+if (flag('help') || flag('h')) {
+  process.stdout.write(
+    'Usage: node scripts/qualify-blocks.mjs [--limit N] [--only id,id] [--resume] [--fresh] [--force]\n' +
+    '  --limit N   measure only the first N blocks\n' +
+    '  --only a,b  measure only these block ids\n' +
+    '  --resume    skip blocks that already have a verdict\n' +
+    '  --fresh     throw the existing verdicts away and measure everything again\n' +
+    '  --force     run even if another qualification is already in progress\n',
+  );
+  process.exit(0);
+}
+
 const limit = Number(opt('limit', 0));
 const only = (opt('only', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
 const resume = flag('resume');
@@ -84,8 +106,12 @@ function saveVerdicts(file) {
   writeFileSync(VERDICTS, `${JSON.stringify({
     generated: 'scripts/qualify-blocks.mjs',
     note:
-      'What the HyperFrames gate said about each block, measured on this machine. A block ' +
-      'marked ok:false is not used to build a film. Delete the file to measure them again.',
+      'What the HyperFrames gate measured on this machine, and what it found. This is a record ' +
+      'of measurements: ok:true means the gate found no errors. It is not the last word — the ' +
+      'house refuses some things the gate only warns about (text below the type floor, an ' +
+      'empty first frame, contrast, unreadable lines), so a block can be ok:true here and still ' +
+      'be refused. That decision lives in mcp/src/verdicts.ts, in one place. Delete the file to ' +
+      'measure them again.',
     verdicts: sorted,
   }, null, 2)}\n`, 'utf8');
 }
@@ -93,6 +119,17 @@ function saveVerdicts(file) {
 /* ------------------------------------------------------------ one block */
 
 /** Kill any browser still holding a file in the work tree. */
+/*
+ * What a dead browser looks like.
+ *
+ * These are not verdicts on a composition. They are the machine saying it
+ * could not look. A block measured this way gets measured again.
+ */
+const BROWSER_FAILURE =
+  /Target closed|Protocol error|Execution context was destroyed|ERR_ABORTED|detached|Check did not finish within its deadline|Target crashed|Timeout/i;
+
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+
 function killStrayBrowsers() {
   try {
     execFileSync('pkill', ['-f', 'chrome-headless-shell'], { stdio: 'ignore' });
@@ -150,7 +187,13 @@ function localiseGsap(dir) {
   walk(comps);
 }
 
-function gateReasons(dir) {
+/*
+ * The gate's own structured findings, with their severity.
+ *
+ * The report is the truth about the composition. The CLI's exit code is
+ * only a summary of it, and the two do not always agree.
+ */
+function gateFindings(dir) {
   const checks = join(dir, '.hyperframes', 'artifacts', 'checks');
   if (!existsSync(checks)) return [];
   const reports = readdirSync(checks)
@@ -165,10 +208,13 @@ function gateReasons(dir) {
       const block = report[section];
       if (!block || !Array.isArray(block.findings)) continue;
       for (const finding of block.findings) {
-        if (finding.severity === 'info') continue;
-        const where = finding.file ? ` ${finding.file}` : '';
-        const when = finding.t !== undefined ? ` t=${finding.t}` : '';
-        out.push(`${finding.code || section}:${where}${when} ${finding.message || ''}`.trim());
+        out.push({
+          code: finding.code || section,
+          severity: finding.severity || 'warning',
+          message: finding.message || '',
+          where: finding.file ? ` ${finding.file}` : '',
+          when: finding.t !== undefined ? ` t=${finding.t}` : '',
+        });
       }
     }
     return out;
@@ -177,7 +223,13 @@ function gateReasons(dir) {
   }
 }
 
-function qualify(block) {
+function gateReasons(dir) {
+  return gateFindings(dir)
+    .filter((f) => f.severity !== 'info')
+    .map((f) => `${f.code}:${f.where}${f.when} ${f.message}`.trim());
+}
+
+async function qualify(block) {
   /*
    * Not every registry entry is a composition. 238 of the 448 are snippets —
    * markup and CSS to paste into a composition, not a composition to mount.
@@ -274,19 +326,80 @@ function qualify(block) {
 </html>
 `);
 
-  let ok = true;
-  let output = '';
-  try {
-    output = execFileSync(HF, ['check', dir],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180_000 });
-  } catch (error) {
-    ok = false;
-    output = `${error.stdout || ''}\n${error.stderr || ''}`;
+  /*
+   * Measure the block.
+   *
+   * The verdict comes from the gate's own structured report, not from the
+   * CLI's exit code. They do not always agree: beat-freeze-cut exited 0
+   * while its report held an error-severity runtime failure, and it was
+   * written down as a pass. A block that the gate found an error in has
+   * failed, whatever the exit code said.
+   */
+  const measure = () => {
+    let ok = true;
+    let output = '';
+    try {
+      output = execFileSync(HF, ['check', dir],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180_000 });
+    } catch (error) {
+      ok = false;
+      output = `${error.stdout || ''}\n${error.stderr || ''}`;
+    }
+    const findings = gateFindings(dir);
+    const errors = findings.filter((f) => f.severity === 'error');
+    const reasons = findings
+      .filter((f) => f.severity !== 'info')
+      .map((f) => `${f.code}:${f.where}${f.when} ${f.message}`.trim());
+    const reported = /\b(\d+) error\(s\)/.exec(output)?.[1];
+    return {
+      cliOk: ok,
+      output,
+      findings,
+      errors: errors.length,
+      reasons,
+      reportedErrors: reported ? Number(reported) : null,
+    };
+  };
+
+  let run = measure();
+  let cliOk = run.cliOk;
+  let reasons = run.reasons;
+
+  /*
+   * A browser that died is not a verdict on the composition.
+   *
+   * "Target closed" means the browser was killed — by a sibling run, by the
+   * machine running out of memory, by a stray cleanup. The composition was
+   * never looked at. So the block is measured again, once, on its own.
+   */
+  if (!cliOk && !run.errors && BROWSER_FAILURE.test(reasons.join(' ') + ' ' + run.output)) {
+    await sleep(4000);
+    killStrayBrowsers();
+    run = measure();
+    cliOk = run.cliOk;
+    reasons = run.reasons;
   }
 
-  const reasons = gateReasons(dir);
-  const errors = /\b(\d+) error\(s\)/.exec(output)?.[1];
-  const errorCount = errors ? Number(errors) : ok ? 0 : 1;
+  /*
+   * The verdict.
+   *
+   * The gate's report decides. The exit code only matters when the report
+   * says nothing at all, because then there is nothing to trust.
+   */
+  const errorFindings = run.findings.filter((f) => f.severity === 'error');
+  let ok = errorFindings.length === 0;
+  let errorCount = errorFindings.length;
+
+  if (!ok) {
+    // The gate found something. The reasons already say what.
+  } else if (!cliOk && !run.findings.length) {
+    ok = false;
+    errorCount = 1;
+    reasons.push('gate_failed: the check did not pass and left no structured report');
+  } else if (!cliOk && run.reportedErrors) {
+    ok = false;
+    errorCount = run.reportedErrors;
+  }
 
   if (!ok && !reasons.length) {
     reasons.push('gate_failed: the check did not pass and left no structured report');
@@ -309,6 +422,42 @@ if (flag('fresh')) {
 saveVerdicts(file);
 
 mkdirSync(WORK, { recursive: true });
+
+/*
+ * One qualification at a time.
+ *
+ * Two runs share the work tree and the verdicts file, and each one kills
+ * stray browsers before it starts — so the second run kills the first
+ * run's browser, and the first run records "Target closed" as though the
+ * composition had failed the gate. That is how twelve good blocks came to
+ * be listed as broken. The lock makes the accident impossible.
+ */
+const LOCK = join(WORK, '.qualify-lock.json');
+function lockHeld() {
+  try {
+    const held = JSON.parse(readFileSync(LOCK, 'utf8'));
+    if (!held.pid || held.pid === process.pid) return null;
+    process.kill(held.pid, 0); // throws when the process is gone
+    return held;
+  } catch {
+    return null;
+  }
+}
+const held = lockHeld();
+if (held && !flag('force')) {
+  process.stderr.write(
+    `Another qualification is already running (pid ${held.pid}, started ${held.startedAt}).\n` +
+    'It writes the same verdicts file and kills browsers, so two at once corrupt both.\n' +
+    'Wait for it, or pass --force if you are certain it is gone.\n',
+  );
+  process.exit(1);
+}
+writeFileSync(LOCK, `${JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() })}\n`);
+const releaseLock = () => { try { rmSync(LOCK, { force: true }); } catch { /* gone already */ } };
+process.on('exit', releaseLock);
+process.on('SIGINT', () => { releaseLock(); process.exit(130); });
+process.on('SIGTERM', () => { releaseLock(); process.exit(143); });
+
 const started = Date.now();
 let done = 0;
 let failed = 0;
@@ -321,7 +470,7 @@ for (const block of targets) {
     done += 1;
     continue;
   }
-  const verdict = qualify(block);
+  const verdict = await qualify(block);
   file.verdicts[block.id] = {
     ...verdict,
     checkedAt: new Date().toISOString(),

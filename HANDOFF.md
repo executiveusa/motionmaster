@@ -333,6 +333,83 @@ gated. And the server advertised 24 tools while registering 35; that had
 already been caught once and came back, so the banner is now checked against
 the same list the live server is checked against.
 
+### The production loop, and the CI that proved it (2026-11-16)
+
+The founder's ask: build the production loop into the product, then finish
+it and merge it. `docs/29-THE-PRODUCTION-LOOP.md` is the blueprint;
+`docs/30-THE-LOOP-IS-BUILT.md` is what was built.
+
+The loop is six stages over a **file-and-folder** world — nothing in a
+database, everything on disk:
+
+| stage | what it is |
+| --- | --- |
+| P0 remediation | 11 rules that repair what the gate found, and ~175 codes that get a clear failure instead of a guessed repair |
+| P1 supervisor | claims a job before it works on it, oldest first, three gate rounds per finding, six per job, and an append-only ledger |
+| P2 durability | `MOTION_MASTER_DATA_DIR`; projects, jobs, briefs and the ledger all live under it; a backup that verifies by checksum |
+| P3 the brief inbox | `workspace/briefs/` — a brief is a JSON file, it is taken once, and a bad one is refused with the reason written beside it |
+| P4 identity | open, one key, or tenants-with-a-required-key; tenant-scoped data; an audit trail that names the tenant and never writes the key |
+| P5 operations | counters that are arithmetic over the ledger, and an alert that fires when three consecutive failures share a finding |
+| P6 the front door | the project editor in the page: connect to your agent, create a lower-third, edit the text and the duration, render, play it, download it, export the source, import it back |
+
+**The CI was red before this.** It had been red for a while — the workflow
+never ran the steps past the first failure, so nobody saw the rest. Four
+gates failed on the first run and each one turned out to be a real defect:
+
+1. `loop-supervisor` wrote its scratch directory into `workspace/`, which is
+   gitignored and does not exist in a clean checkout. It goes in the system
+   temp now.
+2. `loop-panel` looked for a browser at a path that only exists in this
+   sandbox. It resolves the way the house does — an explicit path, then the
+   binaries on PATH — so a CI runner's `google-chrome` works too.
+3. `clips-typecheck` said `tsc: not found`: the workflow installed `mcp`,
+   `site` and `bridge` but never `clips`, while the gate suite runs the
+   clips gates. The suite now installs what it needs, so it does not depend
+   on a workflow having remembered.
+4. `typescript` was never in the `clips` dependencies or its lockfile. It
+   worked locally only because a loose `npm install` had left one behind.
+   It is declared now, pinned to the same version the other three packages
+   use.
+
+**The gate runner now says why.** It printed `FAIL name (0s)` and left the
+reason in the artifact. It prints the last twenty lines of a failing gate
+now, so CI says what broke instead of asking you to reproduce it by hand.
+
+**Every touch target is 44px.** The gauntlet failed on small targets, and
+the check was only reporting four of the eighteen. The cause was the same
+bug as the hero: two stylesheets own the same class. `product-v2.css` is
+imported last and re-declares the house's controls smaller than the ones
+that own them, so the later import won and the design shrank the controls.
+Seven rules were raised. The check now counts them all and names them.
+
+**The block verdicts were wrong, and the editor depended on one.** The
+verdict came from the CLI's exit code rather than the gate's report, so a
+block could be written down as a pass while its report held an error; and
+a browser that died — "Target closed", "Execution context was destroyed" —
+was recorded as a verdict on the composition. The report decides now, and a
+browser that died gets the block measured again. The harness also had no
+`--help`: asking it for help measured all 448 blocks, three of those ran at
+once, each killed the others' browsers, and twelve good blocks were written
+down as broken. `--help` prints the usage, and a lock file refuses a second
+run.
+
+**The editor no longer names a block.** It asked for `lt-neon-border` and
+hoped it still qualified. It did not: the gate had rejected it, the render
+refused it, and the person saw "the render stopped" with no way forward. The
+server knows which blocks passed, so the server chooses now — the editor
+asks for a block by brief and takes the first qualified one with editable
+text. Naming a block no longer excuses it either: `POST /api/v1/blocks/fill`
+used to take the name at face value, so a disqualified block could be filled
+and handed to a render that would then refuse it.
+
+**And the house now decides what it will publish.** The gate rates a finding
+"error" or "warning"; the house has rules of its own (reading type clears
+2.6% of the short side, contrast clears AA, a line a reader cannot read is
+not a line a reader can read). The gate calls those warnings. The verdicts
+file records measurements, and `mcp/src/verdicts.ts` holds the house policy
+in one place. The frame-zero rule stays on the artifact and not on the
+pool: a block is mounted, and the mount is what puts the claim on screen.
+
 ### Verification — all green as of `0215adc`
 
 | check | result |
@@ -481,20 +558,28 @@ remain are the push and the redeploy, and then the founder's decisions.
     or a script. A brief that cannot be read is refused with a reason and the
     loop keeps going. **51 MCP tools, four HTTP routes, seventeen gates.**
 
+    **P2, P4, P5 and P6 are built too** (2026-11-15). The data directory
+    lives outside the tree a redeploy wipes, and the backup is verified by
+    restoring it. A key decides who you are, which tenant you are and how
+    many films you may make today; the quota is counted from the ledger, and
+    the audit trail never writes the key. There are metrics, one alert (three
+    failures with the same finding — a broken rule, not a bad brief), a
+    Dockerfile and a compose file. And the front door: a loop panel on the
+    console section that shows the queue and the ledger and takes a brief —
+    and that says plainly when the studio is not running, rather than
+    showing zeroes. **52 MCP tools, nineteen gates, five of them proofs of
+    the loop.**
+
     **Still open, in order:**
     - **The seven unattended days.** The product-level definition of done
       says the loop runs for a week without a restart, every job resolved,
       every failure legible. That is the next measurement, and it is the
       only one that proves this is a product rather than a demonstration.
-    - **P2 durability** — the ledger and the projects outside the tree a
-      redeploy wipes, and a backup. (The startup reconciliation is already
-      in the supervisor.)
+    - **The image has never been built.** There is no Docker in this
+      sandbox, so `Dockerfile` and `docker-compose.yml` are reviewed rather
+      than run. Treat the first build as untested.
     - **P3's source** — the inbox works, but nothing writes into it yet on a
       schedule. A webhook or a recurring brief file is the missing half.
-    - **P4 identity** — real auth, tenants, quotas, audit.
-    - **P5 operations** — structured logs, metrics, alerts, a Dockerfile.
-      The ledger is the raw material; nothing is built on it yet.
-    - **P6 the surface** — the console driving the loop end to end.
 13. **Founder decisions still open**: the OpenRouter key (BYO PKCE vs a
     server fallback), the public surface, popebot fork-vs-configure (Phase 2
     — ships labelled unverified, no Docker here), a render machine, and

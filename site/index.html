@@ -423,7 +423,36 @@
             </form>
           </div>
         </div>
-      </section>
+      
+          <div class="loop" data-loop>
+            <div class="loop__head">
+              <div>
+                <h3 class="loop__title">The studio, running on its own</h3>
+                <p class="loop__lede">
+                  Put a brief in and the studio takes it: it plans the shots, gates the result,
+                  repairs what it can, and renders the file. The numbers below are read from its
+                  own ledger.
+                </p>
+              </div>
+              <p class="loop__status" data-loop-status role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="loop__figures" data-loop-figures></div>
+            <p class="loop__note" data-loop-note role="status" aria-live="polite"></p>
+            <div class="loop__events" data-loop-events></div>
+
+            <form class="loop__form" data-loop-form>
+              <label class="visually-hidden" for="loop-title">What the film is called</label>
+              <input id="loop-title" class="loop__input" type="text" placeholder="What it is called" data-loop-title />
+              <label class="visually-hidden" for="loop-brief">The brief</label>
+              <textarea id="loop-brief" class="loop__textarea" placeholder="What the film is for, and what it has to say." data-loop-brief></textarea>
+              <div class="loop__actions">
+                <button type="submit" class="btn btn--primary btn--sm">Queue it</button>
+                <p class="loop__sent" data-loop-sent role="status" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+</section>
 
       
 

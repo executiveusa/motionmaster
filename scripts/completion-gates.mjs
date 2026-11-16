@@ -7,7 +7,7 @@
  * Usage: node scripts/completion-gates.mjs [--quick]
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,10 +28,17 @@ const checks = [
      and a real gate, so it is not a quick check. */
   { name: "loop-supervisor", cwd: ".", command: "node", args: ["scripts/proof-supervisor.mjs"], timeoutMs: 240_000 },
   { name: "loop-inbox", cwd: ".", command: "node", args: ["scripts/proof-inbox.mjs"], timeoutMs: 240_000 },
+  { name: "loop-identity", cwd: ".", command: "node", args: ["scripts/proof-identity.mjs"], timeoutMs: 240_000 },
+  /* The site is built before the panel proof, because the panel proof
+     serves the built site. A proof that measures an empty page is worse
+     than no proof. */
+  { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
+  ...(quick ? [] : [
+    { name: "loop-panel", cwd: ".", command: "node", args: ["scripts/proof-loop-panel.mjs"], timeoutMs: 420_000 },
+  ]),
   ...(quick ? [] : [
     { name: "loop-remediation", cwd: ".", command: "node", args: ["scripts/proof-remediation.mjs"], timeoutMs: 900_000 },
   ]),
-  { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   { name: "clips-typecheck", cwd: "clips", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   { name: "clips-tests", cwd: "clips", command: "npm", args: ["test"], timeoutMs: 240_000 },
   ...(quick ? [] : [
@@ -39,6 +46,31 @@ const checks = [
     { name: "montage-bridge-typecheck", cwd: "bridge", command: "npm", args: ["run", "typecheck"], timeoutMs: 240_000 },
   ]),
 ];
+/**
+ * Install what the gates need.
+ *
+ * A clean checkout has no node_modules anywhere, and a gate that fails
+ * because a dependency is missing is not testing anything — it is
+ * reporting the shape of the machine. The workflow installs mcp, site and
+ * bridge; the clips package was left out, so the suite installs it here.
+ *
+ * It is skipped when the dependencies are already there, so the common
+ * case costs nothing.
+ */
+const PACKAGES = ["mcp", "site", "bridge", "clips"];
+for (const pkg of PACKAGES) {
+  const dir = join(root, pkg);
+  if (existsSync(join(dir, "node_modules"))) continue;
+  if (!existsSync(join(dir, "package.json"))) continue;
+  process.stdout.write(`installing ${pkg} dependencies\n`);
+  const install = spawnSync("npm", ["ci", "--no-audit", "--no-fund"], {
+    cwd: dir, encoding: "utf8", maxBuffer: 8 * 1024 * 1024, shell: false, timeout: 600_000,
+  });
+  if (install.status !== 0) {
+    process.stderr.write(`could not install ${pkg}:\n${(install.stderr ?? "").slice(-800)}\n`);
+  }
+}
+
 const results = [];
 for (const check of checks) {
   const start = Date.now();
@@ -58,6 +90,12 @@ for (const check of checks) {
     tail: details.slice(-1200),
   });
   process.stdout.write(`${ok ? "PASS" : "FAIL"} ${check.name} (${results.at(-1).seconds}s)\n`);
+  /* A failing gate that does not say why is a gate you have to go and
+     reproduce by hand. The last twenty lines are right there. */
+  if (!ok) {
+    const tail = details.trim().split("\n").slice(-20).join("\n");
+    process.stderr.write(`\n--- ${check.name} failed ---\n${tail}\n--- end ${check.name} ---\n\n`);
+  }
 }
 const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout?.trim() ?? "unknown";
 const report = {

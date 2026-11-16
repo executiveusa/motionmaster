@@ -79,6 +79,7 @@ export const TOOL_NAMES = [
   "supervisor_status",
   "start_supervisor",
   "submit_brief",
+  "loop_metrics",
 ] as const;
 
 export function createMcpServer(config: Config): McpServer {

@@ -16,7 +16,7 @@
  * from the brief keeps its default, and every value carries a reason.
  */
 import type { TokenShape } from "./enhancer.js";
-import type { VerdictMap } from "./verdicts.js";
+import { isQualified, type VerdictMap } from "./verdicts.js";
 import type { BlockRoles } from "./roles.js";
 
 /**
@@ -133,9 +133,11 @@ export function matchBlocks(
   const pool = file.blocks.filter((b) => {
     if (options.types && !options.types.includes(b.type)) return false;
     if (options.requireVariables && b.variables.length === 0) return false;
-    // The gate has already measured this block and rejected it. It is not
-    // offered again.
-    if (verdicts[b.id] && !verdicts[b.id].ok) return false;
+    // The gate has already measured this block and the house will not
+    // publish it. It is not offered again. The house is stricter than the
+    // gate on the things it cares about, so the verdict is read through the
+    // house's own policy.
+    if (verdicts[b.id] && !isQualified(verdicts[b.id])) return false;
     return true;
   });
 
@@ -199,8 +201,8 @@ export function matchBlocks(
     ? ordered.filter((entry) => (options.roles?.[entry.block.id] ?? []).includes(options.role!))
     : [];
   const rest = ordered.filter((entry) => !inRole.includes(entry));
-  const measured = rest.filter((entry) => verdicts[entry.block.id]?.ok);
-  const unmeasured = rest.filter((entry) => !verdicts[entry.block.id]?.ok);
+  const measured = rest.filter((entry) => isQualified(verdicts[entry.block.id]));
+  const unmeasured = rest.filter((entry) => !isQualified(verdicts[entry.block.id]));
 
   return [...inRole, ...measured, ...unmeasured].slice(0, options.limit ?? 8);
 }
