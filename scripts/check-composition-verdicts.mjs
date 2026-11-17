@@ -12,6 +12,7 @@
  * The exit code is 0 only when every check passed.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { isQualified } from "../mcp/dist/verdicts.js";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,7 +50,9 @@ if (existsSync(TEMPLATES)) {
   let bad = 0;
   for (const template of local) {
     const key = Object.keys(verdicts).find((k) => k.endsWith(`/${template.source.id}`));
-    if (!key || !verdicts[key]?.ok) bad += 1;
+    /* The house's policy, not the gate's severity column: a scene whose text
+       is 14 px on a phone is not a scene the house ships. */
+    if (!key || !isQualified(verdicts[key])) bad += 1;
   }
   check(bad === 0, `every house scene from a composition passed (${local.length} scenes)`, `${bad} without a passing verdict`);
 }

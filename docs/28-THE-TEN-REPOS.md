@@ -20,7 +20,7 @@ cloned and read. Seven of the ten were new to this repository.
 | 04 | `AgentsORG/design-engineering` | MIT | 1 | Thirteen specialist agents that review UI details, with a benchmark | **Recorded, not vendored** |
 | 05 | `alchaincyf/huashu-design` | MIT | 29,427 | The Huashu design suite: web, app, PPTX, animation, infographic | **Already covered** by the vendored `huashu-art-motion` |
 | 06 | `nateherkai/hyperframes-student-kit` | MIT | 2,819 | Fifteen skills that edit a recording: transcript-driven cuts, silence cutting, a style library, showreels, and a second HyperFrames doctrine with nine palettes | **Vendored as twelve skills** |
-| 07 | `nutllwhy/hyperframes-motion-library` | MIT | 308 | Twenty-seven HyperFrames compositions — charts, numbers, chapter titles, comparisons, timelines — with the director rules that pick one | **Vendored, measured, 24 of 27 passed** |
+| 07 | `nutllwhy/hyperframes-motion-library` | MIT | 308 | Twenty-seven HyperFrames compositions — charts, numbers, chapter titles, comparisons, timelines — with the director rules that pick one | **Vendored, measured, 12 of 27 pass the house's policy** |
 | 08 | `tugrawork-creator/saas-motion-kit` | MIT | 257 | The seven-stage studio process, with the tone matrix, the variety rules, the component forge and the transition atlas | **Vendored as a skill** |
 | 09 | `AbubakrChan/product-launch-motion` | MIT | 460 | A product launch film that comes out of code | **Already vendored** |
 | 10 | `openai/plugins` | *no licence file* | 7,931 | HeyGen's official HyperFrames plugin for Codex — five skills, including `website-to-hyperframes` | **Recorded, not vendored** |

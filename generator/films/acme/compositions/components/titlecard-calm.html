@@ -147,7 +147,6 @@
             var HOLD_START = IN;
             var OUT_START = IN + HOLD;
             var KICKER_IN = 0.5 * phaseScale;
-            var HEADLINE_AT = 0.28 * phaseScale;
             var HEADLINE_IN = 0.72 * phaseScale;
 
             gsap.set(lockup, { opacity: 1, y: "0cqh" });
@@ -160,11 +159,19 @@
               { opacity: 1, y: "0cqh", duration: KICKER_IN, ease: "power2.out" },
               0,
             );
+            /*
+             * The claim is on screen at frame zero.
+             *
+             * Frame zero is the thumbnail on a social player, so the title
+             * cannot be entering from nothing. The entrance is a rise, not a
+             * fade from nothing: it is on screen at 0 s and settles into
+             * place. The kicker, which is not the claim, still fades in.
+             */
             tl.fromTo(
               headline,
-              { opacity: 0, y: "3.2cqh" },
+              { opacity: 1, y: "3.2cqh" },
               { opacity: 1, y: "0cqh", duration: HEADLINE_IN, ease: "power3.out" },
-              HEADLINE_AT,
+              0,
             );
 
             if (HOLD > 0) {

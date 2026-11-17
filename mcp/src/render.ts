@@ -7,6 +7,7 @@
  * a file or it did not.
  */
 import { execFileSync, spawn } from "node:child_process";
+import { houseSeverity } from "./verdicts.js";
 import { constants, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -237,7 +238,17 @@ export function readGateFindings(projectDir: string): GateFinding[] {
           message?: string;
           sourceFile?: string;
         };
-        if (f.severity !== "error") continue;
+        /*
+         * The house's severity, not the gate's.
+         *
+         * The gate rates a finding "error" or "warning". The house is
+         * stricter on the things it cares about — the type floor, the
+         * contrast, the claim on frame zero — and a warning that says the
+         * text is 14 px on a phone is not a warning, it is a film nobody
+         * can read. The policy lives in one place, verdicts.ts.
+         */
+        const severity = houseSeverity(f);
+        if (severity !== "error") continue;
         findings.push({
           code: f.code ?? "unknown",
           severity: "error",

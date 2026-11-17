@@ -25,8 +25,34 @@ mkdirSync(downloads);
 const port = 4175;
 const base = 'http://127.0.0.1:' + port + '/';
 const fixtureKey = 'mm-isolated-browser-render-key';
-const chrome = [process.env.CHROME_BIN, 'google-chrome', 'chromium', 'chromium-browser']
-  .filter(Boolean).find((name) => spawnSync('which', [name], { encoding: 'utf8' }).status === 0);
+/**
+ * Find a browser.
+ *
+ * `which` only searches PATH, so an absolute path in CHROME_BIN was
+ * rejected — and CHROME_BIN is how every CI runner points at its Chrome.
+ */
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_BIN,
+    process.env.HYPERFRAMES_BROWSER_PATH,
+    "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell",
+    "/usr/local/bin/chrome-headless-shell",
+    "google-chrome",
+    "chromium",
+    "chromium-browser",
+    "chrome-headless-shell",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (candidate.includes("/")) {
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
+    const found = spawnSync("which", [candidate], { encoding: "utf8" }).stdout?.trim();
+    if (found) return found;
+  }
+  return null;
+}
+const chrome = findChrome();
 assert.ok(chrome, 'Chromium is required for real-worker browser acceptance');
 for (const name of ['site', 'library', 'plugins']) {
   symlinkSync(join(root, name), join(isolated, name), 'dir');

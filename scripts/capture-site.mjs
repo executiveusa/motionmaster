@@ -9,7 +9,12 @@ const dir = resolve(root, ".completion-proof", "screenshots");
 mkdirSync(dir, { recursive: true });
 const chrome = [
   process.env.CHROME_BIN, "google-chrome", "chromium", "chromium-browser"
-].filter(Boolean).find(command => spawnSync("which", [command], { encoding: "utf8" }).status === 0);
+].filter(Boolean).find((command) => {
+  /* An absolute path is a path; `which` only searches PATH, and CHROME_BIN
+     is how every CI runner points at its Chrome. */
+  if (command.includes("/")) return existsSync(command);
+  return spawnSync("which", [command], { encoding: "utf8" }).status === 0;
+});
 if (!chrome) { console.error("Browser capture unavailable: Chrome/Chromium missing"); process.exit(1); }
 // Serve the real build through the real MCP/HTTP host. The console now sees
 // its agent on the same origin, rather than pointing at a dead static route.

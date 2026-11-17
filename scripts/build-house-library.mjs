@@ -19,6 +19,7 @@
  * template can never be built on something that clips its own text.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { isQualified } from "../mcp/dist/verdicts.js";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -98,7 +99,9 @@ const templates = [];
 
 for (const block of blocks) {
   const verdict = verdicts[block.id];
-  if (!verdict || !verdict.ok) continue;
+  /* The house's policy, not the gate's severity column: a scene whose text
+     is 14 px on a phone is not a scene the house publishes. */
+  if (!isQualified(verdict)) continue;
 
   const roles = roleMap[block.id];
   if (!roles || !roles.length) continue;
@@ -170,7 +173,7 @@ const compositionVerdicts = existsSync(compositionVerdictsPath)
   : {};
 
 for (const verdict of Object.values(compositionVerdicts)) {
-  if (!verdict?.ok) continue;
+  if (!isQualified(verdict)) continue;
   const id = verdict.block;
   const directory = join(ROOT, "studio", "compositions", verdict.set, id);
   const file = ["index.html", "block.html"].map((n) => join(directory, n)).find((p) => existsSync(p));
