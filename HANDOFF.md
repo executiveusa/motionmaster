@@ -410,6 +410,54 @@ file records measurements, and `mcp/src/verdicts.ts` holds the house policy
 in one place. The frame-zero rule stays on the artifact and not on the
 pool: a block is mounted, and the mount is what puts the claim on screen.
 
+### The gate is hard now (2026-11-16, after the merge)
+
+The founder asked for two things to be fixed: the render gate did not
+enforce the house's own taste rules, and the deployed site was stale. Both
+are done. The gate was the bigger job than it looked.
+
+**The gate's severity column is not the house's opinion.** The gate rates a
+finding "error" or "warning". The house has rules of its own — the type
+floor, the contrast, a line a reader can read, media with an id, the claim
+on frame zero — and it is stricter than the gate on those. The gate calls
+them warnings. A warning that says the text is 14 px on a phone is not a
+warning.
+
+So the house now reads every gate report through its own policy, in one
+place: `mcp/src/verdicts.ts`. `houseSeverity()` decides a finding's
+severity; `isQualified()` decides whether a block or a scene may be used.
+The render gate fails on the house's severity, not the gate's.
+
+**The frame-zero rule is different for an artifact than for a part.** A
+finished film must carry its claim on frame zero, because frame zero is the
+thumbnail on a social player. A block gets mounted into a composition, and
+the mount is what puts the claim on screen — so a block that enters from
+nothing is not a broken block. A house scene is the same. Getting this
+wrong cost ten of the twelve blocks that could carry editable text, and
+left the matcher answering every brief with the same block.
+
+**The house's own work failed the gate, and it was fixed rather than
+excused.** The shipped ACME film had a blank first frame and two labels at
+24 px and 26 px on a 1080 frame. The claim now goes on screen at frame
+zero (the entrance is a rise, not a fade from nothing), the labels are
+28 px and above, and the film was re-rendered: **15.0 s, 1920×1080, 30 fps,
+0 errors, 0 warnings.** Frame zero is the title.
+
+**The house library is now 69 templates, not 99.** It is built from what
+the house will publish, not from what the gate was happy with: 53 registry
+blocks and 16 vendored compositions. Every role still has cover (data 13,
+typography 18, opening 6, and so on). The thirty that dropped are
+third-party work the house does not fork — their type was under the floor
+or their contrast was under the line, and the house's pattern with a
+vendored composition is *vendor, measure, filter*, not *vendor, patch, and
+pretend*.
+
+**Two more real defects found on the way.** The smoke scripts looked for a
+browser with `which`, which only searches PATH — so `CHROME_BIN`, which is
+how every CI runner points at its Chrome, was rejected. And the served
+site is `site/dist`, so a proof that drives the browser has to run against
+a **rebuilt** site or it tests the last build.
+
 ### Verification — all green as of `0215adc`
 
 | check | result |

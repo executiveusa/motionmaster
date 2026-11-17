@@ -45,6 +45,16 @@ nothing is not a broken block. Refusing them took away ten of the twelve
 blocks that could carry editable text and left the matcher answering every
 brief with the same block. The rule stays on the artifact.
 
+**The house library is built from what the house will publish, not from
+what the gate was happy with.** 53 registry blocks and 16 vendored
+compositions — 69 templates, down from 99. Every role still has cover:
+ui-entrance 39, rhythm 31, interaction 29, outro 27, camera 18,
+typography 18, data 13, effects 10, transition 7, opening 6. The thirty
+that dropped are third-party work the house does not fork: their type was
+under the floor or their contrast was under the line, and the house's
+pattern with a vendored composition is *vendor, measure, filter* — not
+*vendor, patch, and pretend*.
+
 **Re-measured in full on 2026-11-16.** The first measurement had two
 faults: the verdict came from the CLI's exit code rather than the gate's
 report, so a block could be recorded as a pass while its report held an

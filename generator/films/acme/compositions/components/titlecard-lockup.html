@@ -146,7 +146,9 @@
             /* Same fg/bg-derived ink as the kicker: contrast-safe on any host. */
             color: color-mix(in srgb, var(--fg, #f8fafc) 62%, var(--bg, #0b0c0e));
             font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
-            font-size: 2.2cqmin;
+            /* The house floor is 2.6% of the short side — 28 px on a 1080
+               frame. 2.2cqmin was 24 px: text a phone cannot read. */
+            font-size: 2.7cqmin;
             font-weight: 600;
             line-height: 1.4;
             letter-spacing: 0.34em;

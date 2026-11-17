@@ -126,7 +126,9 @@
           .pbr-detail-label,
           .pbr-support-label {
             color: var(--muted, #94a3b8);
-            font-size: 1.35cqw;
+            /* The house floor is 2.6% of the short side — 28 px on a 1080
+               frame. 1.35cqw was 26 px: text a phone cannot read. */
+            font-size: 1.5cqw;
             font-weight: 680;
             line-height: 1;
             letter-spacing: 0.1em;

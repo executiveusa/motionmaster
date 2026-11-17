@@ -68,6 +68,42 @@ export const HOUSE_DISQUALIFYING = new Set([
 export const FRAME_ZERO = "first_frame_empty";
 
 /**
+ * One finding as the gate wrote it.
+ *
+ * Only the fields the house needs to make a decision.
+ */
+export interface RawGateFinding {
+  code?: string;
+  severity?: string;
+  message?: string;
+  selector?: string;
+  sourceFile?: string;
+  time?: number;
+}
+
+/**
+ * The house's severity for one finding.
+ *
+ * The gate has a severity column, and the house has its own opinion about
+ * the findings it cares about. A gate warning that says the text is 14 px
+ * on a phone is a failure here, not a note.
+ *
+ * The frame-zero rule is the one that differs between a block and an
+ * artifact, so it is handled separately: a finished film must carry its
+ * claim on frame zero, because frame zero is the thumbnail on a social
+ * player, and the gate measures exactly that — the frame 0 of the file it
+ * is checking.
+ */
+export function houseSeverity(finding: RawGateFinding): "error" | "warning" | "info" {
+  if (finding.severity === "error") return "error";
+  const code = (finding.code ?? "").trim();
+  if (HOUSE_DISQUALIFYING.has(code)) return "error";
+  if (code === FRAME_ZERO) return "error";
+  if (finding.severity === "info") return "info";
+  return "warning";
+}
+
+/**
  * Whether a verdict means the block may be used.
  *
  * A block qualifies when the gate found nothing at all — no errors, and no

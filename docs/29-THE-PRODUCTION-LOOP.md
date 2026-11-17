@@ -207,6 +207,29 @@ A handoff is only useful if "finished" is unambiguous.
 - Every piece of reading type clears 2.6% of the short side.
 - The preflight is clean for the placement it is for.
 
+**And the gate is read through the house's policy, not its severity
+column.** The gate rates a finding "error" or "warning". The house has
+rules of its own, and it is stricter than the gate on the things it cares
+about: the type floor, the contrast, a line a reader can read, media with
+an id, and the claim on frame zero. The gate calls those warnings; a
+warning that says the text is 14 px on a phone is not a warning, it is a
+film nobody can read. So the render gate fails on them.
+
+That policy lives in one place — `mcp/src/verdicts.ts` — and it applies
+wherever the house decides what it will publish:
+
+| where | what the frame-zero rule means |
+| --- | --- |
+| **a finished artifact** — a film, an ad, a project render | frame zero is the thumbnail, so it must carry the claim. A failure. |
+| **a block** — a reusable composition from the registry | it gets mounted, and the mount is what puts the claim on screen. Not a failure. |
+| **a house scene** — a vendored composition | the same. It enters from nothing and that is fine. |
+
+The house's own ACME film failed this once: its first frame was the
+background, and two labels were 24 px and 26 px on a 1080 frame. It was
+re-measured, the claim was put on screen at frame zero, the labels were
+raised to 28 px and above, and the film was re-rendered. The gate now says
+**0 errors, 0 warnings** on it.
+
 ### 3.2 A campaign is done
 
 - Every deliverable in the brief exists and meets 3.1.

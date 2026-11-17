@@ -71,6 +71,24 @@ for (const pkg of PACKAGES) {
   }
 }
 
+/*
+ * The mcp package is built before anything else.
+ *
+ * Several scripts import its compiled output — the house's verdict policy
+ * lives in mcp/src/verdicts.ts and is compiled to mcp/dist/verdicts.js. That
+ * is a build output, so it does not exist in a clean checkout, and the gates
+ * that use it ran before the build. A gate that fails because a dependency
+ * has not been compiled is not testing anything.
+ */
+{
+  const build = spawnSync("npm", ["run", "build"], {
+    cwd: join(root, "mcp"), encoding: "utf8", maxBuffer: 8 * 1024 * 1024, shell: false, timeout: 300_000,
+  });
+  if (build.status !== 0) {
+    process.stderr.write(`could not build mcp:\n${(build.stderr ?? "").slice(-800)}\n`);
+  }
+}
+
 const results = [];
 for (const check of checks) {
   const start = Date.now();

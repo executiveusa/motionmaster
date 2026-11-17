@@ -118,6 +118,11 @@ const PROBE = `(() => {
 })()`;
 
 const WORK = mkdtempSync(join(tmpdir(), "mm-loop-panel-"));
+/* The browser's own profile. It has to live outside the try, so the finally
+   can clean it up. */
+const profile = mkdtempSync(join(tmpdir(), "mm-panel-chrome-"));
+/* The browser, so the finally can stop it before its profile is removed. */
+let chrome = null;
 
 try {
   if (!await waitFor(`http://127.0.0.1:${PORT}/`)) {
@@ -127,20 +132,29 @@ try {
   }
 
   /* The house's own browser harness: raw CDP, no dependency. */
-  const chrome = spawn(CHROME, [
+  chrome = spawn(CHROME, [
     "--remote-debugging-port=9333",
     "--remote-allow-origins=*",
     "--headless",
     "--no-sandbox",
+    "--disable-gpu",
     "--disable-dev-shm-usage",
     "--ignore-certificate-errors",
     "--disable-features=LocalNetworkAccessChecks",
+    /* Its own profile, so a browser left over from an earlier step cannot
+       hold the lock and keep this one from starting. */
+    "--user-data-dir=" + profile,
     "about:blank",
   ], { stdio: ["ignore", "ignore", "pipe"] });
-  chrome.stderr.on("data", () => {});
+  /* Keep what the browser said. "The browser did not start" without the
+     reason is a gate you have to reproduce by hand. */
+  let chromeSaid = "";
+  chrome.stderr.on("data", (chunk) => { chromeSaid = (chromeSaid + chunk).slice(-1500); });
 
   let list = null;
-  for (let i = 0; i < 40; i += 1) {
+  /* A CI runner is a shared machine and can be slow; twelve seconds was a
+     race, not a wait. */
+  for (let i = 0; i < 150; i += 1) {
     try {
       const response = await fetch("http://127.0.0.1:9333/json/list");
       const targets = await response.json();
@@ -149,9 +163,11 @@ try {
     } catch {
       /* Not up yet. */
     }
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 400));
   }
-  if (!list) throw new Error("The browser did not start.");
+  if (!list) {
+    throw new Error("The browser did not start. " + (chromeSaid || "(it said nothing)"));
+  }
 
   const ws = new WebSocket(list.webSocketDebuggerUrl);
   let id = 0;
@@ -237,7 +253,17 @@ try {
   chrome.kill("SIGTERM");
 } finally {
   preview.kill("SIGTERM");
+  /* The browser has to be gone before its profile is removed — it is still
+     writing to it, and a half-written profile is an ENOTEMPTY. */
+  try { chrome?.kill("SIGTERM"); } catch { /* already gone */ }
+  await new Promise((r) => setTimeout(r, 300));
   rmSync(WORK, { recursive: true, force: true });
+  /* A leftover profile in the temp directory is not a failed gate. */
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  } catch {
+    /* the operating system will clear the temp directory */
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
