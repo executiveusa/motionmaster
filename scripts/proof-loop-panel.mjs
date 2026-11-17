@@ -121,6 +121,8 @@ const WORK = mkdtempSync(join(tmpdir(), "mm-loop-panel-"));
 /* The browser's own profile. It has to live outside the try, so the finally
    can clean it up. */
 const profile = mkdtempSync(join(tmpdir(), "mm-panel-chrome-"));
+/* The browser, so the finally can stop it before its profile is removed. */
+let chrome = null;
 
 try {
   if (!await waitFor(`http://127.0.0.1:${PORT}/`)) {
@@ -130,7 +132,7 @@ try {
   }
 
   /* The house's own browser harness: raw CDP, no dependency. */
-  const chrome = spawn(CHROME, [
+  chrome = spawn(CHROME, [
     "--remote-debugging-port=9333",
     "--remote-allow-origins=*",
     "--headless",
@@ -251,8 +253,17 @@ try {
   chrome.kill("SIGTERM");
 } finally {
   preview.kill("SIGTERM");
+  /* The browser has to be gone before its profile is removed — it is still
+     writing to it, and a half-written profile is an ENOTEMPTY. */
+  try { chrome?.kill("SIGTERM"); } catch { /* already gone */ }
+  await new Promise((r) => setTimeout(r, 300));
   rmSync(WORK, { recursive: true, force: true });
-  rmSync(profile, { recursive: true, force: true });
+  /* A leftover profile in the temp directory is not a failed gate. */
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  } catch {
+    /* the operating system will clear the temp directory */
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
