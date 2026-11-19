@@ -35,6 +35,12 @@ const checks = [
   { name: "site-build-content-gate", cwd: "site", command: "npm", args: ["run", "build"], timeoutMs: 600_000 },
   ...(quick ? [] : [
     { name: "loop-panel", cwd: ".", command: "node", args: ["scripts/proof-loop-panel.mjs"], timeoutMs: 420_000 },
+    /* The page itself, in a real browser: the collage plays, the film
+       plays, the sound shelf has sounds, the clips carry their prompts,
+       every touch target is big enough to hit, and no price is on the
+       page. This proof went stale once because nothing ran it — it was
+       still asking about a design the site had been rebuilt without. */
+    { name: "deploy-proof", cwd: ".", command: "node", args: ["scripts/proof-deploy.mjs"], timeoutMs: 420_000 },
   ]),
   ...(quick ? [] : [
     { name: "loop-remediation", cwd: ".", command: "node", args: ["scripts/proof-remediation.mjs"], timeoutMs: 900_000 },

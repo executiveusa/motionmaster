@@ -24,6 +24,8 @@ const strings: Record<string, [string, string]> = {
   privateSale: ['Private preview · Not on sale.', 'Vista previa privada · No está a la venta.'],
   consoleTitle: ['Create from an example or a brief.', 'Crea desde un ejemplo o una descripción.'],
   libraryTitle: ['Prompt & skill library.', 'Biblioteca de prompts y skills.'],
+  soundTitle: ['Every sound, and where it belongs.', 'Cada sonido, y dónde pertenece.'],
+  soundLede: ['Sound made in code, and open-licensed recordings, on one shelf with one vocabulary. Each one says what it sounds like and where it belongs.', 'Sonidos hechos en código y grabaciones con licencia abierta, en una estantería con un solo vocabulario. Cada uno dice cómo suena y dónde pertenece.'],
   signInTitle: ['Connect your agent to create videos', 'Conecta tu agente para crear videos'],
   signInButton: ['Connect OpenRouter', 'Conectar OpenRouter'],
   useAgent: ['Connect', 'Conectar'],

@@ -199,7 +199,30 @@ try {
   await send("Page.enable");
   await send("Runtime.enable");
   await send("Page.navigate", { url: `http://127.0.0.1:${PORT}/` });
-  await new Promise((r) => setTimeout(r, 2500));
+
+  /*
+   * Wait for the condition, not for a duration.
+   *
+   * The panel has to find out that the studio is not running before it can
+   * say so, and that is a request to an agent that is not there. On a
+   * loaded machine that takes longer than a fixed wait allows, and the
+   * proof then reads an empty status and calls it a failure.
+   */
+  const until = async (expression, label, timeout = 30000) => {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      if (await evaluate(expression)) return true;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    throw new Error("the panel never settled: " + label);
+  };
+  await until(
+    `(() => {
+       const status = document.querySelector('[data-loop-status]');
+       return Boolean(status && status.textContent.trim().length > 0);
+     })()`,
+    'the panel said nothing about the studio',
+  );
 
   const state = await evaluate(PROBE);
   check("the panel is on the page", state.hasPanel === true, JSON.stringify(state));
