@@ -191,6 +191,24 @@ await send('Emulation.setEmulatedMedia', {
 await send('Page.navigate', { url: URL_ });
 await sleep(6000);
 
+/*
+ * Scroll the way a wheel arrives, and keep up with a page that is still
+ * growing.
+ *
+ * The document is taller after the lazy sections load — the library browser
+ * renders a thousand items and the sound shelf renders its rows — so a
+ * position computed before that happens points at the wrong place. A
+ * visitor who scrolls to a section and does not find it scrolls again.
+ */
+const scrollTo = async (selector) =>
+  evaluate(`(() => {
+    const root = document.querySelector(${JSON.stringify(selector)});
+    if (!root) return false;
+    const y = root.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: y, behavior: 'instant' });
+    return true;
+  })()`);
+
 const results = [];
 const check = (name, ok, detail = '') => {
   results.push({ name, ok, detail });
@@ -280,22 +298,64 @@ check(
 // 6. the sound shelf — wait for it to load, not for a duration. The shelf
 // fetches its index when it comes into view, and a loaded machine is
 // slower than a fixed wait.
-await evaluate(`document.querySelector('#sound')?.scrollIntoView({block:'start'})`);
-const until = async (expression, label, timeout = 30000) => {
+const until = async (expression, label, selector = '', timeout = 30000) => {
   const end = Date.now() + timeout;
   while (Date.now() < end) {
     if (await evaluate(expression)) return true;
+    /* The page grows while it loads, so the section moves. Keep the
+       scroll on it, the way a visitor would. */
+    if (selector) await scrollTo(selector);
     await sleep(300);
   }
   throw new Error('the page never settled: ' + label);
 };
-await until(
-  `(() => {
-     const kinds = document.querySelector('[data-sfx-kinds]');
-     return Boolean(kinds && kinds.children.length > 0);
-   })()`,
-  'the sound shelf loaded no kinds',
-);
+/*
+ * When it does not settle, say what the page is actually doing — the
+ * section's position, what the shelf said for itself, and what the
+ * browser makes of the shelf's own index. A proof that only says "no
+ * kinds" makes somebody else do the archaeology.
+ */
+const soundDiagnosis = await evaluate(`(async () => {
+  const root = document.querySelector('[data-sound]');
+  const kinds = document.querySelector('[data-sfx-kinds]');
+  const note = document.querySelector('[data-sfx-note]');
+  const box = root ? root.getBoundingClientRect() : null;
+  let fetched = 'not tried';
+  try {
+    const response = await fetch('/sfx.json');
+    fetched = response.status + ' ' + (response.headers.get('content-type') || 'no type');
+    if (response.ok) {
+      const data = await response.json();
+      fetched += ' · ' + (Array.isArray(data.kinds) ? data.kinds.length : 'no kinds') + ' kinds';
+    }
+  } catch (error) {
+    fetched = 'fetch failed: ' + String(error && error.message);
+  }
+  return JSON.stringify({
+    section: Boolean(root),
+    inView: box ? (box.top < 900 && box.bottom > 0) : false,
+    top: box ? Math.round(box.top) : null,
+    kinds: kinds ? kinds.children.length : -1,
+    note: note ? note.textContent.trim().slice(0, 120) : '',
+    fetched,
+    scrollY: Math.round(window.scrollY),
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  });
+})()`);
+try {
+  await until(
+    `(() => {
+       const kinds = document.querySelector('[data-sfx-kinds]');
+       return Boolean(kinds && kinds.children.length > 0);
+     })()`,
+    'the sound shelf loaded no kinds — ' + soundDiagnosis,
+    '#sound',
+  );
+} catch (error) {
+  console.error(String(error.message));
+  check('the sound shelf has kinds and sounds', false, soundDiagnosis);
+  throw error;
+}
 const sound = await evaluate(`(() => {
   const s = document.querySelector('#sound');
   if (!s) return 'no shelf';
@@ -308,9 +368,17 @@ const sound = await evaluate(`(() => {
 })()`);
 check('the sound shelf has kinds and sounds', /"kinds":[1-9]/.test(sound) && /"listChildren":[1-9]/.test(sound), sound);
 
-// 7. the library browser
-await evaluate(`document.querySelector('#library')?.scrollIntoView({block:'start'})`);
-await sleep(3000);
+// 7. the library browser — same as the shelf: scroll, and wait for the
+// items rather than for a number of milliseconds.
+await scrollTo('#library');
+await until(
+  `(() => {
+     const list = document.querySelector('[data-library-items]');
+     return Boolean(list && list.children.length > 0);
+   })()`,
+  'the library browser loaded no items',
+  '#library',
+);
 const library = await evaluate(`(() => {
   const list = document.querySelector('[data-library-items]');
   const count = document.querySelector('[data-library-count]');
