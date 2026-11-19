@@ -277,9 +277,25 @@ check(
   `${clipList.length} clips`,
 );
 
-// 6. the sound shelf
+// 6. the sound shelf — wait for it to load, not for a duration. The shelf
+// fetches its index when it comes into view, and a loaded machine is
+// slower than a fixed wait.
 await evaluate(`document.querySelector('#sound')?.scrollIntoView({block:'start'})`);
-await sleep(2500);
+const until = async (expression, label, timeout = 30000) => {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    if (await evaluate(expression)) return true;
+    await sleep(300);
+  }
+  throw new Error('the page never settled: ' + label);
+};
+await until(
+  `(() => {
+     const kinds = document.querySelector('[data-sfx-kinds]');
+     return Boolean(kinds && kinds.children.length > 0);
+   })()`,
+  'the sound shelf loaded no kinds',
+);
 const sound = await evaluate(`(() => {
   const s = document.querySelector('#sound');
   if (!s) return 'no shelf';
