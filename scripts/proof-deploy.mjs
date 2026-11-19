@@ -403,4 +403,5 @@ try {
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length} passed, ${failed.length} failed`);
-if (failed.length) process.exit(1);
+/* The preview server keeps the event loop alive. The checks are done. */
+process.exit(failed.length ? 1 : 0);
