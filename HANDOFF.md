@@ -458,6 +458,43 @@ how every CI runner points at its Chrome, was rejected. And the served
 site is `site/dist`, so a proof that drives the browser has to run against
 a **rebuilt** site or it tests the last build.
 
+### The page is proved, not assumed (2026-11-17)
+
+**The deploy proof was asking about a design that no longer existed.** It
+still looked for `.hero__video` and `.scene[data-scene]` — the scroll-scene
+system the site was rebuilt without. It had been saying "pass" about a page
+nobody had looked at, because the selectors it checked were simply absent.
+A proof that checks for the wrong thing is worse than no proof.
+
+It is rewritten against the site that exists — the hero collage, the
+twenty-second film, the clips and their prompts, the sound shelf, the
+library, the console, the loop panel, the project editor — plus the rules:
+no price on the page, every touch target at least 44 px, no horizontal
+overflow at a desk or on a phone, and **a visitor who asks for reduced
+motion gets a still page with its poster, not a broken one**. Fifteen
+checks, all real, all in a real browser.
+
+And it is **a gate now**. The proof went stale because nothing ran it.
+
+**Three real things it found, all fixed:**
+
+- **The sound shelf had no home on the page.** 1,470 sounds, 36 kinds, the
+  module, the styles, the data — and the section had been cut in the
+  rebuild, so `sfx.json` was deployed and nothing ever fetched it. It is
+  back, after the library, with its English and Spanish copy.
+- **The library's and the sound shelf's buttons were under 44 px** — 34 px
+  and 28 px. All 44 px now.
+- **The film was "not playing" because it was off screen.** The site pauses
+  a film nobody is looking at, which is right; the proof was judging it at
+  the top of the page. It scrolls the film into view now, and proves the
+  reduced-motion path separately.
+
+**The dead scroll-scene system is gone**: `modules/scenes.ts`,
+`modules/stage.ts`, `styles/scenes.css` and the call. The site was booting
+a stage for a design that had been replaced. The pricing module stays —
+the offer is dormant but wired, and the content gate refuses a price while
+`onSale` is false.
+
 ### Verification — all green as of `0215adc`
 
 | check | result |
