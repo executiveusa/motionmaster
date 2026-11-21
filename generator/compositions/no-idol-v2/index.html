@@ -1,0 +1,65 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Anton;src:url(./fonts/Anton-Regular.ttf)}
+html,body{margin:0;background:#000}
+#root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:Anton,sans-serif}
+.wash{position:absolute;inset:0;opacity:0}
+#wb{background:radial-gradient(circle at 50% 45%,#1a6bff 0%,#0a1f8f 45%,#000 85%)}
+#wr{background:radial-gradient(circle at 50% 45%,#ff2a3c 0%,#8f0a1a 45%,#000 85%)}
+#wg{background:radial-gradient(circle at 50% 45%,#5a3c00 0%,#1a1000 50%,#000 85%)}
+.rays{position:absolute;left:-460px;top:-60px;width:2000px;height:2000px;opacity:0;
+ background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.14) 0deg 4deg,rgba(255,255,255,0) 4deg 15deg)}
+.t{position:absolute;left:0;width:1080px;text-align:center;line-height:.88;text-transform:uppercase;font-size:250px;letter-spacing:4px}
+.chrome{background:linear-gradient(180deg,#ffffff 0%,#dfe6ee 30%,#6c7684 48%,#f4f7fb 52%,#a9b3c0 75%,#ffffff 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 10px 0 rgba(0,0,0,.55))}
+.gold{background:linear-gradient(180deg,#fff6c8 0%,#ffd23a 35%,#8a5a00 50%,#ffe27a 55%,#c98a00 80%,#fff2b0 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 10px 0 rgba(0,0,0,.55))}
+#a1{top:610px}#a2{top:860px}
+#sweep{position:absolute;top:560px;left:-600px;width:300px;height:620px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.75),rgba(255,255,255,0));transform:skewX(-20deg);mix-blend-mode:overlay}
+.bar{position:absolute;left:0;width:1080px;height:300px;background:#000}
+#top{top:0}#bot{bottom:0}
+#sub{position:absolute;top:1170px;left:0;width:1080px;text-align:center;color:#fff;font-size:46px;letter-spacing:22px;opacity:0}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+</style></head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="2.6" data-width="1080" data-height="1920">
+  <div id="wb" class="wash"></div><div id="wr" class="wash"></div><div id="wg" class="wash"></div>
+  <div id="rays" class="rays"></div>
+  <div id="a1" class="t chrome">No Idol.</div>
+  <div id="a2" class="t gold">No Rival.</div>
+  <div id="sweep"></div>
+  <div id="sub">POSTATEES</div>
+  <div id="top" class="bar"></div><div id="bot" class="bar"></div>
+  <div id="flash"></div>
+  <audio id="hit" src="./assets/hit.mp3" data-start="0" data-duration="2.6"></audio>
+  <audio id="kick" src="./assets/cut_hit_kick.mp3" data-start="0.63" data-duration="1"></audio>
+  <audio id="blast" src="./assets/impact_blast.mp3" data-start="1.26" data-duration="1.3"></audio>
+</div>
+<script src="./gsap-3.14.2.min.js"></script>
+<script>
+const B=0.63; const tl=gsap.timeline({paused:true});
+tl.set("#a2",{opacity:0},0).set("#top",{yPercent:-100},0).set("#bot",{yPercent:100},0);
+// beat 1: blue wash + chrome NO IDOL
+tl.set("#wb",{opacity:1},0).set("#rays",{opacity:1},0);
+tl.to("#rays",{rotation:30,duration:2.6,ease:"none"},0);
+tl.fromTo("#a1",{scale:1.6},{scale:1,duration:.2,ease:"power4.out"},0);
+tl.fromTo("#root",{y:0},{y:16,duration:.04,yoyo:true,repeat:5,ease:"none"},0);
+tl.fromTo("#sweep",{x:0},{x:1900,duration:.5,ease:"power2.inOut"},.15);
+// beat 2: flash, red wash, gold NO RIVAL
+tl.to("#flash",{opacity:1,duration:.01},B-.02).to("#flash",{opacity:0,duration:.08},B+.02);
+tl.set("#wb",{opacity:0},B).set("#wr",{opacity:1},B).set("#a2",{opacity:1},B);
+tl.fromTo("#a2",{scale:1.7},{scale:1,duration:.2,ease:"power4.out"},B);
+tl.fromTo("#root",{x:0},{x:14,duration:.035,yoyo:true,repeat:5,ease:"none"},B);
+tl.fromTo("#sweep",{x:0},{x:1900,duration:.5,ease:"power2.inOut"},B+.15);
+// beat 3: gold wash, letterbox in, sub
+tl.to("#flash",{opacity:1,duration:.01},2*B-.02).to("#flash",{opacity:0,duration:.1},2*B+.02);
+tl.set("#wr",{opacity:0},2*B).set("#wg",{opacity:1},2*B);
+tl.to(["#top","#bot"],{yPercent:0,duration:.25,ease:"power3.out"},2*B);
+tl.to("#sub",{opacity:1,duration:.2},2*B+.1);
+tl.to(["#a1","#a2"],{scale:1.06,duration:1.3,ease:"none"},2*B);
+// beat 4: strobe alternating washes, out to white
+for(let k=0;k<4;k++){tl.set("#wg",{opacity:k%2?1:0},3*B+k*.08).set("#wb",{opacity:k%2?0:1},3*B+k*.08);}
+tl.to("#flash",{opacity:1,duration:.04},2.52);
+window.__timelines=window.__timelines||{};window.__timelines["main"]=tl;tl.seek(0);
+</script></body></html>
