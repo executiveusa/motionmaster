@@ -458,6 +458,48 @@ how every CI runner points at its Chrome, was rejected. And the served
 site is `site/dist`, so a proof that drives the browser has to run against
 a **rebuilt** site or it tests the last build.
 
+### It is live (2026-11-19)
+
+**https://h5coxj8717ke7.space.mcode.io** — the built site, deployed from
+`site/dist` on merge commit `aa73e2a`. It is on the open Internet: anyone
+with the link can see it. The old deployment
+(`20vyen0s3mpc9.space.minimax.io`) is stale and should be forgotten — it
+still carries the pricing section the founder took down.
+
+The live page passes the same proof as the local build: **15 checks, 0
+failures**, in a real browser, against the deployed URL and not a preview
+of it. The sound shelf is on it (1,470 sounds, 36 kinds, every one with
+its licence), the collage plays, the twenty-second film plays, the
+clips carry their real prompts, there is no price on the page, every
+touch target is at least 44px, and a visitor who asks for reduced motion
+gets a still page with its poster.
+
+### The ad has a voice now (2026-11-19)
+
+`scripts/preflight-ad.mjs` had been reporting one thing against the Meta
+ad for weeks: **no audio track**. Meta says sound on an ad is worth more
+than sound off it, and the house already owned 1,470 sounds with their
+licences — so the ad was shipping silent for no reason.
+
+`scripts/sound-ad.mjs` is the fix, and it is a script rather than a
+one-off because the next ad needs it too. A plan is a list of moments: a
+sound, when it starts, how loud it is, and why. The ACME ad opens with a
+low swell, the claim arrives on a soft bloom, one drop of coffee lands at
+the product moment, and a small pop closes it. Four sounds, all MIT, all
+from Leon Lin's earshot, all written into `ad-sound.json` beside the
+file.
+
+**The picture is never touched.** The video stream is copied, so the
+render that passed the house gate is the render that ships — the MD5 of
+the video stream is identical before and after.
+
+The mix is measured, not assumed: **-16.02 LUFS integrated, -1.50 dB
+true peak**, which is where a social ad is played. The first attempt came
+out at -33 LUFS, which is quiet enough that nobody would hear it, and the
+first measurement said "?" because loudnorm prints on stderr. Both fixed.
+
+Preflight on the finished file: **PASS**. The `no_audio` note is gone.
+
 ### The page is proved, not assumed (2026-11-17)
 
 **The deploy proof was asking about a design that no longer existed.** It
