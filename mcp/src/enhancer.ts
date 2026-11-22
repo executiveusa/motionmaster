@@ -45,6 +45,22 @@ export interface EnhanceOptions {
   extraConstraints?: string[];
   /** Return this many alternative style recipes. */
   alternatives?: number;
+  /**
+   * An existing shot plan to write into the brief.
+   *
+   * When the caller has already run the shot planner, the enhancer must not
+   * guess a second shape for the film. It writes the plan down and leaves
+   * the arrangement alone.
+   */
+  shotPlan?: {
+    id: string;
+    role: string | null;
+    summary: string;
+    duration: string;
+    durationSeconds: number | null;
+    energy?: string;
+    reason?: string;
+  }[];
 }
 
 export interface Check {
@@ -235,6 +251,22 @@ export function enhance(
   );
   if (!original.length) {
     assumptions.push("Subject is a placeholder — replace it before rendering.");
+  }
+
+  if (options.shotPlan && options.shotPlan.length) {
+    const lines = options.shotPlan.map((shot, index) => {
+      const length = shot.durationSeconds !== null ? ` (${shot.durationSeconds}s)` : "";
+      const role = shot.role ? `${shot.role}: ` : "";
+      return `${index + 1}. ${role}${shot.id}${length} — ${shot.summary}`;
+    });
+    push(
+      "SHOTS",
+      lines.join("\n"),
+      "A shot plan was supplied, so the film has a shape before it has code. Build the frames in this order and do not add shots of your own.",
+    );
+    assumptions.push(
+      `The shot plan was supplied (${options.shotPlan.length} shots) and is carried through verbatim.`,
+    );
   }
 
   if (!has(original, RE.style)) {

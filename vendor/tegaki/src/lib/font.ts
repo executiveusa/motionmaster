@@ -1,0 +1,103 @@
+import type { TegakiBundle } from '../types.ts';
+import { toCssFeatureSettings } from './features.ts';
+
+/**
+ * One registered face per font URL, with the `font-feature-settings`,
+ * `unicode-range` and weight it was made with: the same file under other
+ * settings (a feature toggled off) is a different face.
+ */
+interface CachedFace {
+  settings: string;
+  unicodeRange: string | undefined;
+  weight: string;
+  pending: Promise<void>;
+  /** The loaded face, once registered. */
+  face: FontFace | null;
+  /** The face this one takes over from — removed once this one is added. */
+  replaces: FontFace | null;
+}
+const fontFaces = new Map<string, CachedFace>();
+
+/**
+ * Ensures the bundle's font face is loaded and available for rendering.
+ * Resolves immediately if the font is already loaded.
+ */
+export async function ensureFontFace(bundle: TegakiBundle): Promise<void> {
+  await ensureFont(bundle.family, bundle.fontUrl, bundle.features, bundle.extraFontUrls, bundle.extraFontRanges, bundle.weight);
+}
+
+export function ensureFont(
+  family: string,
+  url: string,
+  features?: readonly string[],
+  extraFontUrls?: readonly string[],
+  extraFontRanges?: readonly string[],
+  weight = 400,
+): Promise<void> | null {
+  if (typeof document === 'undefined') return Promise.resolve();
+  // Register every subset URL under the same family name. Browsers union
+  // glyph coverage across same-family faces via cmap, so Arabic text falls
+  // through to an Arabic subset even though the primary face is Latin-only.
+  // Each extra face is limited to the characters the shaper draws from it
+  // (see `TegakiBundle.extraFontRanges`): overlapping faces are tried
+  // last-first, so a character several subsets share would otherwise come
+  // from a different file than its strokes. One that adds nothing is left out.
+  const faces = [
+    { url, unicodeRange: undefined as string | undefined },
+    ...(extraFontUrls ?? []).map((u, i) => ({ url: u, unicodeRange: extraFontRanges?.[i] })),
+  ].filter((f) => f.unicodeRange !== '');
+  // Align DOM shaping with the bundle. Shaper-managed features (Arabic
+  // init/medi/fina/isol, rlig) are *omitted* from font-feature-settings
+  // because explicitly enabling them suppresses the browser's contextual
+  // positional assignment (every glyph would end up the same variant).
+  // Legacy bundles without any declared features fall back to disabling
+  // liga/calt so 1:1 char-to-glyph fallback holds.
+  const featureSettings = toCssFeatureSettings(features ?? []);
+  // Each face is registered at its weight, so the browser picks the one the
+  // engine draws the strokes of (see `matchFontWeight`).
+  const fontWeight = String(weight);
+  const same = (cached: CachedFace | undefined, unicodeRange: string | undefined) =>
+    cached?.settings === featureSettings && cached.unicodeRange === unicodeRange && cached.weight === fontWeight;
+  if (faces.every((f) => same(fontFaces.get(f.url), f.unicodeRange) && fontFaces.get(f.url)?.face)) return null;
+  const pending = faces.map(({ url: u, unicodeRange }) => {
+    const cached = fontFaces.get(u);
+    if (same(cached, unicodeRange)) return cached!.pending;
+    const entry: CachedFace = {
+      settings: featureSettings,
+      unicodeRange,
+      weight: fontWeight,
+      pending: Promise.resolve(),
+      face: null,
+      replaces: cached ? (cached.face ?? cached.replaces) : null,
+    };
+    entry.pending = new FontFace(family, `url(${u})`, { featureSettings, weight: fontWeight, ...(unicodeRange ? { unicodeRange } : {}) })
+      .load()
+      .then((loaded) => {
+        // Swap in place once the new face is ready, so text never falls back
+        // to another font in between; a newer request for this URL wins.
+        if (fontFaces.get(u) !== entry) return;
+        document.fonts.add(loaded);
+        if (entry.replaces) document.fonts.delete(entry.replaces);
+        entry.face = loaded;
+      });
+    fontFaces.set(u, entry);
+    return entry.pending;
+  });
+  return Promise.all(pending).then(() => {});
+}
+
+const FONT_MIME: Record<string, string> = { ttf: 'font/ttf', otf: 'font/otf', woff: 'font/woff', woff2: 'font/woff2' };
+
+/** A font file as a `data:` URI, for embedding in a standalone SVG. */
+export async function fontDataUri(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch font ${url}: ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const ext = /\.(\w+)(?:[?#]|$)/.exec(url)?.[1]?.toLowerCase() ?? '';
+  const header = res.headers.get('content-type');
+  const mime = FONT_MIME[ext] ?? (header?.startsWith('font/') ? header : 'font/ttf');
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${mime};base64,${btoa(binary)}`;
+}

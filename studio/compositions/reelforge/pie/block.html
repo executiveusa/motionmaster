@@ -1,0 +1,769 @@
+<!doctype html>
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"title","type":"string","label":"Title","default":"구성 비율"},
+    {"id":"items","type":"json","label":"Items","default":[]},
+    {"id":"values","type":"json","label":"Values","default":[]},
+    {"id":"unit","type":"string","label":"Unit","default":""},
+    {"id":"accent","type":"color","label":"Accent","default":"Highlight"},
+    {"id":"mood","type":"string","label":"Mood","default":"informative"},
+    {"id":"emphasis","type":"string","label":"Emphasis","default":"number"},
+    {"id":"reveal","type":"string","label":"Reveal","default":"draw"},
+    {"id":"visualKind","type":"string","label":"Visual kind","default":"chart"},
+    {"id":"source","type":"string","label":"Source","default":""},
+    {"id":"repeatIndex","type":"number","label":"Repeat index","default":0}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>ReelForge pie block</title>
+  </head>
+  <body>
+    <template>
+      <div
+        class="pie-block"
+        data-composition-id="pie"
+        data-width="1920"
+        data-height="1080"
+        data-duration="4"
+        role="img"
+        aria-label=""
+      >
+        <style>
+          .pie-block {
+            --pie-ink: var(--rf-text, currentColor);
+            --pie-muted: var(--rf-ink-subtle, color-mix(in srgb, var(--rf-text, currentColor) 64%, transparent));
+            --pie-tertiary: var(
+              --rf-ink-tertiary,
+              var(--rf-ink-subtle, color-mix(in srgb, var(--rf-text, currentColor) 44%, transparent))
+            );
+            --pie-accent: var(--rf-accent, var(--rf-text, currentColor));
+            --pie-accent-alt: var(--rf-accent-alt, var(--rf-accent, var(--rf-text, currentColor)));
+            --pie-hairline: var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 16%, transparent));
+            --pie-hairline-strong: var(
+              --rf-hairline-strong,
+              var(--rf-hairline, color-mix(in srgb, var(--rf-text, currentColor) 30%, transparent))
+            );
+            --pie-type-meta: 1.45rem;
+            --pie-type-title: 5.35rem;
+            --pie-type-value: 12.8rem;
+            position: absolute;
+            inset: 0;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            box-sizing: border-box;
+            color: var(--pie-ink);
+            font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }
+
+          .pie-stage {
+            position: absolute;
+            inset: 7.2% 6.25%;
+            min-width: 0;
+            min-height: 0;
+          }
+
+          .pie-layout {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: minmax(21rem, 0.78fr) minmax(42rem, 1.16fr) minmax(20rem, 0.7fr);
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            column-gap: 3.4rem;
+            min-width: 0;
+            min-height: 0;
+          }
+
+          .pie-copy {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            align-self: start;
+            min-width: 0;
+            padding-top: 1.25rem;
+          }
+
+          .pie-eyebrow,
+          .pie-source,
+          .pie-center-label,
+          .pie-center-unit,
+          .pie-rail-label,
+          .pie-rail-value {
+            font-size: var(--pie-type-meta);
+          }
+
+          .pie-eyebrow {
+            width: max-content;
+            max-width: 100%;
+            margin: 0 0 1.55rem;
+            color: var(--pie-muted);
+            font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .pie-title {
+            max-width: 31rem;
+            margin: 0;
+            color: var(--pie-ink);
+            font-size: var(--pie-type-title);
+            font-weight: 820;
+            line-height: 1.01;
+            letter-spacing: -0.03em;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+          }
+
+          .pie-source {
+            max-width: 27rem;
+            margin: 2rem 0 0;
+            color: var(--pie-muted);
+            font-weight: 620;
+            line-height: 1.42;
+            letter-spacing: -0.01em;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+          }
+
+          .pie-visual {
+            position: relative;
+            grid-column: 2;
+            grid-row: 1 / span 3;
+            align-self: center;
+            justify-self: center;
+            width: min(100%, 47rem);
+            aspect-ratio: 1;
+          }
+
+          .pie-visual--gauge {
+            aspect-ratio: 1 / 0.84;
+            align-self: end;
+            margin-bottom: 4.25rem;
+          }
+
+          .pie-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+          }
+
+          .pie-track,
+          .pie-slice,
+          .pie-gauge-baseline {
+            fill: none;
+            vector-effect: non-scaling-stroke;
+          }
+
+          .pie-track {
+            stroke: var(--pie-hairline);
+            stroke-width: 34;
+          }
+
+          .pie-slice {
+            stroke: var(--pie-tertiary);
+            stroke-width: 34;
+            stroke-linecap: butt;
+            transform-box: fill-box;
+            transform-origin: center;
+            will-change: transform, opacity, stroke-dasharray;
+          }
+
+          .pie-slice[data-highlight="true"] {
+            stroke: var(--pie-accent);
+            animation: pie-accent-breathe 2.4s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+          }
+
+          .pie-slice[data-highlight="false"] {
+            opacity: 0.78;
+          }
+
+          .pie-gauge-baseline {
+            stroke: var(--pie-hairline-strong);
+            stroke-width: 1;
+          }
+
+          .pie-center {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            align-content: center;
+            justify-items: center;
+            min-width: 0;
+            pointer-events: none;
+            text-align: center;
+          }
+
+          .pie-visual--gauge .pie-center {
+            padding-top: 11rem;
+          }
+
+          .pie-center-label {
+            max-width: 20rem;
+            margin: 0 0 0.72rem;
+            color: var(--pie-muted);
+            font-weight: 680;
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+          }
+
+          .pie-center-value {
+            max-width: 100%;
+            color: var(--pie-ink);
+            font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+            font-size: var(--pie-type-value);
+            font-weight: 760;
+            font-variant-numeric: tabular-nums;
+            line-height: 0.88;
+            letter-spacing: -0.045em;
+            white-space: nowrap;
+            animation: pie-value-breathe 2.15s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+          }
+
+          .pie-center-value[data-label-value="true"],
+          .pie-center-value[data-compact="true"] {
+            font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: var(--pie-type-title);
+            font-variant-numeric: normal;
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+            white-space: normal;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+          }
+
+          .pie-center-unit {
+            min-height: 1.2em;
+            margin: 1rem 0 0;
+            color: var(--pie-muted);
+            font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+            font-weight: 650;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+          }
+
+          .pie-rail {
+            grid-column: 3;
+            grid-row: 2;
+            align-self: center;
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+          }
+
+          .pie-rail-row {
+            display: grid;
+            grid-template-columns: 0.42rem minmax(0, 1fr) auto;
+            align-items: baseline;
+            column-gap: 0.95rem;
+            min-width: 0;
+            padding: 1rem 0;
+            border-top: 1px solid var(--pie-hairline);
+          }
+
+          .pie-rail-row:last-child {
+            border-bottom: 1px solid var(--pie-hairline);
+          }
+
+          .pie-rail-marker {
+            align-self: center;
+            width: 0.42rem;
+            height: 1.65rem;
+            background: var(--pie-tertiary);
+          }
+
+          .pie-rail-row[data-tone="accent"] .pie-rail-marker {
+            background: var(--pie-accent-alt);
+            animation: pie-marker-breathe 2.3s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+          }
+
+          .pie-rail-label {
+            min-width: 0;
+            color: var(--pie-muted);
+            font-weight: 650;
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+          }
+
+          .pie-rail-value {
+            margin-left: 0.5rem;
+            color: var(--pie-ink);
+            font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+            font-weight: 720;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+            letter-spacing: -0.025em;
+            white-space: nowrap;
+          }
+
+          .pie-structure-line {
+            grid-column: 1 / span 3;
+            grid-row: 3;
+            align-self: end;
+            width: 100%;
+            height: 1px;
+            background: var(--pie-hairline);
+            opacity: 0.78;
+            animation: pie-structure-breathe 2.5s ease-in-out calc(var(--rf-scene-start, 0s) + 1.2s) infinite alternate;
+          }
+
+          @keyframes pie-accent-breathe {
+            0% {
+              filter: brightness(0.98);
+            }
+            100% {
+              filter: brightness(1.13);
+            }
+          }
+
+          @keyframes pie-value-breathe {
+            0% {
+              filter: brightness(0.98);
+            }
+            100% {
+              filter: brightness(1.08);
+            }
+          }
+
+          @keyframes pie-marker-breathe {
+            0% {
+              opacity: 0.62;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+
+          @keyframes pie-structure-breathe {
+            0% {
+              opacity: 0.52;
+            }
+            100% {
+              opacity: 0.9;
+            }
+          }
+        </style>
+        <section class="pie-stage" data-pie-stage aria-label="도넛 차트"></section>
+      </div>
+      <script>
+        (function () {
+          const root = document.querySelector(".pie-block") ?? document.querySelector("[data-hf-inner-root]");
+          const runtimeCompositionId =
+            typeof __hfTimelineCompId !== "undefined" && __hfTimelineCompId ? __hfTimelineCompId : "";
+          const compositionId =
+            runtimeCompositionId ||
+            root?.closest("[data-composition-id]")?.getAttribute("data-composition-id") ||
+            root?.dataset.compositionId ||
+            "pie";
+          if (!root) {
+            window.__timelines = window.__timelines || {};
+            window.__timelines[compositionId] = gsap.timeline({ paused: true });
+            return;
+          }
+
+          const hf = typeof __hyperframes !== "undefined" ? __hyperframes : window.__hyperframes;
+          const variables = scopedVariables();
+          const title = stringValue(variables.title, "구성 비율");
+          const source = stringValue(variables.source, "");
+          const mood = stringValue(variables.mood, "informative");
+          const unit = displayUnit(variables.unit);
+          const rows = normalizeRows(arrayValue(variables.items), arrayValue(variables.values), title);
+          const numericRows = rows.filter((row) => row.hasValue);
+          const hasNumericValues = numericRows.length > 0;
+          const total = numericRows.reduce((sum, row) => sum + Math.max(0, row.numeric), 0);
+          const focusIndex = focusRowIndex(rows, hasNumericValues);
+          const focus = rows[focusIndex];
+          const focusShare = hasNumericValues && total > 0 ? Math.max(0, focus.numeric) / total : 0;
+          const repeatIndex = Math.max(0, Math.floor(numericValue(variables.repeatIndex)));
+          const variant = repeatIndex % 2 === 0 ? "donut" : "gauge";
+          const stage = root.querySelector("[data-pie-stage]");
+
+          root.style.setProperty("--pie-accent", safeColor(variables.accent));
+          root.dataset.variant = variant;
+          root.setAttribute("aria-label", ariaLabel(title, focus, unit, variant, focusShare));
+          stage.setAttribute("aria-label", variant === "donut" ? "도넛 차트" : "반원 게이지");
+
+          const built = buildStage({
+            title,
+            source,
+            mood,
+            rows,
+            focus,
+            focusIndex,
+            unit,
+            total,
+            focusShare,
+            hasNumericValues,
+            variant
+          });
+          stage.append(built.layout);
+
+          window.__timelines = window.__timelines || {};
+          const tl = gsap.timeline({ paused: true });
+          tl.addLabel("start", 0);
+          tl.fromTo(built.eyebrow, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.22, ease: "power2.out" }, 0);
+          tl.fromTo(built.title, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.34, ease: "power3.out" }, 0.06);
+          tl.to(built.eyebrow, { opacity: 0.72, duration: 0.14, ease: "power2.out" }, 0.16);
+          tl.fromTo(
+            built.visual,
+            { opacity: 0, y: 26, scale: 0.96 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: "expo.out" },
+            0.12
+          );
+          tl.fromTo(
+            built.center,
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" },
+            0.28
+          );
+          built.slices.forEach((slice, index) => {
+            tl.fromTo(
+              slice.element,
+              { opacity: 0, strokeDasharray: `0 ${slice.circumference}` },
+              {
+                opacity: slice.highlight ? 1 : 0.78,
+                strokeDasharray: `${slice.arc} ${Math.max(0, slice.circumference - slice.arc)}`,
+                duration: 0.28,
+                ease: "power3.out",
+                immediateRender: false
+              },
+              0.16 + index * 0.025
+            );
+          });
+          tl.fromTo(
+            built.railRows,
+            { opacity: 0, x: 18 },
+            { opacity: 1, x: 0, duration: 0.24, ease: "power2.out", stagger: 0.04 },
+            0.34
+          );
+          tl.fromTo(
+            built.structure,
+            { opacity: 0, scaleX: 0 },
+            { opacity: 0.78, scaleX: 1, duration: 0.3, ease: "power2.out", transformOrigin: "left center" },
+            0.3
+          );
+          addCountUp(tl, focus, built.value, unit, 0.25);
+          tl.addLabel("final", blockDuration(root, 4));
+
+          const timelineIds = runtimeCompositionId ? new Set([runtimeCompositionId]) : new Set([compositionId, "pie"]);
+          timelineIds.forEach((id) => {
+            if (id) window.__timelines[id] = tl;
+          });
+          globalThis.__timelines = window.__timelines;
+          timelineIds.forEach((id) => {
+            if (id) globalThis.__timelines[id] = tl;
+          });
+          signalRuntimeReady();
+
+          function buildStage(config) {
+            const layout = element("div", `pie-layout pie-layout--${config.variant}`);
+            const copy = element("header", "pie-copy");
+            const eyebrow = element("p", "pie-eyebrow", config.mood);
+            const titleEl = element("h1", "pie-title", config.title);
+            copy.append(eyebrow, titleEl);
+            if (config.source) copy.append(element("p", "pie-source", config.source));
+
+            const visual = element("section", `pie-visual pie-visual--${config.variant}`);
+            visual.setAttribute("aria-label", config.variant === "donut" ? "도넛 중심 값" : "반원 게이지 중심 값");
+            const chart = buildChart(config);
+            const center = element("div", "pie-center");
+            const centerLabel = element("p", "pie-center-label", config.focus.label);
+            const value = element(
+              "p",
+              "pie-center-value",
+              config.focus.hasValue ? formatNumber(0, config.focus.decimals) : config.focus.label
+            );
+            const centerUnit = element("p", "pie-center-unit", config.focus.hasValue ? config.unit : "");
+            if (!config.focus.hasValue) value.dataset.labelValue = "true";
+            if (config.focus.hasValue && formatNumber(config.focus.numeric, config.focus.decimals).length > 5) {
+              value.dataset.compact = "true";
+            }
+            if (config.focus.hasValue) center.append(centerLabel, value, centerUnit);
+            else center.append(value);
+            visual.append(chart.svg, center);
+
+            const rail = element("ol", "pie-rail");
+            const railRows = [];
+            const secondaryRows = config.rows.filter((row, index) => index !== config.focusIndex && row.hasValue);
+            if (config.variant === "gauge" && config.hasNumericValues) {
+              railRows.push(appendRailRow(rail, "비중", formatPercent(config.focusShare), "accent"));
+              if (config.total > 0 && secondaryRows.length > 0) {
+                railRows.push(appendRailRow(rail, "전체", formatNumber(config.total, decimalTotal(config.rows)) + config.unit, "muted"));
+              }
+            }
+            secondaryRows.forEach((row) => {
+              railRows.push(appendRailRow(rail, row.label, displayValue(row, config.unit), "muted"));
+            });
+            if (railRows.length === 0) rail.remove();
+
+            const structure = element("div", "pie-structure-line");
+            structure.setAttribute("aria-hidden", "true");
+            layout.append(copy, visual);
+            if (railRows.length > 0) layout.append(rail);
+            layout.append(structure);
+            return { layout, eyebrow, title: titleEl, visual, center, value, railRows, structure, slices: chart.slices };
+          }
+
+          function buildChart(config) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "pie-svg");
+            svg.setAttribute("viewBox", "0 0 440 440");
+            svg.setAttribute("aria-hidden", "true");
+            const circumference = 2 * Math.PI * 168;
+            const slices = [];
+            if (config.variant === "donut") {
+              svg.append(svgCircle("pie-track", { cx: 220, cy: 220, r: 168 }));
+              const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              group.setAttribute("transform", "rotate(-90 220 220)");
+              const gap = Math.min(7, circumference * 0.009);
+              let running = 0;
+              const chartRows = config.rows
+                .map((row, index) => ({ row, index }))
+                .filter((entry) => entry.row.hasValue);
+              const numericTotal = chartRows.reduce((sum, entry) => sum + Math.max(0, entry.row.numeric), 0);
+              chartRows.forEach(({ row, index }) => {
+                const share = numericTotal > 0 ? Math.max(0, row.numeric) / numericTotal : 1 / chartRows.length;
+                const rawArc = circumference * share;
+                const arc = share > 0 ? Math.max(1, rawArc - gap) : 0;
+                const slice = svgCircle("pie-slice", { cx: 220, cy: 220, r: 168 });
+                slice.dataset.highlight = String(index === config.focusIndex);
+                slice.style.strokeDasharray = `0 ${circumference}`;
+                slice.style.strokeDashoffset = String(-(running + gap / 2));
+                group.append(slice);
+                slices.push({ element: slice, arc, circumference, highlight: index === config.focusIndex });
+                running += rawArc;
+              });
+              svg.append(group);
+            } else {
+              const halfCircumference = circumference / 2;
+              const track = svgCircle("pie-track", { cx: 220, cy: 220, r: 168 });
+              track.setAttribute("transform", "rotate(180 220 220)");
+              track.style.strokeDasharray = `${halfCircumference} ${circumference - halfCircumference}`;
+              svg.append(track);
+              const slice = svgCircle("pie-slice", { cx: 220, cy: 220, r: 168 });
+              slice.dataset.highlight = "true";
+              slice.setAttribute("transform", "rotate(180 220 220)");
+              slice.style.strokeDasharray = `0 ${circumference}`;
+              svg.append(slice);
+              const baseline = document.createElementNS("http://www.w3.org/2000/svg", "line");
+              baseline.setAttribute("class", "pie-gauge-baseline");
+              baseline.setAttribute("x1", "52");
+              baseline.setAttribute("x2", "388");
+              baseline.setAttribute("y1", "388");
+              baseline.setAttribute("y2", "388");
+              svg.append(baseline);
+              slices.push({
+                element: slice,
+                arc: config.focusShare > 0 ? Math.max(1, halfCircumference * config.focusShare) : 0,
+                circumference,
+                highlight: true
+              });
+            }
+            return { svg, slices };
+          }
+
+          function appendRailRow(rail, labelText, valueText, tone) {
+            const row = element("li", "pie-rail-row");
+            row.dataset.tone = tone;
+            const marker = element("span", "pie-rail-marker");
+            marker.setAttribute("aria-hidden", "true");
+            const label = element("span", "pie-rail-label", labelText);
+            const value = element("span", "pie-rail-value", valueText);
+            row.append(marker, label, value);
+            rail.append(row);
+            return row;
+          }
+
+          function addCountUp(timeline, row, target, suffix, start) {
+            if (!row.hasValue) return;
+            const counter = { value: 0 };
+            const update = function () {
+              target.textContent = formatNumber(counter.value, row.decimals);
+            };
+            timeline.to(
+              counter,
+              { value: row.numeric * 0.5, duration: 0.4, ease: "power2.out", onUpdate: update },
+              start
+            );
+            timeline.to(
+              counter,
+              {
+                value: row.numeric,
+                duration: 0.4,
+                ease: "power2.out",
+                onUpdate: update,
+                onComplete: function () {
+                  target.textContent = formatNumber(row.numeric, row.decimals);
+                }
+              },
+              start + 0.4
+            );
+          }
+
+          function svgCircle(className, attributes) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("class", className);
+            Object.entries(attributes).forEach(([name, value]) => circle.setAttribute(name, String(value)));
+            return circle;
+          }
+
+          function element(tagName, className, text) {
+            const node = document.createElement(tagName);
+            node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+          }
+
+          function scopedVariables() {
+            const scoped = hf?.getVariables?.() ?? {};
+            if (scoped && Object.keys(scoped).length > 0) return scoped;
+            const host = root.closest("[data-variable-values]") ?? document.querySelector("[data-variable-values]");
+            const raw = host?.getAttribute("data-variable-values");
+            if (!raw) return {};
+            try {
+              const parsed = JSON.parse(raw);
+              return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+            } catch {
+              return {};
+            }
+          }
+
+          function arrayValue(value) {
+            if (Array.isArray(value)) return value;
+            if (typeof value !== "string") return [];
+            try {
+              const parsed = JSON.parse(value);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          }
+
+          function normalizeRows(labels, rawValues, fallbackTitle) {
+            const count = Math.max(labels.length, rawValues.length);
+            if (count === 0) {
+              return [{ label: fallbackTitle, numeric: 0, decimals: 0, hasValue: false }];
+            }
+            return Array.from({ length: count }, (_, index) => {
+              const numeric = numericInfo(rawValues[index]);
+              return {
+                label: stringValue(labels[index], `항목 ${index + 1}`),
+                numeric: numeric.value,
+                decimals: numeric.hasValue ? decimalPlaces(rawValues[index]) : 0,
+                hasValue: numeric.hasValue
+              };
+            });
+          }
+
+          function focusRowIndex(rows, hasNumericValues) {
+            if (!hasNumericValues) return 0;
+            const firstNumericIndex = rows.findIndex((row) => row.hasValue);
+            return rows.reduce(
+              (bestIndex, row, index) => (row.hasValue && row.numeric > rows[bestIndex].numeric ? index : bestIndex),
+              firstNumericIndex
+            );
+          }
+
+          function stringValue(value, fallback) {
+            if (value === undefined || value === null) return fallback;
+            const text = String(value).trim();
+            return text.length > 0 ? text : fallback;
+          }
+
+          function numericInfo(value) {
+            if (typeof value === "number" && Number.isFinite(value)) return { value, hasValue: true };
+            const match = String(value ?? "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+            return match ? { value: Number(match[0]), hasValue: true } : { value: 0, hasValue: false };
+          }
+
+          function numericValue(value) {
+            return numericInfo(value).value;
+          }
+
+          function decimalPlaces(value) {
+            if (typeof value === "number" && Number.isFinite(value) && !Number.isInteger(value)) {
+              return Math.min(2, String(value).split(".")[1]?.length ?? 0);
+            }
+            const match = String(value ?? "").replace(/,/g, "").match(/-?\d+\.(\d+)/);
+            return match ? Math.min(2, match[1].length) : 0;
+          }
+
+          function decimalTotal(rows) {
+            return rows.reduce((maximum, row) => Math.max(maximum, row.decimals), 0);
+          }
+
+          function displayUnit(value) {
+            const text = stringValue(value, "");
+            if (!text) return "";
+            const normalized = text === "％" ? "%" : text.toLowerCase();
+            return new Set(["%", "sec", "원", "건", "개", "명", "회", "hex", "점"]).has(normalized)
+              ? normalized
+              : "";
+          }
+
+          function formatNumber(value, decimals) {
+            const fixed = decimals > 0 ? Number(value).toFixed(decimals) : String(Math.round(value));
+            return new Intl.NumberFormat("ko-KR", {
+              minimumFractionDigits: decimals,
+              maximumFractionDigits: decimals
+            }).format(Number(fixed));
+          }
+
+          function displayValue(row, suffix) {
+            return row.hasValue ? formatNumber(row.numeric, row.decimals) + suffix : row.label;
+          }
+
+          function formatPercent(value) {
+            return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+          }
+
+          function ariaLabel(chartTitle, focusRow, suffix, chartVariant, share) {
+            const mode = chartVariant === "donut" ? "도넛" : "게이지";
+            if (!focusRow.hasValue) return `${chartTitle}: ${mode}, ${focusRow.label}`;
+            const value = formatNumber(focusRow.numeric, focusRow.decimals) + suffix;
+            return `${chartTitle}: ${mode}, ${focusRow.label} ${value}, ${formatPercent(share)}`;
+          }
+
+          function safeColor(value) {
+            const text = stringValue(value, "");
+            return /^[A-Za-z]+$|^#[0-9A-Fa-f]{3,8}$|^var\(--[A-Za-z0-9_-]+\)$|^color-mix\(.+\)$/.test(text)
+              ? text
+              : "var(--rf-accent, var(--rf-text, currentColor))";
+          }
+
+          function blockDuration(element, fallback) {
+            let node = element.parentElement;
+            while (node) {
+              const value = Number(node.getAttribute?.("data-duration"));
+              if (Number.isFinite(value) && value > 0) return value;
+              node = node.parentElement;
+            }
+            const own = Number(element.getAttribute("data-duration"));
+            return Number.isFinite(own) && own > 0 ? own : fallback;
+          }
+
+          function signalRuntimeReady() {
+            if (typeof window.__hfForceTimelineRebind === "function") window.__hfForceTimelineRebind();
+            if (typeof window.__hfFlushSync === "function") window.__hfFlushSync();
+            window.__playerReady = true;
+            window.__renderReady = true;
+          }
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -7,13 +7,39 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const chrome = [process.env.CHROME_BIN, 'google-chrome', 'chromium', 'chromium-browser']
-  .filter(Boolean).find((name) => spawnSync('which', [name], { encoding: 'utf8' }).status === 0);
+/**
+ * Find a browser.
+ *
+ * `which` only searches PATH, so an absolute path in CHROME_BIN was
+ * rejected — and CHROME_BIN is how every CI runner points at its Chrome.
+ */
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_BIN,
+    process.env.HYPERFRAMES_BROWSER_PATH,
+    "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell",
+    "/usr/local/bin/chrome-headless-shell",
+    "google-chrome",
+    "chromium",
+    "chromium-browser",
+    "chrome-headless-shell",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (candidate.includes("/")) {
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
+    const found = spawnSync("which", [candidate], { encoding: "utf8" }).stdout?.trim();
+    if (found) return found;
+  }
+  return null;
+}
+const chrome = findChrome();
 if (!chrome) throw new Error('Chromium is required for the locale click smoke.');
 
 const port = 4174;

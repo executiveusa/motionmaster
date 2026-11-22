@@ -14,7 +14,7 @@ const NODES: Record<string, Node> = {
   skills: {
     label: 'skills/',
     text:
-      'Forty-two motion skills: the LottieFiles motion-design doctrine, the official GreenSock GSAP and Remotion packs, the motionmaxxing craft law with its measured gates, sixty complete film styles, and libraries for launch films, canvas animation and a 637-technique catalogue. Each keeps its own licence and attribution. The agent loads the two or three a brief actually needs.',
+      'Sixty-one motion skills: the LottieFiles motion-design doctrine, the official GreenSock GSAP and Remotion packs, the motionmaxxing craft law with its measured gates, sixty complete film styles, 124 shot cards that decide the shape of a film before it has code, and libraries for launch films, canvas animation and a 637-technique catalogue. Each keeps its own licence and attribution. The agent loads the two or three a brief actually needs.',
   },
   'motion-design': {
     label: 'skills/motion-design/',
@@ -37,9 +37,9 @@ const NODES: Record<string, Node> = {
       'Sequencing and position parameters — the choreography layer: tween order, stagger budgets, and the easing role each movement is allowed to use.',
   },
   'more-skills': {
-    label: 'skills/ — 37 more',
+    label: 'skills/ — 56 more',
     text:
-      'Remotion captions, multimedia, interactivity and rendering, the GSAP core, plugins and utilities, plus the craft law, the film-style library and the technique catalogue. Forty-two in total, every one licensed and attributed.',
+      'Remotion captions, multimedia, interactivity and rendering, the GSAP core, plugins and utilities, plus the craft law, the film-style library, the shot cards, the effect shelf and the technique catalogue. Sixty-one in total, every one licensed and attributed.',
   },
   tokens: {
     label: 'tokens/',

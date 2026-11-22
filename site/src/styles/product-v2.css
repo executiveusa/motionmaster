@@ -42,31 +42,45 @@ body { padding-left: 0 !important; background: #fff; }
   min-height: 36px; border-radius: 999px; background: rgba(255,255,255,.72);
   border: 1px solid rgba(17,17,19,.14); padding: 0 12px; font-weight: 600;
 }
-.topbar__signin { min-height: 38px; border-radius: 999px; padding-inline: 18px; background: rgba(255,255,255,.55); }
-.topbar__cta { min-height: 40px; border-radius: 999px; padding-inline: 20px; box-shadow: 0 9px 24px rgba(77,93,246,.22); }
+.topbar__signin { min-height: 44px; border-radius: 999px; padding-inline: 18px; background: rgba(255,255,255,.55); }
+.topbar__cta { min-height: 44px; border-radius: 999px; padding-inline: 20px; box-shadow: 0 9px 24px rgba(77,93,246,.22); }
 .btn--primary { background: #111113; color: #fff; border-color: #111113; }
 .btn--primary:hover { background: #2c2c31; border-color: #2c2c31; }
 .btn--ghost { background: rgba(255,255,255,.72); }
 
-/* Full-bleed hero: approved editorial collage, straight edges only. */
+/* Full-bleed hero: approved editorial collage, straight edges only.
+   This block owns the hero. Nothing else may style these classes.
+   Every card holds the footage at the footage's own shape: the renders are
+   16:9 and every card is 16:9, so no frame is ever cropped. A title card
+   cut mid-word reads as a broken render, not as a crop. */
 .hero--brand {
+  /* The collage is positioned against the hero, not against the viewport.
+     Without this the cards drift out of the hero the moment the page is
+     taller than the screen. */
+  position: relative;
   min-height: clamp(760px, 96vh, 930px);
   width: 100%;
   overflow: hidden;
+  padding: 0;
+  isolation: isolate;
   background:
     radial-gradient(circle at 76% 28%, rgba(122,129,255,.50), transparent 27%),
     linear-gradient(180deg,#8b90ff 0%,#bfc2ff 32%,#f0f0ff 58%,#fff 71%,#fff 100%);
 }
 .hero--brand .hero__stack { position: absolute; inset: 0; pointer-events: none; }
-.hero__card { position: absolute; overflow: hidden; background: #fff; border: 1px solid rgba(79,91,246,.85); box-shadow: 0 12px 28px rgba(23,28,95,.14); }
+.hero__card {
+  position: absolute; overflow: hidden; background: #fff;
+  border: 1px solid rgba(79,91,246,.85); box-shadow: 0 12px 28px rgba(23,28,95,.14);
+  aspect-ratio: 16 / 9;
+}
 .hero__card::after { display: none !important; }
-.hero__card img { width:100%; height:100%; object-fit:cover; }
-.hero__card--c1 { left:-2%; top:0; width:clamp(210px,24vw,390px); aspect-ratio:1.3/1; transform:none; }
-.hero__card--c2 { left:15%; top:8%; width:clamp(260px,29vw,470px); aspect-ratio:1.6/1; transform:none; z-index:2; }
-.hero__card--c3 { left:37%; top:18%; width:clamp(300px,33vw,520px); aspect-ratio:1.65/1; transform:none; z-index:4; }
-.hero__card--c4 { left:59%; top:34%; width:clamp(260px,31vw,500px); aspect-ratio:1.55/1; transform:none; z-index:5; }
-.hero__card--c5 { left:75%; top:52%; width:clamp(230px,27vw,420px); aspect-ratio:1.35/1; transform:none; z-index:6; }
-.hero__card--c6 { left:91%; top:68%; width:clamp(170px,18vw,290px); aspect-ratio:.9/1; transform:none; z-index:7; }
+.hero__card img, .hero__card .hero__clip { width:100%; height:100%; object-fit:cover; }
+.hero__card--c1 { left:-2%; top:0; width:clamp(210px,24vw,390px); transform:none; }
+.hero__card--c2 { left:15%; top:8%; width:clamp(260px,29vw,470px); transform:none; z-index:2; }
+.hero__card--c3 { left:42%; top:12%; width:clamp(300px,33vw,520px); transform:none; z-index:4; }
+.hero__card--c4 { left:62%; top:30%; width:clamp(260px,31vw,500px); transform:none; z-index:5; }
+.hero__card--c5 { left:75%; top:60%; width:clamp(230px,27vw,420px); transform:none; z-index:6; }
+.hero__card--c6 { left:88%; top:82%; width:clamp(170px,18vw,290px); transform:none; z-index:7; }
 
 .hero--brand .hero__body {
   position: relative; z-index: 10; display:flex; flex-direction:column; align-items:flex-start;
@@ -79,7 +93,10 @@ body { padding-left: 0 !important; background: #fff; }
 }
 .hero--brand .hero__line { display:block; white-space:nowrap; }
 .hero--brand .hero__aside {
-  position:static; width:min(100%,720px); max-width:none; border:0; padding:0;
+  /* Aligned to the headline's left edge. A headline on the left and a caption
+     floating on the right reads as two pages that were not designed together. */
+  position:static; align-self:flex-start; width:min(100%,720px); max-width:none;
+  border:0; padding:0;
 }
 .hero--brand .hero__lede { max-width:58ch; margin:0 0 16px; font-size:16px; color:#363641; }
 .hero--brand .hero__actions { display:flex; flex-wrap:wrap; gap:10px; }
@@ -99,7 +116,7 @@ body { padding-left: 0 !important; background: #fff; }
 .example-discovery__search input:focus-visible { outline:3px solid rgba(77,93,246,.28); border-color:var(--accent); }
 .example-discovery__filters { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
 .example-filter {
-  flex:0 0 auto; min-height:36px; padding:0 14px; border-radius:999px;
+  flex:0 0 auto; min-height:44px; padding:0 14px; border-radius:999px;
   border:1px solid var(--hairline); background:#fff; font-size:13px; cursor:pointer;
 }
 .example-filter.is-active, .example-filter[aria-pressed="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -114,8 +131,8 @@ body { padding-left: 0 !important; background: #fff; }
 .prompt { margin:0; padding:10px 16px 16px; background:#fff; border:0; }
 .prompt__label, .prompt__text { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .prompt__actions { margin-top:0; gap:8px; }
-.prompt__actions .btn { min-height:34px; padding:0 10px; border-radius:8px; font-size:12px; font-family:var(--font-sans); }
-.clip__toggle { min-height:36px; border-radius:999px; text-transform:none; letter-spacing:0; font-family:var(--font-sans); }
+.prompt__actions .btn { min-height:44px; padding:0 10px; border-radius:8px; font-size:12px; font-family:var(--font-sans); }
+.clip__toggle { min-height:44px; border-radius:999px; text-transform:none; letter-spacing:0; font-family:var(--font-sans); }
 .full-film, .contact-sheet__foot { display:none !important; }
 
 /* Create surface: product, not marketing. */
@@ -183,7 +200,7 @@ body { padding-left: 0 !important; background: #fff; }
   .hero__card--c2 { left:18%; width:43vw; }
   .hero__card--c3 { left:46%; width:45vw; top:17%; }
   .hero__card--c4 { left:68%; width:39vw; top:31%; }
-  .hero__card--c5 { left:72%; width:38vw; top:46%; }
+  .hero__card--c5 { left:72%; width:38vw; top:56%; }
   .hero__card--c6 { display:none; }
   .agent-grid { grid-template-columns:1fr; }
 }
@@ -201,14 +218,12 @@ body { padding-left: 0 !important; background: #fff; }
   .brand__name { white-space:nowrap; }
   .brand__mark { width:20px; height:15px; }
   .locale-picker select { min-height:34px; padding-inline:9px; font-size:12px; }
-  .menu-toggle { min-height:40px; padding-inline:10px; }
-  .hero--brand { min-height:760px; background:linear-gradient(180deg,#9095ff 0%,#c6c9ff 31%,#f4f4ff 52%,#fff 64%); }
-  .hero--brand .hero__body { min-height:760px; padding-top:340px; padding-bottom:28px; }
-  .hero__card--c1 { left:-12%; top:4%; width:55vw; }
-  .hero__card--c2 { left:31%; top:8%; width:60vw; }
-  .hero__card--c3 { left:8%; top:19%; width:66vw; }
-  .hero__card--c4 { left:55%; top:27%; width:58vw; }
-  .hero__card--c5, .hero__card--c6 { display:none; }
+  .menu-toggle { min-height:44px; padding-inline:10px; }
+  .hero--brand { min-height:0; background:linear-gradient(180deg,#9095ff 0%,#c6c9ff 31%,#f4f4ff 52%,#fff 64%); }
+  .hero--brand .hero__body { min-height:0; padding-top:292px; padding-bottom:28px; }
+  .hero__card--c1 { left:-6%; top:0; width:84vw; }
+  .hero__card--c2 { left:34%; top:120px; width:70vw; }
+  .hero__card--c3, .hero__card--c4, .hero__card--c5, .hero__card--c6 { display:none; }
   .hero--brand .display { max-width:100%; font-size:clamp(44px,12.5vw,62px); line-height:.92; }
   .hero--brand .hero__line { white-space:normal; }
   .hero--brand .hero__lede { font-size:14px; max-width:36ch; }
@@ -223,8 +238,8 @@ body { padding-left: 0 !important; background: #fff; }
 }
 
 @media (max-width:420px) {
-  .hero--brand { min-height:720px; }
-  .hero--brand .hero__body { min-height:720px; padding-top:320px; }
+  .hero--brand .hero__body { padding-top:304px; }
+  .hero__card--c2 { top:130px; }
   .hero--brand .display { font-size:clamp(40px,12vw,50px); }
 }
 

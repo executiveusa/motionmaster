@@ -16,6 +16,8 @@
  * from the brief keeps its default, and every value carries a reason.
  */
 import type { TokenShape } from "./enhancer.js";
+import { isQualified, type VerdictMap } from "./verdicts.js";
+import type { BlockRoles } from "./roles.js";
 
 /**
  * The headline a card carries, and a short label for the small slots.
@@ -97,14 +99,31 @@ function tokenize(text: string): string[] {
  *
  * A block's tags are the best signal — they are curated and consistent — so
  * they carry most of the weight. The title and description are the tiebreak.
+ *
+ * The gate's verdicts cut in above the wording. A block the gate has already
+ * rejected is not offered at all, and a block it has already passed is
+ * preferred over one nobody has measured — because the gate finds the real
+ * failures (text clipped by its own box, a label under the contrast floor,
+ * an occluded line), and a film built on one of those is a broken film.
  */
 export function matchBlocks(
   file: BlockFile,
   brief: string,
-  options: { limit?: number; types?: string[]; requireVariables?: boolean } = {},
+  options: {
+    limit?: number;
+    types?: string[];
+    requireVariables?: boolean;
+    /** What the gate said about each block. */
+    verdicts?: VerdictMap;
+    /** Which shot roles each block can serve. */
+    roles?: BlockRoles;
+    /** The role of the shot being filled. A block that serves it comes first. */
+    role?: string;
+  } = {},
 ): { block: MotionBlock; score: number; matchedTags: string[] }[] {
   const words = new Set(tokenize(brief));
   const lower = brief.toLowerCase();
+  const verdicts = options.verdicts ?? {};
   // A brief that never mentions pictures should not be answered with a block
   // that needs twelve of them.
   const wantsImages = /\b(image|images|photo|photos|picture|pictures|gallery|carousel|album|artwork|screenshots?)\b/.test(
@@ -114,6 +133,11 @@ export function matchBlocks(
   const pool = file.blocks.filter((b) => {
     if (options.types && !options.types.includes(b.type)) return false;
     if (options.requireVariables && b.variables.length === 0) return false;
+    // The gate has already measured this block and the house will not
+    // publish it. It is not offered again. The house is stricter than the
+    // gate on the things it cares about, so the verdict is read through the
+    // house's own policy.
+    if (verdicts[b.id] && !isQualified(verdicts[b.id])) return false;
     return true;
   });
 
@@ -159,9 +183,28 @@ export function matchBlocks(
     if (!held || entry.score > held.score) families.set(key, entry);
   }
 
-  return [...families.values()]
-    .sort((a, b) => b.score - a.score || a.block.id.localeCompare(b.block.id))
-    .slice(0, options.limit ?? 8);
+  const ordered = [...families.values()].sort(
+    (a, b) => b.score - a.score || a.block.id.localeCompare(b.block.id),
+  );
+
+  /*
+   * Three tiers.
+   *
+   * 1. The blocks that can serve the role of the shot being filled.
+   * 2. The blocks the gate has passed, whatever their wording matched.
+   * 3. The blocks nobody has measured.
+   *
+   * A brief is answered from the role pool whenever the role pool has
+   * something that matched, and falls back to the rest when it does not.
+   */
+  const inRole = options.role
+    ? ordered.filter((entry) => (options.roles?.[entry.block.id] ?? []).includes(options.role!))
+    : [];
+  const rest = ordered.filter((entry) => !inRole.includes(entry));
+  const measured = rest.filter((entry) => isQualified(verdicts[entry.block.id]));
+  const unmeasured = rest.filter((entry) => !isQualified(verdicts[entry.block.id]));
+
+  return [...inRole, ...measured, ...unmeasured].slice(0, options.limit ?? 8);
 }
 
 /**

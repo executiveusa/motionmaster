@@ -22,13 +22,21 @@ import { filmsDir, listFilms, readJob } from "./render.js";
 import { authorised, handleApi } from "./api.js";
 import { recoverInterruptedProjectJobs } from "./projects.js";
 import { processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
+import { queueState, reconcileJobs } from "./queue.js";
 
 const SERVER_NAME = "motion-master";
 const SERVER_VERSION = "1.0.0";
 
-const TOOL_NAMES = [
+export const TOOL_NAMES = [
   "list_skills",
   "get_motion_tokens",
+  "list_brand_kits",
+  "get_brand_kit",
+  "save_brand_kit",
+  "queue_status",
+  "list_house_templates",
+  "get_house_template",
+  "plan_house_template",
   "list_clips",
   "get_clip_prompt",
   "plan_video",
@@ -40,17 +48,38 @@ const TOOL_NAMES = [
   "browse_library",
   "get_library_item",
   "list_motion_blocks",
+  "get_motion_block",
   "fill_block",
+  "check_hyperframes",
   "compose_film",
   "render_film",
   "film_status",
   "list_films",
+  "list_shots",
+  "get_shot",
+  "plan_shots",
+  "list_motion_effects",
+  "get_motion_effect",
   "list_sfx_kinds",
   "browse_sfx",
   "search_sfx",
   "get_sfx",
   "plan_sound",
   "enhance_prompt",
+  "board_sync_check",
+  "board_sync_start",
+  "board_sync_status",
+  "board_sync_cancel",
+  "list_meta_placements",
+  "check_ad_copy",
+  "plan_meta_ad",
+  "build_meta_ad",
+  "preflight_ad",
+  "run_supervisor",
+  "supervisor_status",
+  "start_supervisor",
+  "submit_brief",
+  "loop_metrics",
 ] as const;
 
 export function createMcpServer(config: Config): McpServer {
@@ -671,6 +700,15 @@ export async function startChatServer(config: Config): Promise<{
 
 export async function main(): Promise<void> {
   const config = loadConfig();
+
+  /* A render that was interrupted is not rendering. Say so, so the queue
+     knows what was running and the film can be asked for again. */
+  const interrupted = reconcileJobs(config.repoRoot);
+  if (interrupted.length) {
+    process.stdout.write(
+      `  reconciled   : ${interrupted.length} interrupted render(s) marked as failed\n`,
+    );
+  }
   const { server: httpServer } = await startChatServer(config);
 
   const skills = listSkills(config.skillsDir);
@@ -686,7 +724,12 @@ export async function main(): Promise<void> {
         config.montage.baseUrl.length > 0 ? config.montage.baseUrl : "not configured"
       }`,
       `  licence      : ${LICENCE.summary}`,
-      `  rendering    : local (Remotion) on your own machine; Studio can also render on ours — never billed automatically`,
+      `  rendering    : ${
+        LICENCE.status?.onSale && LICENCE.rendering?.hosted?.available
+          ? "local on your own machine, or hosted on ours; nothing is ever charged automatically"
+          : "local on your own machine. There is no hosted rendering."
+      }`,
+      `  queue        : ${Math.max(1, config.renderConcurrency)} render(s) at a time`,
       "",
     ].join("\n"),
   );

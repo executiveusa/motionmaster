@@ -9,7 +9,9 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "motion-master-mcp": "dist/index.js"
+    "motion-master-mcp": "dist/index.js",
+    "motion-master-mcp-stdio": "dist/stdio.js",
+    "motion-master-supervisor": "dist/supervisor-cli.js"
   },
   "files": [
     "dist"
@@ -23,7 +25,8 @@
     "check:tokens": "node scripts/sync-tokens.mjs --check",
     "test": "npm run build && node --test --test-concurrency=1 test/*.mjs",
     "sync:licence": "node scripts/sync-licence.mjs",
-    "check:licence": "node scripts/sync-licence.mjs --check"
+    "check:licence": "node scripts/sync-licence.mjs --check",
+    "supervisor": "node dist/supervisor-cli.js"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^2.0.83",
@@ -32,7 +35,7 @@
     "@types/node": "^22.10.2",
     "ai": "^7.0.150",
     "typescript": "^5.9.2",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": ">=20.0.0"

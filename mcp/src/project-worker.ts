@@ -10,6 +10,7 @@ import type { Config } from "./config.js";
 import { loadBlocks } from "./library.js";
 import { loadTokens } from "./tokens.js";
 import { loadVerdicts } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import { buildFilmProject, planFilm } from "./film.js";
 import { renderProject } from "./render.js";
 import {
@@ -36,15 +37,28 @@ export function cancelRunningProjectJob(repoRoot: string, projectId: string, job
   return true;
 }
 
-/** Use the shipped, gated HyperFrames renderer, not a mock or a remote vendor. */
-export const renderProjectRevision: RevisionRenderer = async (config, revision, outputDir, signal) => {
-  if (signal?.aborted) throw new Error("Render cancelled.");
+/**
+ * Build the composition for a revision, on disk.
+ *
+ * Split out of the renderer so that the supervisor can use it too. The
+ * supervisor needs the composition on disk *before* it can gate it, because
+ * the gate is what decides whether the composition is any good — and a
+ * composition that is never gated is exactly the thing this studio does not
+ * ship.
+ */
+export function buildRevisionComposition(
+  config: Pick<Config, "repoRoot" | "blocksPath" | "tokensPath" | "blockRolesPath">,
+  revision: ProjectRevision,
+  outputDir: string,
+): { plan: ReturnType<typeof planFilm> } {
   const blocks = loadBlocks(config.blocksPath);
   const tokens = loadTokens(config.tokensPath) as never;
   const verdicts = loadVerdicts(config.repoRoot);
   const edits = revision.shots;
   const plan = planFilm(revision.brief, {
     blocks, tokens, count: edits.length || 3,
+    verdicts,
+    roles: loadBlockRoles(config.blockRolesPath),
     exclude: Object.entries(verdicts).filter(([, verdict]) => !verdict.ok).map(([id]) => id),
     ...(edits.length > 0 ? { selectedIds: edits.map((shot) => shot.id) } : {}),
   });
@@ -78,14 +92,21 @@ export const renderProjectRevision: RevisionRenderer = async (config, revision, 
     });
   }
   const built = buildFilmProject(config.repoRoot, outputDir, plan, tokens);
-  // Registry installation is currently synchronous; do not start the gate or
-  // video render if cancellation arrived during installation.
-  if (signal?.aborted) throw new Error("Render cancelled.");
   if (built.plan.shots.length === 0) throw new Error("No renderable shots survived installation.");
   // An explicit edit is all-or-nothing: never quietly drop a chosen shot.
   if (edits.length > 0 && built.plan.shots.length !== edits.length) {
     throw new Error("An edited motion block could not be installed; render was not published.");
   }
+  return { plan: built.plan };
+}
+
+/** Use the shipped, gated HyperFrames renderer, not a mock or a remote vendor. */
+export const renderProjectRevision: RevisionRenderer = async (config, revision, outputDir, signal) => {
+  if (signal?.aborted) throw new Error("Render cancelled.");
+  buildRevisionComposition(config, revision, outputDir);
+  // Registry installation is currently synchronous; do not start the gate or
+  // video render if cancellation arrived during installation.
+  if (signal?.aborted) throw new Error("Render cancelled.");
   const result = await renderProject(config.repoRoot, outputDir, { signal });
   if (!result.ok || !result.video) {
     throw new Error((result.log || "HyperFrames render failed.").slice(-1800));

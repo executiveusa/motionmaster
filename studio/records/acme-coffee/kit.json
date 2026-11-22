@@ -1,0 +1,15 @@
+{
+  "id": "acme-coffee",
+  "name": "ACME Coffee",
+  "notes": "The worked example the studio ships with. Warm paper, a deep accent, and a wordmark that sits quiet.",
+  "palette": {
+    "accent": "#C2410C"
+  },
+  "typography": {
+    "display": {
+      "family": "sans",
+      "weight": 700,
+      "tracking": "-0.03em"
+    }
+  }
+}

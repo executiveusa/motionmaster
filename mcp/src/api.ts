@@ -18,6 +18,11 @@
  *   GET  /api/v1/library/categories
  *   GET  /api/v1/library/items       ?query=&collection=&category=&kind=&limit=&offset=
  *   GET  /api/v1/library/items/:id
+ *   GET  /api/v1/shots               ?role=&query=&limit=
+ *   GET  /api/v1/shots/:id
+ *   POST /api/v1/shots/plan          { brief, durationSeconds?, maxShots? }
+ *   GET  /api/v1/effects             ?category=&query=&limit=
+ *   GET  /api/v1/effects/:id
  *   GET  /api/v1/blocks              ?tag=&query=&type=&limit=&offset=
  *   GET  /api/v1/blocks/:id
  *   POST /api/v1/blocks/fill         { brief, block?, values?, headline? }
@@ -35,7 +40,7 @@
  * open, which is the right thing for a server running on your own machine.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createReadStream, existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { appendFileSync, createReadStream, existsSync, lstatSync, mkdirSync, realpathSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import type { Config } from "./config.js";
 import { listSkills } from "./skills.js";
@@ -55,7 +60,8 @@ import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import { buildHyperFramesProject } from "./hyperframes-composer.js";
 import { buildComposition, normalizeStoryboard } from "./composer.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxKinds } from "./sfx.js";
-import { loadVerdicts } from "./verdicts.js";
+import { isQualified, loadVerdicts } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import {
   copyKitFiles,
   buildFilmProject,
@@ -71,13 +77,33 @@ import {
   writeJob,
   type RenderJob,
 } from "./render.js";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createProject, createProjectJob, listProjectJobs, listProjects, projectsRoot, readProject, readProjectJob, readRevision, saveRevision, transitionProjectJob } from "./projects.js";
 import { cancelRunningProjectJob, processProjectQueue, projectWorkerEnabled } from "./project-worker.js";
 import {
   BoardSyncError, boardSyncArtifactPath, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
 } from "./board-sync.js";
 import { exportProjectSource, importProjectSource } from "./project-source-bundle.js";
+import { getShot, loadShots, matchShots, planShots, SHOT_ROLES, type ShotRole } from "./shots.js";
+import { getEffect, loadEffectCategories, loadEffects, matchEffects } from "./effects.js";
+import { getBrandKit, listBrandKits, resolveTokens, saveBrandKit } from "./brandkit.js";
+import {
+  PLACEMENTS,
+  placement,
+  checkCopy,
+  cropLoss,
+  safeAreaOf,
+  safeZoneFractions,
+  preflight,
+  type PlacementId,
+} from "./meta.js";
+import { execFileSync } from "node:child_process";
+import { Supervisor, defaultLedgerPath, readLedger } from "./supervisor.js";
+import { inboxDir, submitBrief } from "./inbox.js";
+import { readMetrics } from "./metrics.js";
+import { loadTenants, tenantForKey, withinQuota, type Tenant } from "./tenants.js";
+import { getHouseTemplate, houseLibraryPath, houseLibraryProblems, listHouseTemplates, loadHouseLibrary, planHouseTemplate } from "./houselibrary.js";
+import { queueState, reconcileJobs } from "./queue.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -133,6 +159,55 @@ async function readSourceArchive(req: IncomingMessage): Promise<Buffer> {
  * Is this request allowed? An unset key means the API is open, which is the
  * right default for a server on somebody's own machine.
  */
+/**
+ * Who is making this request?
+ *
+ * Three modes, and which one is in force is decided by configuration rather
+ * than by a default:
+ *
+ *   - **No tenants file and no API key** — one studio, open. That is
+ *     development, and it is honest about being development.
+ *   - **An API key** — one studio, one key. The key is compared and never
+ *     logged.
+ *   - **A tenants file** — several studios, one key each, and a key is
+ *     **required**. A tenants file that exists and the studio still lets
+ *     anybody in would be a mistake, not a convenience.
+ */
+export interface RequestIdentity {
+  authorised: boolean;
+  /** The tenant, when there is one. */
+  tenant?: Tenant;
+  /** The reason it was refused, when it was. */
+  reason?: string;
+}
+
+export function identify(req: IncomingMessage, repoRoot: string): RequestIdentity {
+  const header = req.headers.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+
+  const { tenants, error } = loadTenants(repoRoot);
+  if (error) {
+    return { authorised: false, reason: error };
+  }
+
+  if (tenants.length > 0) {
+    if (!token) {
+      return { authorised: false, reason: "A bearer key is required: this studio has tenants." };
+    }
+    const tenant = tenantForKey(repoRoot, token);
+    if (!tenant) {
+      return { authorised: false, reason: "That key does not belong to a tenant." };
+    }
+    return { authorised: true, tenant };
+  }
+
+  const key = process.env.MOTION_MASTER_API_KEY?.trim();
+  if (!key) return { authorised: true };
+  if (token.length > 0 && token === key) return { authorised: true };
+  return { authorised: false, reason: "A valid bearer key is required." };
+}
+
+/** The old boolean check, kept for the one place that only needs a yes. */
 export function authorised(req: IncomingMessage): boolean {
   const key = process.env.MOTION_MASTER_API_KEY?.trim();
   if (!key) return true;
@@ -186,6 +261,41 @@ export function openApiDocument(config: Config): Record<string, unknown> {
       },
       [`${API_PREFIX}/tokens`]: {
         get: { summary: "The motion tokens.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/kits`]: {
+        get: { summary: "The brand kits: per-project overrides of the tokens.", responses: { 200: { description: "ok", content: json(obj) } } },
+        post: {
+          summary: "Write a brand kit. It is validated first and a kit with problems is not written.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 201: { description: "written", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/kits/{id}`]: {
+        get: {
+          summary: "One brand kit, with the tokens it overrides and the resolved result.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/queue`]: {
+        get: { summary: "What the render queue is doing.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/scenes`]: {
+        get: { summary: "The house scenes: the reusable shots the studio renders from.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/scenes/{id}`]: {
+        get: {
+          summary: "One house scene, in full.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/scenes/plan`]: {
+        post: {
+          summary: "Fill a house scene from a brief.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
       },
       [`${API_PREFIX}/clips`]: {
         get: { summary: "The gallery clips and the exact prompt behind each.", responses: { 200: { description: "ok", content: json(obj) } } },
@@ -251,6 +361,56 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
         },
       },
+      [`${API_PREFIX}/shots`]: {
+        get: {
+          summary: "The shot cards: the vocabulary a film is built from.",
+          parameters: [
+            { name: "role", in: "query", schema: str },
+            { name: "query", in: "query", schema: str },
+            { name: "limit", in: "query", schema: num },
+          ],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/shots/{id}`]: {
+        get: {
+          summary: "One shot card in full.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/shots/plan`]: {
+        post: {
+          summary: "Plan the shots of a film from a brief.",
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              properties: { brief: str, durationSeconds: num, maxShots: num },
+              required: ["brief"],
+            }),
+          },
+          responses: { 200: { description: "ok", content: json(obj) }, 400: { description: "no brief", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/effects`]: {
+        get: {
+          summary: "The effect shelf: small reusable pieces of craft, each one a file of code.",
+          parameters: [
+            { name: "category", in: "query", schema: str },
+            { name: "query", in: "query", schema: str },
+            { name: "limit", in: "query", schema: num },
+          ],
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/effects/{id}`]: {
+        get: {
+          summary: "One effect, with the path to its source.",
+          parameters: [{ name: "id", in: "path", required: true, schema: str }],
+          responses: { 200: { description: "ok", content: json(obj) }, 404: { description: "not found", content: json(obj) } },
+        },
+      },
       [`${API_PREFIX}/blocks/fill`]: {
         post: {
           summary: "Fill a motion block from a brief.",
@@ -277,6 +437,63 @@ export function openApiDocument(config: Config): Record<string, unknown> {
           summary: "Build a Remotion composition from a storyboard.",
           requestBody: { required: true, content: json(obj) },
           responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/supervisor/status`]: {
+        get: { summary: "The queue, the interrupted jobs and the ledger's counts.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/supervisor/ledger`]: {
+        get: { summary: "The ledger: one line per event, append-only.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/supervisor/metrics`]: {
+        get: {
+          summary: "The loop's counters, counted from the ledger. Every number traces back to a line in it.",
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/supervisor/brief`]: {
+        post: {
+          summary: "Put a brief in the inbox. The loop takes it on its next tick.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 201: { description: "queued", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/supervisor/tick`]: {
+        post: {
+          summary: "Run the loop: take the oldest queued job, gate it, repair it, render it, publish it.",
+          requestBody: { required: false, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/placements`]: {
+        get: { summary: "Meta's placements: the sizes, the safe zones and the text limits.", responses: { 200: { description: "ok", content: json(obj) } } },
+      },
+      [`${API_PREFIX}/meta/copy/check`]: {
+        post: {
+          summary: "Check a primary text and a headline against a placement's character limits.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/plan`]: {
+        post: {
+          summary: "Plan an ad for a placement: the frame, the safe area and where the type goes.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/build`]: {
+        post: {
+          summary: "Build the ad: a composition authored at the placement's own size.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) } },
+        },
+      },
+      [`${API_PREFIX}/meta/preflight`]: {
+        post: {
+          summary: "Measure a rendered file against its placement.",
+          requestBody: { required: true, content: { "application/json": { schema: obj } } },
+          responses: { 200: { description: "ok", content: json(obj) }, 422: { description: "outside the contract", content: json(obj) } },
         },
       },
       [`${API_PREFIX}/sfx/kinds`]: {
@@ -420,12 +637,38 @@ export async function handleApi(
   const method = req.method ?? "GET";
   const query = new URL(req.url ?? "/", "http://localhost").searchParams;
 
-  if (!authorised(req)) {
-    fail(res, 401, "This API needs a bearer token.", {
-      hint: "Set MOTION_MASTER_API_KEY on the server and send Authorization: Bearer <key>.",
+  const identity = identify(req, config.repoRoot);
+  if (!identity.authorised) {
+    fail(res, 401, identity.reason ?? "This API needs a bearer token.", {
+      hint:
+        "Send Authorization: Bearer <key>. With tenants configured the key decides which tenant you " +
+        "are; with a single API key it decides whether you may be here at all.",
     });
     return true;
   }
+  const tenantId = identity.tenant?.id;
+
+  /**
+   * The audit trail.
+   *
+   * One line per mutating request: who, what, and when. The key is never
+   * written down — only the tenant it belongs to — because an audit log
+   * that holds secrets is a place to leak them from.
+   */
+  const audit = (action: string, detail?: string): void => {
+    if (method === "GET" || method === "HEAD") return;
+    try {
+      const dir = join(config.repoRoot, "workspace", "audit");
+      mkdirSync(dir, { recursive: true });
+      appendFileSync(
+        join(dir, "audit.jsonl"),
+        `${JSON.stringify({ at: new Date().toISOString(), action, tenant: tenantId ?? null, detail: detail ?? null, route })}\n`,
+        "utf8",
+      );
+    } catch {
+      /* An audit that cannot be written must not take the request down. */
+    }
+  };
 
   const route = path.slice(API_PREFIX.length) || "/";
 
@@ -439,6 +682,13 @@ export async function handleApi(
       endpoints: [
         "GET  /skills",
         "GET  /tokens",
+        "GET  /kits",
+        "GET  /kits/{id}",
+        "POST /kits",
+        "GET  /queue",
+        "GET  /scenes",
+        "GET  /scenes/{id}",
+        "POST /scenes/plan",
         "GET  /clips",
         "GET  /licence",
         "POST /prompts/enhance",
@@ -452,6 +702,11 @@ export async function handleApi(
         "GET  /library/categories",
         "GET  /library/items",
         "GET  /library/items/{id}",
+        "GET  /shots",
+        "GET  /shots/{id}",
+        "POST /shots/plan",
+        "GET  /effects",
+        "GET  /effects/{id}",
         "GET  /blocks",
         "GET  /blocks/{id}",
         "POST /blocks/fill",
@@ -533,6 +788,135 @@ export async function handleApi(
 
   if (route === "/tokens" && method === "GET") {
     writeJson(res, 200, { source: tokenSource(config.tokensPath), tokens: loadTokens(config.tokensPath) });
+    return true;
+  }
+
+  /* ── brand kits ────────────────────────────────────────────────────────── */
+  if (route === "/kits" && method === "GET") {
+    const kits = listBrandKits(config.repoRoot);
+    writeJson(res, 200, {
+      path: config.brandKitsPath,
+      total: kits.length,
+      note:
+        "A kit overrides the canonical tokens for one brand. It may not remove a token and it may not " +
+        "change the system identity.",
+      kits,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/kits/") && method === "GET") {
+    const id = decodeURIComponent(route.slice("/kits/".length));
+    const base = loadTokens(config.tokensPath);
+    const { kit, problems } = getBrandKit(config.repoRoot, id, base);
+    if (!kit) {
+      writeJson(res, 404, { error: `There is no usable kit called "${id}".`, problems });
+      return true;
+    }
+    writeJson(res, 200, {
+      id: kit.id,
+      name: kit.name,
+      notes: kit.notes,
+      problems,
+      overrides: kit,
+      resolved: resolveTokens(base, kit),
+    });
+    return true;
+  }
+
+  if (route === "/kits" && method === "POST") {
+    const body = (await readJson(req)) as Record<string, unknown>;
+    const base = loadTokens(config.tokensPath);
+    const result = saveBrandKit(config.repoRoot, body, base);
+    if (!result.saved) {
+      writeJson(res, 400, { error: "The kit was not written because it has problems.", problems: result.problems });
+      return true;
+    }
+    writeJson(res, 201, { saved: true, id: body.id, path: result.path });
+    return true;
+  }
+
+  /* ── the render queue ─────────────────────────────────────────────────── */
+  if (route === "/queue" && method === "GET") {
+    const interrupted = reconcileJobs(config.repoRoot);
+    writeJson(res, 200, {
+      ...queueState(config.repoRoot, {
+        concurrency: Math.max(1, config.renderConcurrency),
+        target: config.renderTarget,
+        remoteUrl: config.renderRemoteUrl,
+      }),
+      remoteConfigured: Boolean(config.renderRemoteUrl),
+      remoteUrl: config.renderRemoteUrl ?? null,
+      interrupted,
+    });
+    return true;
+  }
+
+  /* ── the house library ────────────────────────────────────────────────── */
+  if (route === "/scenes" && method === "GET") {
+    const library = loadHouseLibrary(config.repoRoot);
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const role = url.searchParams.get("role") ?? undefined;
+    const query = url.searchParams.get("query") ?? undefined;
+    const limit = num(url.searchParams.get("limit"), 0);
+    const templates = listHouseTemplates(config.repoRoot, { role, query, limit: limit || undefined });
+    writeJson(res, 200, {
+      source: houseLibraryPath(config.repoRoot),
+      total: library.counts.total,
+      matched: templates.length,
+      byRole: library.counts.byRole,
+      problems: houseLibraryProblems(config.repoRoot),
+      templates,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/scenes/") && method === "GET" && !route.endsWith("/plan")) {
+    const id = decodeURIComponent(route.slice("/scenes/".length));
+    const template = getHouseTemplate(config.repoRoot, id);
+    if (!template) {
+      writeJson(res, 404, { error: `There is no house scene called "${id}".` });
+      return true;
+    }
+    writeJson(res, 200, { source: houseLibraryPath(config.repoRoot), template, problems: houseLibraryProblems(config.repoRoot) });
+    return true;
+  }
+
+  if (route === "/scenes/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      id?: string;
+      brief?: string;
+      values?: Record<string, unknown>;
+      headline?: string;
+      brand_kit?: string;
+    };
+    if (!body.id || !body.brief) {
+      writeJson(res, 400, { error: "A scene plan needs a scene id and a brief." });
+      return true;
+    }
+    const base = loadTokens(config.tokensPath);
+    let tokens = base;
+    let kit: { id: string; name: string } | undefined;
+    const problems: unknown[] = [];
+    if (body.brand_kit) {
+      const found = getBrandKit(config.repoRoot, body.brand_kit, base);
+      if (found.kit) {
+        tokens = resolveTokens(base, found.kit);
+        kit = { id: found.kit.id, name: found.kit.name };
+      }
+      problems.push(...found.problems);
+    }
+    const planned = planHouseTemplate(config.repoRoot, body.id, {
+      brief: body.brief,
+      tokens,
+      values: body.values,
+      headline: body.headline,
+    });
+    if (!planned.template || !planned.filled) {
+      writeJson(res, 404, { error: `There is no house scene called "${body.id}".`, problems: planned.problems });
+      return true;
+    }
+    writeJson(res, 200, { template: planned.template, filled: planned.filled, brandKit: kit, problems });
     return true;
   }
 
@@ -645,14 +1029,35 @@ export async function handleApi(
 
     let chosen: MotionBlock | undefined;
     let matched: { block: MotionBlock; score: number }[] = [];
+    const verdicts = loadVerdicts(config.repoRoot);
     if (body.block) {
       chosen = file.blocks.find((b) => b.id === body.block);
       if (!chosen) {
         fail(res, 404, `No motion block with id "${body.block}".`);
         return true;
       }
+      /*
+       * Naming a block does not excuse it.
+       *
+       * The matcher refuses a block the gate rejected, but this path used to
+       * take the name at face value — so a disqualified block could be
+       * filled and handed to a render that would then refuse it. The gate
+       * is the same gate either way.
+       */
+      const verdict = verdicts[chosen.id];
+      if (verdict && !isQualified(verdict)) {
+        fail(res, 400, `The block "${chosen.id}" did not pass the house gate on this machine.`, {
+          reasons: verdict.reasons,
+          hint: "Ask for a block by brief instead of by name, and the matcher will pick a qualified one.",
+        });
+        return true;
+      }
     } else {
-      matched = matchBlocks(file, body.brief, { limit: 5, requireVariables: true });
+      matched = matchBlocks(file, body.brief, {
+        limit: 5,
+        requireVariables: true,
+        verdicts,
+      });
       if (matched.length === 0) {
         fail(res, 400, "No motion block matched that brief.", {
           hint: "Name a look: title card, kinetic type, transition, product demo, data.",
@@ -696,6 +1101,375 @@ export async function handleApi(
   }
 
   // ── the sound ─────────────────────────────────────────────────────────────
+  if (route === "/shots" && method === "GET") {
+    const shots = loadShots(config.skillsDir);
+    const role = query.get("role");
+    const q = query.get("query")?.trim();
+    const limit = Math.min(num(query.get("limit"), 12), 200);
+    const matched = q
+      ? matchShots(shots, q, { limit }).map((m) => m.shot)
+      : shots.filter((s) => !role || s.role === role).slice(0, limit);
+    writeJson(res, 200, {
+      source: "plugins/motion-master/skills/shotcraft/references/shots",
+      upstream: "github.com/Vincentwei1021/video-shotcraft",
+      licence: "Apache-2.0",
+      total: shots.length,
+      roles: SHOT_ROLES,
+      shots: matched,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/shots/") && method === "GET" && !route.endsWith("/plan")) {
+    const id = decodeURIComponent(route.slice("/shots/".length));
+    const found = getShot(loadShots(config.skillsDir), id);
+    if (!found) {
+      fail(res, 404, `No shot card with id "${id}".`);
+      return true;
+    }
+    writeJson(res, 200, found);
+    return true;
+  }
+
+  if (route === "/shots/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      brief?: string;
+      durationSeconds?: number;
+      maxShots?: number;
+    };
+    if (!body?.brief) {
+      fail(res, 400, "A brief is required.");
+      return true;
+    }
+    const shots = loadShots(config.skillsDir);
+    if (shots.length === 0) {
+      fail(res, 500, "No shot cards are installed.");
+      return true;
+    }
+    writeJson(res, 200, planShots(shots, body.brief, {
+      durationSeconds: body.durationSeconds,
+      maxShots: body.maxShots,
+    }));
+    return true;
+  }
+
+  if (route === "/effects" && method === "GET") {
+    const effects = loadEffects(config.skillsDir);
+    const category = query.get("category");
+    const q = query.get("query")?.trim();
+    const limit = Math.min(num(query.get("limit"), 12), 250);
+    const matched = q
+      ? matchEffects(effects, q, { limit }).map((m) => m.effect)
+      : effects.filter((e) => !category || e.category === category).slice(0, limit);
+    writeJson(res, 200, {
+      source: "plugins/motion-master/skills/pixelfx/src",
+      upstream: "github.com/patch-gg/pixelfx",
+      licence: "MIT",
+      total: effects.length,
+      categories: loadEffectCategories(config.skillsDir),
+      effects: matched,
+    });
+    return true;
+  }
+
+  if (route.startsWith("/effects/") && method === "GET") {
+    const id = decodeURIComponent(route.slice("/effects/".length));
+    const found = getEffect(loadEffects(config.skillsDir), id);
+    if (!found) {
+      fail(res, 404, `No effect with id "${id}".`);
+      return true;
+    }
+    writeJson(res, 200, found);
+    return true;
+  }
+
+  /* --------------------------------------------------------- the loop -- */
+
+  if (route === "/supervisor/status" && method === "GET") {
+    const supervisor = new Supervisor({ repoRoot: config.repoRoot, tenantId });
+    const ledgerPath = defaultLedgerPath(config.repoRoot, tenantId);
+    const ledger = readLedger(ledgerPath);
+    writeJson(res, 200, {
+      ledgerPath,
+      totalEvents: ledger.length,
+      byEvent: ledger.reduce<Record<string, number>>((counts, entry) => {
+        counts[entry.event] = (counts[entry.event] ?? 0) + 1;
+        return counts;
+      }, {}),
+      events: ledger.slice(-num(query.get("limit"), 20)),
+      queued: supervisor.queuedJobs().map((job) => ({
+        jobId: job.id, projectId: job.projectId, revision: job.revision, createdAt: job.createdAt,
+      })),
+      interrupted: supervisor.interruptedJobs().map((job) => ({
+        jobId: job.id, projectId: job.projectId,
+      })),
+    });
+    return true;
+  }
+
+  if (route === "/supervisor/ledger" && method === "GET") {
+    const ledgerPath = defaultLedgerPath(config.repoRoot, tenantId);
+    const ledger = readLedger(ledgerPath);
+    const limit = num(query.get("limit"), 50);
+    writeJson(res, 200, { ledgerPath, total: ledger.length, events: ledger.slice(-limit) });
+    return true;
+  }
+
+  if (route === "/supervisor/metrics" && method === "GET") {
+    writeJson(res, 200, readMetrics(config.repoRoot, tenantId));
+    return true;
+  }
+
+  if (route === "/supervisor/brief" && method === "POST") {
+    const body = (await readJson(req)) as { title?: string; brief?: string; name?: string };
+    if (!body.title || !body.brief) {
+      fail(res, 400, "A brief needs a title and a brief.");
+      return true;
+    }
+    const path = submitBrief(config.repoRoot, { title: body.title, brief: body.brief }, body.name, tenantId);
+    audit("brief.submitted", body.title);
+    writeJson(res, 201, { path, inbox: inboxDir(config.repoRoot, tenantId), tenant: tenantId ?? null });
+    return true;
+  }
+
+  if (route === "/supervisor/tick" && method === "POST") {
+    const body = (await readJson(req)) as { ticks?: number; dryRun?: boolean; budget?: number };
+    /* A tenant's quota is checked before the work is queued, not after. */
+    if (identity.tenant) {
+      const quota = withinQuota(config.repoRoot, identity.tenant);
+      if (!quota.ok) {
+        fail(res, 429, `The daily quota is spent: ${quota.used} of ${quota.limit} publishes today.`, {
+          resetsAt: "midnight, local time",
+        });
+        return true;
+      }
+    }
+    const supervisor = new Supervisor({
+      repoRoot: config.repoRoot,
+      tenantId,
+      dryRun: body.dryRun ?? false,
+      budget: body.budget ?? 3,
+    });
+    const results = [];
+    for (let i = 0; i < (body.ticks ?? 1); i += 1) {
+      const result = await supervisor.tick();
+      results.push({
+        action: result.action,
+        jobId: result.jobId,
+        state: result.state,
+        ok: result.outcome?.ok,
+        error: result.outcome?.error,
+        findings: result.outcome?.findings,
+        artifact: result.outcome?.artifact,
+      });
+      if (result.action === "idle") break;
+    }
+    audit("supervisor.tick", `${results.length} tick(s)`);
+    writeJson(res, 200, {
+      ran: results.length,
+      results,
+      tenant: tenantId ?? null,
+      ledger: defaultLedgerPath(config.repoRoot, tenantId),
+    });
+    return true;
+  }
+
+  /* ------------------------------------------------------------- the ads */
+
+  if (route === "/meta/placements" && method === "GET") {
+    writeJson(res, 200, {
+      placements: PLACEMENTS.map((p) => ({
+        id: p.id,
+        name: p.name,
+        aspect: p.aspect,
+        master: { width: p.width, height: p.height },
+        where: p.placements,
+        aspectTolerance: `${p.aspectTolerance * 100}%`,
+        safeZone: safeZoneFractions(p),
+        safeArea: safeAreaOf(p),
+        text: p.text,
+        duration: p.duration,
+        minWidth: p.minWidth,
+        encoding: p.encoding,
+        maxFileBytes: p.maxFileBytes,
+        source: p.source,
+        readOn: p.readOn,
+        cropLoss: cropLoss(p),
+      })),
+      source: "Meta Ads Guide, read 2026-11-13",
+    });
+    return true;
+  }
+
+  if (route === "/meta/copy/check" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      primaryText?: string;
+      headline?: string;
+      description?: string;
+      label?: string;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const copy = {
+      primaryText: body.primaryText ?? "",
+      headline: body.headline ?? "",
+      description: body.description ?? "",
+      label: body.label ?? "",
+    };
+    const problems = checkCopy(copy, p);
+    writeJson(res, 200, {
+      ok: problems.length === 0,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+      measured: {
+        primaryText: { length: copy.primaryText.length, min: p.text.primaryMin, max: p.text.primaryMax },
+        headline: { length: copy.headline.length, max: p.text.headlineMax },
+      },
+      problems,
+    });
+    return true;
+  }
+
+  if (route === "/meta/plan" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      claim?: string;
+      eyebrow?: string;
+      brand?: string;
+      primaryText?: string;
+      headline?: string;
+      durationSeconds?: number;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const safe = safeAreaOf(p);
+    const problems = checkCopy(
+      { primaryText: body.primaryText ?? "", headline: body.headline ?? "", description: "", label: "" },
+      p,
+    );
+    writeJson(res, 200, {
+      ok: true,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height }, where: p.placements },
+      frame: {
+        safeArea: safe,
+        safeZone: safeZoneFractions(p),
+        typeFloorPx: Math.round(Math.min(p.width, p.height) * 0.026),
+      },
+      content: {
+        claim: body.claim ?? "",
+        eyebrow: body.eyebrow ?? null,
+        brand: body.brand ?? "",
+        primaryText: body.primaryText ?? "",
+        headline: body.headline ?? "",
+      },
+      durationSeconds: body.durationSeconds ?? 6,
+      copyProblems: problems,
+      theAlternative: { cropLoss: cropLoss(p) },
+    });
+    return true;
+  }
+
+  if (route === "/meta/build" && method === "POST") {
+    const body = (await readJson(req)) as {
+      placement?: string;
+      claim?: string;
+      eyebrow?: string;
+      brand?: string;
+      primaryText?: string;
+      headline?: string;
+      accent?: string;
+      out?: string;
+      durationSeconds?: number;
+    };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    const outDir = body.out ?? join(config.repoRoot, "studio", "ads", "build");
+    const args = [
+      join(config.repoRoot, "scripts", "build-meta-ad.mjs"),
+      "--placement", p.id,
+      "--claim", body.claim ?? "",
+      "--brand", body.brand ?? "",
+      "--out", outDir,
+      "--primary-text", body.primaryText ?? "",
+      "--headline", body.headline ?? "",
+      "--duration", String(body.durationSeconds ?? 6),
+    ];
+    if (body.eyebrow) args.push("--eyebrow", body.eyebrow);
+    if (body.accent) args.push("--accent", body.accent);
+    let stdout = "";
+    try {
+      stdout = execFileSync("node", args, { cwd: config.repoRoot, encoding: "utf8" });
+    } catch (error) {
+      const e = error as { stdout?: string; stderr?: string };
+      fail(res, 500, "The build failed.", { stdout: e.stdout ?? "", stderr: e.stderr ?? "" });
+      return true;
+    }
+    writeJson(res, 200, {
+      ok: true,
+      placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+      outDir,
+      adJson: join(outDir, "ad.json"),
+      report: stdout.trim().split("\n").slice(-20).join("\n"),
+    });
+    return true;
+  }
+
+  if (route === "/meta/preflight" && method === "POST") {
+    const body = (await readJson(req)) as { placement?: string; file?: string };
+    const p = placement(body.placement ?? "");
+    if (!p) {
+      fail(res, 404, `There is no placement called "${body.placement ?? ""}".`, { placements: PLACEMENTS.map((x) => x.id) });
+      return true;
+    }
+    if (!body.file) {
+      fail(res, 400, "Give the file to check.");
+      return true;
+    }
+    const path = body.file.startsWith("/") ? body.file : join(config.repoRoot, body.file);
+    if (!existsSync(path)) {
+      fail(res, 404, `There is no file at ${body.file}.`);
+      return true;
+    }
+    const raw = execFileSync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate:format=duration,size", "-of", "json", path],
+      { encoding: "utf8" },
+    );
+    const probed = JSON.parse(raw) as {
+      streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number; r_frame_rate?: string }[];
+      format?: { duration?: string; size?: string };
+    };
+    const video = (probed.streams ?? []).find((s) => s.codec_type === "video");
+    const audio = (probed.streams ?? []).find((s) => s.codec_type === "audio");
+    if (!video) {
+      fail(res, 400, "That file has no video stream.");
+      return true;
+    }
+    const [num, den] = String(video.r_frame_rate ?? "0/1").split("/").map(Number);
+    const result = preflight(body.placement as PlacementId, {
+      file: body.file,
+      width: video.width,
+      height: video.height,
+      durationSeconds: probed.format?.duration ? Number(probed.format.duration) : undefined,
+      bytes: statSync(path).size,
+      codec: video.codec_name,
+      audioCodec: audio?.codec_name,
+      fps: den ? num / den : undefined,
+      hasAudio: Boolean(audio),
+    });
+    writeJson(res, result.ok ? 200 : 422, result);
+    return true;
+  }
+
   if (route === "/sfx/kinds" && method === "GET") {
     const catalogue = loadSfx(config.sfxPath);
     writeJson(res, 200, sfxKinds(catalogue));
@@ -1023,6 +1797,8 @@ export async function handleApi(
       tokens: tokenFile,
       count: body.shots ?? 3,
       tags: body.tags,
+      verdicts: known,
+      roles: loadBlockRoles(config.blockRolesPath),
       exclude: Object.entries(known)
         .filter(([, verdict]) => !verdict.ok)
         .map(([id]) => id),

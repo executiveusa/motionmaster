@@ -15,7 +15,7 @@ mkdirSync(OUT, { recursive: true });
 const DEMOS = [
   { id: 'blueprint', src: 'demos/blueprint/blueprint.mp4', posterAt: 26 },
   { id: 'ink', src: 'demos/ink/ink.mp4', posterAt: 17 },
-  { id: 'whiteboard', src: 'demos/whiteboard/whiteboard.mp4', posterAt: 25 },
+  { id: 'whiteboard', src: 'demos/whiteboard/whiteboard.mp4', posterAt: 28 },
 ];
 
 for (const d of DEMOS) {

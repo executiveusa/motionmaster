@@ -2,9 +2,17 @@
 /**
  * MOTION MASTER — hero film.
  *
- * A single 104-second film, rendered frame by frame: picture is a function of
- * time. `window.render(t)` draws the frame at time t and resolves when the
- * pixels are ready.
+ * A film, rendered frame by frame: picture is a function of time.
+ * `window.render(t)` draws the frame at time t and resolves when the pixels
+ * are ready.
+ *
+ * It ships in two cuts, chosen with `window.setEdit(name)`:
+ *
+ *   full  — 104 seconds, the original rhythm
+ *   short — 55.4 seconds, the cut that runs on the front page
+ *
+ * The cut is an edit decision list, not a re-timing of the animations: each
+ * movement still receives the time it was designed for.
  *
  * The rules this film is built to, taken from the motionmaxxing craft law
  * that ships in this repository (skills/motionmaxxing):
@@ -29,7 +37,66 @@
   const W = 1920;
   const H = 1080;
   const FPS = 30;
-  const DUR = 104;
+
+  // ── the edit ────────────────────────────────────────────────────────────────
+  /**
+   * A film is cut, not merely played. Each segment of an edit decision list
+   * maps a stretch of the finished timeline onto a stretch of the original
+   * timeline, and the movement is handed the ORIGINAL time — so every
+   * animation is exactly the one that was designed, at exactly its own pace.
+   * What the edit changes is the running order and the tempo.
+   *
+   * `m0` is where that segment's footage clock starts. The footage plays at
+   * real speed in every segment; only the staging around it is compressed,
+   * so a clip is never seen speeding up to make room for the next one.
+   */
+  const EDITS = {
+    // the long cut: the original film, one to one
+    full: {
+      dur: 104,
+      segments: [
+        { n0: 0, n1: 20, o0: 0, o1: 20, mv: 1, m0: 0 },
+        { n0: 20, n1: 50, o0: 20, o1: 50, mv: 2, m0: 20 },
+        { n0: 50, n1: 77.5, o0: 50, o1: 77.5, mv: 3, m0: 44 },
+        { n0: 77.5, n1: 96, o0: 77.5, o1: 96, mv: 4, m0: 78 },
+        { n0: 96, n1: 104, o0: 96, o1: 104, mv: 5, m0: 96 },
+      ],
+    },
+    // the short cut: a slow opening, a fast middle, a held ending
+    short: {
+      dur: 55.4,
+      segments: [
+        { n0: 0, n1: 12.4, o0: 0, o1: 12.4, mv: 1, m0: 0 },
+        { n0: 12.4, n1: 28.4, o0: 20, o1: 50, mv: 2, m0: 12.4 },
+        { n0: 28.4, n1: 41.4, o0: 50, o1: 76, mv: 3, m0: 28.4 },
+        { n0: 41.4, n1: 47.4, o0: 77.5, o1: 96, mv: 4, m0: 41.4 },
+        { n0: 47.4, n1: 55.4, o0: 96, o1: 104, mv: 5, m0: 47.4 },
+      ],
+    },
+  };
+
+  let EDIT = EDITS.short;
+  let DUR = EDIT.dur;
+
+  /** Which segment is playing at time t, and the original time it maps to. */
+  function segmentAt(t) {
+    const segs = EDIT.segments;
+    for (let i = 0; i < segs.length; i++) {
+      const s = segs[i];
+      if (t < s.n1 || i === segs.length - 1) {
+        const p = clamp01((t - s.n0) / (s.n1 - s.n0));
+        return { seg: s, old: s.o0 + p * (s.o1 - s.o0), local: t - s.n0 };
+      }
+    }
+    const last = segs[segs.length - 1];
+    return { seg: last, old: last.o1, local: last.n1 - last.n0 };
+  }
+
+  /** Where a shot inside a segment lands on the finished timeline. */
+  function shotNewAt(seg, oldAt) {
+    const p = (oldAt - seg.o0) / (seg.o1 - seg.o0);
+    return seg.n0 + p * (seg.n1 - seg.n0);
+  }
 
   const canvas = document.getElementById('film');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -59,17 +126,27 @@
   const rgba = (c, a) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
 
   // ── assets ─────────────────────────────────────────────────────────────────
+  /**
+   * The footage, and the window of each clip that actually holds the picture.
+   *
+   * Two of these clips open on black: the footage-title clip spends its first
+   * three seconds on an empty ground, and the kinetic clip its first half
+   * second. A film that shows the empty part of a clip is showing nothing, so
+   * the usable window is cut here and the loops run inside it.
+   */
   const CLIPS = {
-    launch: { dir: 'frames/launch-title', count: 420 },
-    kinetic: { dir: 'frames/kinetic-type-full', count: 270 },
-    product: { dir: 'frames/product-loop', count: 630 },
-    footage: { dir: 'frames/footage-title', count: 480 },
+    launch: { dir: 'frames/launch-title', from: 1, count: 420 },
+    kinetic: { dir: 'frames/kinetic-type-full', from: 13, count: 255 },
+    product: { dir: 'frames/product-loop', from: 1, count: 621 },
+    footage: { dir: 'frames/footage-title', from: 92, count: 459 },
   };
-  /** The frame index a clip actually shows at a given step. Clips loop. */
+  /** The frame index a clip actually shows at a given step, relative to `from`. */
   function wrapIndex(clip, index) {
     const c = CLIPS[clip];
     if (!c) return 1;
-    return ((Math.floor(index) - 1) % c.count + c.count) % c.count + 1;
+    const from = c.from;
+    const n = c.count - from + 1;
+    return from + (((Math.floor(index) - 1) % n + n) % n);
   }
 
   const cache = new Map();
@@ -79,7 +156,10 @@
   function frameImage(clip, index) {
     const c = CLIPS[clip];
     if (!c) return Promise.resolve(null);
-    const idx = wrapIndex(clip, index);
+    // `index` is already the absolute frame inside the clip. It is wrapped
+    // exactly once, by the caller, so the cache key and the file on disk can
+    // never disagree.
+    const idx = index;
     const key = clip + ':' + idx;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (pending.has(key)) return pending.get(key);
@@ -660,41 +740,60 @@
   }
 
   // ── the render loop ────────────────────────────────────────────────────────
-  /** Which clip frame is needed at time t. */
-  function neededFrames(t) {
+  /**
+   * Which clip frame is needed at time t.
+   *
+   * The footage clock runs at real speed and restarts at every cut, so a clip
+   * is never seen speeding up to make room for the next one. What gets
+   * compressed is the staging around it.
+   */
+  function neededFrames(t, oldT, seg) {
     const need = {};
+    // relative to each clip's usable window; the absolute frame is worked out
+    // once, in render(), so the file on disk and the cache key always agree.
     const add = (clip, idx) => {
-      need[clip] = wrapIndex(clip, idx);
+      need[clip] = idx;
     };
-    // movement 1 — the reel is already running on the right, so the launch
-    // clip has to be primed from the first frame or the opening is empty.
-    if (t < 20) add('launch', Math.floor(t * 30) + 1);
-    // movement 2
-    if (t >= 19 && t < 50) {
-      const local = t - 20;
-      add('launch', Math.floor(local * 30) + 1);
-      add('kinetic', Math.floor(local * 30) + 1);
-      add('product', Math.floor(local * 30) + 1);
-      add('footage', Math.floor(local * 30) + 1);
+    const mt = t - seg.m0; // the footage clock for this segment
+
+    if (seg.mv === 1) {
+      add('launch', Math.floor(mt * 30) + 1);
+    } else if (seg.mv === 2) {
+      // the reel is already running on the right, so the launch clip has to be
+      // primed from the first frame or the opening is empty.
+      for (const c of ['launch', 'kinetic', 'product', 'footage']) {
+        add(c, Math.floor(mt * 30) + 1);
+      }
+    } else if (seg.mv === 3) {
+      add('kinetic', Math.floor(mt * 30) + 1);
+    } else if (seg.mv === 4) {
+      // Three shots, cut on motion. Each one starts on a frame that already
+      // holds the picture — a shot that opens on an empty canvas is a hole in
+      // the montage.
+      const shots = [
+        { clip: 'launch', at: 78, from: 36 },
+        { clip: 'product', at: 84, from: 36 },
+        { clip: 'footage', at: 90, from: 0 },
+      ];
+      for (const s of shots) {
+        const local = oldT - s.at;
+        if (local < -0.02 || local > 6.02) continue;
+        const newAt = shotNewAt(seg, s.at);
+        add(s.clip, Math.floor((t - newAt) * 30) + 1 + s.from);
+      }
+    } else if (seg.mv === 5) {
+      // The still the file lands on: the footage clip's own title frame, not
+      // the black ground it opens on.
+      add('footage', 300 - (CLIPS.footage.from - 1));
     }
-    // movement 3
-    if (t >= 44 && t < 76) add('kinetic', Math.floor((t - 44) * 30) + 1);
-    // movement 4
-    if (t >= 77.9 && t < 96.1) {
-      const local = t - 78;
-      if (local < 6.1) add('launch', Math.floor(local * 30) + 1);
-      const local2 = t - 84;
-      if (local2 >= 0 && local2 < 6.1) add('product', Math.floor(local2 * 30) + 1);
-      const local3 = t - 90;
-      if (local3 >= 0 && local3 < 6.1) add('footage', Math.floor(local3 * 30) + 1);
-    }
-    // movement 5
-    if (t >= 95.9) add('footage', 1);
     return need;
   }
 
   window.render = function render(t) {
-    const need = neededFrames(t);
+    const { seg, old } = segmentAt(t);
+    const raw = neededFrames(t, old, seg);
+    const need = {};
+    for (const k of Object.keys(raw)) need[k] = wrapIndex(k, raw[k]);
     const keys = Object.keys(need);
     return Promise.all(keys.map((k) => frameImage(k, need[k]))).then(() => {
       const imgs = {};
@@ -704,16 +803,25 @@
       ctx.fillStyle = '#08080a';
       ctx.fillRect(0, 0, W, H);
 
-      if (t < 20) movement1(ctx, t, imgs);
-      else if (t < 50) movement2(ctx, t, imgs);
-      else if (t < 77.5) movement3(ctx, t, imgs);
-      else if (t < 96) movement4(ctx, t, imgs);
-      else movement5(ctx, t, imgs);
+      if (seg.mv === 1) movement1(ctx, old, imgs);
+      else if (seg.mv === 2) movement2(ctx, old, imgs);
+      else if (seg.mv === 3) movement3(ctx, old, imgs);
+      else if (seg.mv === 4) movement4(ctx, old, imgs);
+      else movement5(ctx, old, imgs);
 
       ctx.restore();
       return true;
     });
   };
+
+  /** Switch cuts. The page asks for one by name; the default is the short cut. */
+  window.setEdit = function setEdit(name) {
+    if (!EDITS[name]) return false;
+    EDIT = EDITS[name];
+    DUR = EDIT.dur;
+    return true;
+  };
+  window.EDITS = EDITS;
 
   window.DUR = DUR;
   window.FPS = FPS;

@@ -1,0 +1,180 @@
+import { CSS_DURATION, CSS_PROGRESS, CSS_TIME } from '../lib/css-properties.ts';
+import { type CanvasOverflow, NO_OVERFLOW } from '../lib/inkBounds.ts';
+import { computeTimeline } from '../lib/timeline.ts';
+import { cssFontFamily } from '../lib/utils.ts';
+import { resolveBundle } from './bundle-registry.ts';
+import type { CreateElementFn, TegakiEngineOptions } from './types.ts';
+
+export const PAD_V_CSS = 'max(0.2em, 0.9em - 0.5lh)';
+
+/**
+ * The sentinel's transitions: each inherited style the engine reads ends one
+ * (after a millisecond), so a class toggled anywhere above reaches it.
+ */
+export const SENTINEL_TRANSITION = 'font-size 0.001s, line-height 0.001s, color 0.001s, letter-spacing 0.001s, font-weight 0.001s';
+
+/**
+ * The canvas's box: the text box padded by 0.2em horizontally and `PAD_V_CSS`
+ * vertically, grown per side by `overflow` px where the strokes reach further
+ * (a stem running past a letter's advance under negative letter-spacing, a
+ * glow).
+ */
+export function canvasBoxStyle(overflow: CanvasOverflow = NO_OVERFLOW): Record<string, string> {
+  const { left, top, right, bottom } = overflow;
+  const plus = (px: number) => (px ? ` + ${px}px` : '');
+  const minus = (px: number) => (px ? ` - ${px}px` : '');
+  // `inset` shorthand not supported by Safari < 14.1 — expand to longhand.
+  return {
+    top: `calc(-1 * ${PAD_V_CSS}${minus(top)})`,
+    right: right ? `calc(-0.2em${minus(right)})` : '-0.2em',
+    bottom: `calc(-1 * ${PAD_V_CSS}${minus(bottom)})`,
+    left: left ? `calc(-0.2em${minus(left)})` : '-0.2em',
+    width: `calc(100% + 0.4em${plus(left + right)})`,
+    height: `calc(100% + 2 * ${PAD_V_CSS}${plus(top + bottom)})`,
+  };
+}
+
+export function buildRootProps(options: TegakiEngineOptions): Record<string, any> {
+  const text = options.text ?? '';
+  const font = resolveBundle(options.font);
+  const fontFamily = font ? cssFontFamily(font, options.fallbackFont) : undefined;
+
+  const duration = text && font ? computeTimeline(text, font, options.timing).totalDuration : 0;
+  const timeObj = typeof options.time === 'object' ? options.time : null;
+  const rawTime =
+    typeof options.time === 'number'
+      ? options.time
+      : timeObj?.mode === 'controlled'
+        ? timeObj.unit === 'progress'
+          ? timeObj.value * duration
+          : timeObj.value
+        : timeObj?.mode === 'uncontrolled'
+          ? (timeObj.initialTime ?? 0)
+          : 0;
+  const easing = timeObj?.mode === 'uncontrolled' ? timeObj.easing : undefined;
+  const time = easing && duration > 0 ? easing(rawTime / duration) * duration : rawTime;
+  const progress = duration > 0 ? time / duration : 0;
+
+  return {
+    'data-tegaki': 'root',
+    dir: options?.direction ?? 'auto',
+    style: {
+      position: 'relative',
+      maxWidth: '100%',
+      width: 'auto',
+      height: 'auto',
+      fontFamily,
+      // The strokes are of the face the weight picks (see `TegakiBundle.faces`),
+      // never a bold the browser makes up from a lighter one.
+      fontSynthesisWeight: 'none',
+      direction: options.direction ?? undefined,
+      [CSS_DURATION]: duration,
+      [CSS_TIME]: time,
+      [CSS_PROGRESS]: progress,
+    },
+  };
+}
+
+export function buildChildren<T>(options: TegakiEngineOptions, h: CreateElementFn<T>): T {
+  const text = options.text ?? '';
+  const isCss = options.time === 'css' || (typeof options.time === 'object' && options.time?.mode === 'css');
+  const showOverlay = options.showOverlay;
+
+  return h(
+    'span',
+    { style: { display: 'block', position: 'relative' } },
+    h('span', {
+      'data-tegaki': 'sentinel',
+      'aria-hidden': 'true',
+      style: {
+        position: 'absolute',
+        width: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        fontSize: 'inherit',
+        lineHeight: 'inherit',
+        letterSpacing: 'inherit',
+        visibility: 'hidden',
+        transition: isCss ? `${SENTINEL_TRANSITION}, ${CSS_PROGRESS} 0.001s` : SENTINEL_TRANSITION,
+      },
+    }),
+    h(
+      'canvas',
+      {
+        'data-tegaki': 'canvas',
+        'aria-hidden': 'true',
+        style: {
+          position: 'absolute',
+          ...canvasBoxStyle(),
+          pointerEvents: 'none',
+          overflow: 'visible',
+        },
+      },
+      h(
+        'span',
+        {
+          'data-tegaki': 'canvas-fallback',
+          style: { display: 'inline-block', padding: `${PAD_V_CSS} 0.2em` },
+        },
+        text,
+      ),
+    ),
+    h(
+      'span',
+      {
+        'data-tegaki': 'overlay',
+        style: {
+          display: 'block',
+          userSelect: 'auto',
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'break-word',
+          paddingInlineEnd: 1,
+          textRendering: 'geometricPrecision',
+          // Hide the overlay glyphs with `color: transparent` rather than
+          // `-webkit-text-fill-color`. The latter is non-standard, so DOM
+          // rasterizers that skip it (video/image exporters like editframe,
+          // html-to-image, Satori, headless-screenshot pipelines) repaint the
+          // overlay text in the inherited color, doubled over the canvas. The
+          // trade-off: in `editable` mode the caret follows `currentColor`, so a
+          // transparent color also hides the caret — acceptable, since editing
+          // is a niche path and correct exports are the common one.
+          color: showOverlay ? 'rgba(255, 0, 0, 0.4)' : 'transparent',
+        },
+      },
+      text,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DOM createElement helper (for vanilla JS constructor)
+// ---------------------------------------------------------------------------
+
+export function domCreateElement(tag: string, props: Record<string, any>, ...children: (HTMLElement | string)[]): HTMLElement {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'style' && typeof value === 'object') {
+      for (const [k, v] of Object.entries(value as Record<string, any>)) {
+        if (v !== undefined && v !== null) {
+          if (k.startsWith('--')) {
+            el.style.setProperty(k, String(v));
+          } else {
+            (el.style as any)[k] = typeof v === 'number' && k !== 'opacity' && k !== 'zIndex' ? `${v}px` : v;
+          }
+        }
+      }
+    } else if (key === 'aria-hidden') {
+      el.setAttribute('aria-hidden', String(value));
+    } else if (key.startsWith('data-')) {
+      el.setAttribute(key, String(value));
+    }
+  }
+  for (const child of children) {
+    if (typeof child === 'string') {
+      el.appendChild(document.createTextNode(child));
+    } else {
+      el.appendChild(child);
+    }
+  }
+  return el;
+}

@@ -1,4 +1,4 @@
-import { prefersReducedMotion, qsa } from '../lib/dom';
+import { prefersReducedMotion, qs, qsa } from '../lib/dom';
 
 /**
  * The hero film.
@@ -58,4 +58,105 @@ export function initFilm(): void {
     { threshold: 0.05 },
   );
   for (const video of videos) observer.observe(video);
+}
+
+/**
+ * The sound on the engine film.
+ *
+ * The film is mixed — paper, a riser, a drop, a punch — so it plays
+ * muted by default and the visitor decides whether to let it speak. The
+ * film's own caption line runs along the bottom of the frame, which is
+ * why there is no stock control bar on it.
+ */
+export function initFilmSound(): void {
+  const buttons = qsa<HTMLButtonElement>('[data-film-sound]');
+  if (!buttons.length) return;
+
+  for (const button of buttons) {
+    const frame = button.closest('.showcase__frame');
+    const video = frame?.querySelector<HTMLVideoElement>('video');
+    if (!video) continue;
+    const label = button.querySelector<HTMLElement>('[data-film-sound-label]');
+
+    button.addEventListener('click', () => {
+      const on = button.getAttribute('aria-pressed') !== 'true';
+      button.setAttribute('aria-pressed', String(on));
+      video.muted = !on;
+      if (label) {
+        const spanish = document.documentElement.lang === 'es-MX';
+        label.textContent = on
+          ? (spanish ? 'Sonido activado' : 'Sound on')
+          : (spanish ? 'Sonido' : 'Sound');
+      }
+      // A muted video that has never been played may be blocked from
+      // starting; the click is a user gesture, so it can start now.
+      if (on && video.paused) video.play().catch(() => {});
+    });
+  }
+}
+
+/**
+ * The hero collage.
+ *
+ * The cards carry the real renders, not stills — the poster is a frame of
+ * the film, so the picture is right before anything plays. The card under
+ * the pointer runs its footage; move away and it stops and rewinds. One
+ * video decodes at a time.
+ *
+ * The cards sit behind the headline, so the pointer never reaches them —
+ * the hero listens instead and works out which card the pointer is over.
+ * On a touch device there is no hover: the collage stays as its frames and
+ * the film below it carries the motion.
+ */
+export function initHeroFilms(): void {
+  const cards = qsa<HTMLVideoElement>('[data-hero-film]');
+  if (!cards.length) return;
+  if (prefersReducedMotion()) return;
+
+  const hero = qs<HTMLElement>('.hero--brand') ?? qs<HTMLElement>('#top');
+  if (!hero) return;
+
+  // On a phone there is no pointer, so no card is ever hovered and the
+  // collage would sit there as a still. The first card runs instead: one
+  // clip, muted, looping, at the top of the screen.
+  const coarse =
+    typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  if (coarse && cards[0]) {
+    const video = cards[0];
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.preload = 'auto';
+    video.play().catch(() => {
+      /* the poster stays. nothing to fix. */
+    });
+  }
+
+  let current: HTMLVideoElement | null = null;
+
+  const wake = (video: HTMLVideoElement | null) => {
+    if (current === video) return;
+    if (current) {
+      current.pause();
+      current.currentTime = 0;
+    }
+    current = video;
+    if (video) {
+      video.play().catch(() => {
+        /* the poster stays. nothing to fix. */
+      });
+    }
+  };
+
+  hero.addEventListener('pointermove', (event) => {
+    const { clientX: x, clientY: y } = event;
+    const hit =
+      cards.find((video) => {
+        const box = video.getBoundingClientRect();
+        return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+      }) ?? null;
+    wake(hit);
+  });
+
+  hero.addEventListener('pointerleave', () => wake(null));
 }

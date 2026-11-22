@@ -31,6 +31,26 @@ import {
 import { enhance, type TokenShape } from "./enhancer.js";
 import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import {
+  PLACEMENTS,
+  placement,
+  checkCopy,
+  cropLoss,
+  safeAreaOf,
+  safeZoneFractions,
+  preflight,
+  type PlacementId,
+} from "./meta.js";
+import { execFileSync } from "node:child_process";
+import {
+  Supervisor,
+  defaultLedgerPath,
+  readLedger,
+  supervisorMain,
+} from "./supervisor.js";
+import { inboxDir, submitBrief } from "./inbox.js";
+import { readMetrics } from "./metrics.js";
+import { statSync } from "node:fs";
+import {
   fillBlock,
   headlineFrom,
   matchBlocks,
@@ -58,12 +78,53 @@ import {
   type RenderJob,
 } from "./render.js";
 import { loadVerdicts, recordVerdict } from "./verdicts.js";
+import { loadBlockRoles } from "./roles.js";
 import { gateProject } from "./render.js";
 import { isAbsolute } from "node:path";
 import {
   BOARD_SYNC_ARTIFACTS, BoardSyncError, cancelBoardSyncJob, checkReadiness, listBoardSyncJobs, readBoardSyncJob, startBoardSyncJob,
 } from "./board-sync.js";
+import {
+  getShot,
+  loadShots,
+  matchShots,
+  planShots,
+  SHOT_ROLES,
+  type ShotRole,
+} from "./shots.js";
+import {
+  getEffect,
+  loadEffectCategories,
+  loadEffects,
+  matchEffects,
+} from "./effects.js";
 import { browseSfx, getSfx, loadSfx, planSound, sfxFile } from "./sfx.js";
+import {
+  getBrandKit,
+  listBrandKits,
+  resolveTokens,
+  saveBrandKit,
+  type BrandKit,
+  type KitProblem,
+} from "./brandkit.js";
+import {
+  acquireSlot,
+  cachedFilm,
+  queueDirectoryName,
+  queueKey,
+  queueState,
+  reconcileJobs,
+  releaseSlot,
+  renderRemotely,
+} from "./queue.js";
+import {
+  getHouseTemplate,
+  houseLibraryPath,
+  houseLibraryProblems,
+  listHouseTemplates,
+  loadHouseLibrary,
+  planHouseTemplate,
+} from "./houselibrary.js";
 
 type TextContent = { type: "text"; text: string };
 
@@ -93,6 +154,15 @@ const GROUP_SCHEMA = z
   .enum(["all", "motion-master", "motion-design", "gsap", "remotion", "hyperframes"])
   .optional()
   .describe("Only return skills from this group.");
+
+/** The schema every kit-aware tool shares. */
+const BRAND_KIT_SCHEMA = z
+  .string()
+  .optional()
+  .describe(
+    "A brand kit id, for example \"house\". The kit overrides the canonical tokens for this work. " +
+      "Call list_brand_kits to see what there is.",
+  );
 
 const PLANNED_ELEMENT_SCHEMA = z.object({
   name: z.string(),
@@ -184,6 +254,28 @@ function readGsap(repoRoot: string): string {
 export function registerTools(server: McpServer, config: Config): void {
   const tokens = () => loadTokens(config.tokensPath);
 
+  /**
+   * Resolve a brand kit id into the tokens a render should actually use.
+   *
+   * A kit that does not exist, or that has problems, falls back to the
+   * canonical tokens rather than throwing: a missing brand must not be able
+   * to stop a render. The problems are reported alongside the result so the
+   * caller can see that the brand was not applied.
+   */
+  const kitProblems = (id?: string): { kit?: BrandKit; problems: KitProblem[] } => {
+    if (!id) return { problems: [] };
+    const found = getBrandKit(config.repoRoot, id, tokens());
+    return { kit: found.kit, problems: found.problems };
+  };
+
+  const tokensFor = (kitId?: string): { tokens: MotionTokens; kit?: BrandKit; problems: KitProblem[] } => {
+    const base = tokens();
+    if (!kitId) return { tokens: base, problems: [] };
+    const found = kitProblems(kitId);
+    if (!found.kit) return { tokens: base, problems: found.problems };
+    return { tokens: resolveTokens(base, found.kit), kit: found.kit, problems: found.problems };
+  };
+
   server.registerTool(
     "list_skills",
     {
@@ -229,10 +321,12 @@ export function registerTools(server: McpServer, config: Config): void {
         "These are the values every generated composition must use.",
       inputSchema: {
         group: TOKEN_GROUP_SCHEMA,
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ group }) => {
-      const all = tokens();
+    async ({ group, brand_kit }) => {
+      const resolved = tokensFor(brand_kit);
+      const all = resolved.tokens;
       const groups = group && group !== "all" ? [group] : Object.keys(all);
       const selected: Record<string, unknown> = {};
       for (const key of groups) {
@@ -241,6 +335,8 @@ export function registerTools(server: McpServer, config: Config): void {
       return ok({
         source: tokenSource(config.tokensPath),
         canonicalPath: config.tokensPath,
+        kit: resolved.kit ? { id: resolved.kit.id, name: resolved.kit.name } : undefined,
+        kitProblems: resolved.problems,
         version: all.version,
         name: all.name,
         doctrine: {
@@ -250,6 +346,257 @@ export function registerTools(server: McpServer, config: Config): void {
           staggerBudgetMs: all.stagger.budgetMs,
         },
         tokens: selected,
+      });
+    },
+  );
+
+  /* ---- brand kits ------------------------------------------------------ */
+
+  server.registerTool(
+    "list_brand_kits",
+    {
+      title: "List brand kits",
+      description:
+        "List the brand kits: the named, per-project overrides of the Motion Master tokens. A kit changes the " +
+        "palette, the type, the easing or the timing for one brand without touching the canonical token file. " +
+        "Call this before a render when the work is for a particular brand.",
+      inputSchema: {},
+    },
+    async () => {
+      const kits = listBrandKits(config.repoRoot);
+      return ok({
+        path: config.brandKitsPath,
+        count: kits.length,
+        note:
+          "A kit overrides the canonical tokens. It may not remove a token and it may not change the system " +
+          "identity. The house kit is the default for every render.",
+        kits,
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_brand_kit",
+    {
+      title: "Get a brand kit",
+      description:
+        "Return one brand kit with the tokens it overrides and the resolved result, so a caller can see what " +
+        "the render will actually use.",
+      inputSchema: {
+        id: z.string().describe("The kit id, for example \"house\"."),
+      },
+    },
+    async ({ id }) => {
+      const base = tokens();
+      const { kit, problems } = getBrandKit(config.repoRoot, id, base);
+      if (!kit) {
+        return fail(`There is no usable kit called "${id}".`, {
+          problems,
+          available: listBrandKits(config.repoRoot).map((k) => k.id),
+        });
+      }
+      const resolved = resolveTokens(base, kit);
+      return ok({
+        id: kit.id,
+        name: kit.name,
+        notes: kit.notes,
+        path: join(config.brandKitsPath, `${kit.id}.json`),
+        problems,
+        overrides: kit,
+        resolved: {
+          palette: resolved.palette,
+          typography: resolved.typography,
+          easing: resolved.easing,
+          duration: resolved.duration,
+          styleDurations: resolved.styleDurations,
+          motion: resolved.motion,
+        },
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_brand_kit",
+    {
+      title: "Save a brand kit",
+      description:
+        "Write a brand kit from a brand brief. The kit is validated first: it may only override token sections " +
+        "and tokens that exist, palette values must be hex, and the system identity may not be changed. A kit " +
+        "with problems is not written.",
+      inputSchema: {
+        id: z.string().describe("Lowercase id, letters digits and dashes."),
+        name: z.string().describe("The name people will read."),
+        notes: z.string().optional().describe("What this kit is for."),
+        palette: z.record(z.string(), z.string()).optional().describe("Token name to hex colour."),
+        typography: z.record(z.string(), z.any()).optional().describe("Typography overrides, by token."),
+        easing: z.record(z.string(), z.any()).optional(),
+        duration: z.record(z.string(), z.any()).optional(),
+        durationRanges: z.record(z.string(), z.any()).optional(),
+        styleDurations: z.record(z.string(), z.any()).optional(),
+        spring: z.record(z.string(), z.any()).optional(),
+        stagger: z.record(z.string(), z.any()).optional(),
+        motion: z.record(z.string(), z.any()).optional(),
+      },
+    },
+    async (args) => {
+      const base = tokens();
+      const result = saveBrandKit(config.repoRoot, args, base);
+      if (!result.saved) {
+        return fail("The kit was not written because it has problems.", {
+          problems: result.problems,
+        });
+      }
+      return ok({
+        saved: true,
+        id: args.id,
+        path: result.path,
+        note: "The kit overrides the canonical tokens. Pass its id to the render tools to use it.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "queue_status",
+    {
+      title: "Render queue status",
+      description:
+        "What the render queue is doing: how many renders are running, how many are waiting, how many films " +
+        "are on disk and how many of those are finished. A render that was interrupted is reported as failed, " +
+        "so it can be asked for again.",
+      inputSchema: {},
+    },
+    async () => {
+      const interrupted = reconcileJobs(config.repoRoot);
+      const state = queueState(config.repoRoot, {
+        concurrency: Math.max(1, config.renderConcurrency),
+        target: config.renderTarget,
+        remoteUrl: config.renderRemoteUrl,
+      });
+      return ok({
+        ...state,
+        remoteConfigured: Boolean(config.renderRemoteUrl),
+        remoteUrl: config.renderRemoteUrl ?? null,
+        interrupted,
+        note:
+          "One render at a time by default: a render wants the whole machine. The same request renders once — " +
+          "the key is a hash of the brief, the brand kit and the render options.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_house_templates",
+    {
+      title: "List the house scenes",
+      description:
+        "List the house library: the reusable scenes the studio renders from. Every one of them is a motion " +
+        "block that passed the gate, filed under the shot roles it can serve, bound to a brand kit and " +
+        "named down to its content variables. Pick a scene by what the shot has to do — an opening, a " +
+        "number, a camera move, an end — rather than by searching for a prompt.",
+      inputSchema: {
+        role: z
+          .string()
+          .optional()
+          .describe(
+            "Only scenes that can serve this shot role: opening, typography, camera, data, effects, " +
+              "interaction, ui-entrance, rhythm, transition, outro.",
+          ),
+        query: z.string().optional().describe("Search the scene names, ids and tags."),
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ role, query, limit }) => {
+      const library = loadHouseLibrary(config.repoRoot);
+      const templates = listHouseTemplates(config.repoRoot, { role, query, limit });
+      return ok({
+        source: houseLibraryPath(config.repoRoot),
+        total: library.counts.total,
+        matched: templates.length,
+        byRole: library.counts.byRole,
+        problems: houseLibraryProblems(config.repoRoot),
+        note:
+          "Every scene here passed the gate. The motion already works: fill the content variables and it " +
+          "renders.",
+        templates: templates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          role: template.role,
+          roles: template.roles,
+          durationSeconds: template.durationSeconds,
+          format: template.format,
+          contentVariables: template.contentVariables,
+          why: template.why,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_house_template",
+    {
+      title: "Get one house scene",
+      description:
+        "Return one house scene in full: every variable it takes, what each one means, what it defaults to, " +
+        "and the brief that produces it.",
+      inputSchema: {
+        id: z.string().describe("The scene id."),
+      },
+    },
+    async ({ id }) => {
+      const template = getHouseTemplate(config.repoRoot, id);
+      if (!template) {
+        return fail(`There is no house scene called "${id}".`, {
+          hint: "Call list_house_templates to see what there is.",
+        });
+      }
+      return ok({
+        source: houseLibraryPath(config.repoRoot),
+        template,
+        problems: houseLibraryProblems(config.repoRoot),
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_house_template",
+    {
+      title: "Plan a house scene from a brief",
+      description:
+        "Fill a house scene from a brief and return the scene's variables with their values, plus the tokens " +
+        "and the kit it will render with. This is the fast path: the motion already works, so the brief only " +
+        "has to say what the scene is about.",
+      inputSchema: {
+        id: z.string().describe("The scene id."),
+        brief: z.string().describe("What the scene is about."),
+        values: z.record(z.string(), z.any()).optional().describe("Explicit values by variable id. These always win."),
+        headline: z.string().optional().describe("Override the headline."),
+        brand_kit: BRAND_KIT_SCHEMA,
+      },
+    },
+    async ({ id, brief, values, headline, brand_kit }) => {
+      const resolvedKit = tokensFor(brand_kit);
+      const planned = planHouseTemplate(config.repoRoot, id, {
+        brief,
+        tokens: resolvedKit.tokens,
+        values,
+        headline,
+      });
+      if (!planned.template || !planned.filled) {
+        return fail(`There is no house scene called "${id}".`, { problems: planned.problems });
+      }
+      return ok({
+        template: planned.template,
+        filled: planned.filled,
+        tokensSource: tokenSource(config.tokensPath),
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
+        note:
+          planned.template.source?.kind === "local"
+            ? `The composition is in this repository at ${planned.template.source.path}. Copy it into a ` +
+              "HyperFrames project, or point a host composition at it with data-composition-src. It " +
+              "already passed the gate, so it renders as it is."
+            : "Install the block with `npx hyperframes add <id>` and render it. The scene already " +
+              "passed the gate, so it renders as it is.",
       });
     },
   );
@@ -314,6 +661,183 @@ export function registerTools(server: McpServer, config: Config): void {
         renderedWith: clip.renderedWith,
         bridgeDemo: clip.bridgeDemo,
         source: gallery.source,
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_shots",
+    {
+      title: "List motion shots",
+      description:
+        "List the shot cards: the authored vocabulary of shots, what each one is for, how long it runs " +
+        "and how much energy it spends. Use this to choose the shape of a film before writing any code.",
+      inputSchema: {
+        role: z
+          .enum(SHOT_ROLES as [ShotRole, ...ShotRole[]])
+          .optional()
+          .describe("Only shots in this role."),
+        query: z.string().optional().describe("Match this against the shot's use-when line."),
+        limit: z.number().optional().describe("How many to return (default 12)."),
+      },
+    },
+    async ({ role, query, limit }) => {
+      const shots = loadShots(config.skillsDir);
+      if (shots.length === 0) {
+        return fail(
+          `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+        );
+      }
+      const matched = query
+        ? matchShots(shots, query, { limit: limit ?? 12 })
+        : shots
+            .filter((s) => !role || s.role === role)
+            .slice(0, limit ?? 12);
+      return ok({
+        count: matched.length,
+        total: shots.length,
+        roles: SHOT_ROLES,
+        source: {
+          skill: "shotcraft",
+          upstream: "github.com/Vincentwei1021/video-shotcraft",
+          licence: "Apache-2.0",
+          path: "plugins/motion-master/skills/shotcraft/references/shots",
+        },
+        note:
+          "Read the card at the path given before writing the shot. The card is the technique, not a summary of it.",
+        shots: matched.map((m) =>
+          "shot" in m ? m.shot : m,
+        ),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_shot",
+    {
+      title: "Get one shot card",
+      description:
+        "Return one shot card in full: its one-line description, when to use it, its duration, its energy " +
+        "and the path to the card itself.",
+      inputSchema: {
+        id: z.string().describe("The shot id, for example \"opening/brand-ink-open\"."),
+      },
+    },
+    async ({ id }) => {
+      const shots = loadShots(config.skillsDir);
+      const found = getShot(shots, id);
+      if (!found) {
+        return fail(
+          `No shot card with id "${id}". The ids are the role and the card name, for example "opening/brand-ink-open".`,
+        );
+      }
+      return ok({
+        shot: found,
+        note: `Read ${found.path} for the technique, its parameters and its known traps.`,
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_shots",
+    {
+      title: "Plan the shots of a film",
+      description:
+        "Build a shot plan from a brief: an opening, the shots the brief asks for, and an ending, each " +
+        "one an existing authored card. Use this before composing anything, so the film has a shape " +
+        "before it has code.",
+      inputSchema: {
+        brief: z.string().describe("What the film is about."),
+        durationSeconds: z
+          .number()
+          .optional()
+          .describe("How long the film should run. The plan is trimmed to fit."),
+        maxShots: z.number().optional().describe("How many shots at most (default 6)."),
+      },
+    },
+    async ({ brief, durationSeconds, maxShots }) => {
+      if (!brief || !brief.trim()) return fail("A brief is required.");
+      const shots = loadShots(config.skillsDir);
+      if (shots.length === 0) {
+        return fail(
+          `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+        );
+      }
+      const plan = planShots(shots, brief, { durationSeconds, maxShots });
+      return ok({
+        ...plan,
+        note:
+          "Every shot here is an authored card. Read the card before you write the shot — the card carries " +
+          "the parameters and the traps its author already hit.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_motion_effects",
+    {
+      title: "List motion effects",
+      description:
+        "List the effects on the shelf: small reusable pieces of craft — wipes, dissolves, impacts, counters, " +
+        "weather — each one a file of code with no dependencies.",
+      inputSchema: {
+        category: z.string().optional().describe("Only effects in this category, for example \"transitions\"."),
+        query: z.string().optional().describe("Match this against the effect's tags and description."),
+        limit: z.number().optional().describe("How many to return (default 12)."),
+      },
+    },
+    async ({ category, query, limit }) => {
+      const effects = loadEffects(config.skillsDir);
+      if (effects.length === 0) {
+        return fail(
+          `No effects were found under ${config.skillsDir}. The pixelfx skill may be missing.`,
+        );
+      }
+      const matched = query
+        ? matchEffects(effects, query, { limit: limit ?? 12 })
+        : effects
+            .filter((e) => !category || e.category === category)
+            .slice(0, limit ?? 12);
+      return ok({
+        count: matched.length,
+        total: effects.length,
+        categories: loadEffectCategories(config.skillsDir).map((c) => ({
+          id: c.id,
+          count: c.count,
+          summary: c.summary,
+        })),
+        source: {
+          skill: "pixelfx",
+          upstream: "github.com/patch-gg/pixelfx",
+          licence: "MIT",
+          path: "plugins/motion-master/skills/pixelfx/src",
+        },
+        note:
+          "An effect is code, not a description. Open its path and use it rather than drawing something like it.",
+        effects: matched.map((m) => ("effect" in m ? m.effect : m)),
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_motion_effect",
+    {
+      title: "Get one effect",
+      description:
+        "Return one effect in full: what it does, how long it runs, its tags, and the path to its source.",
+      inputSchema: {
+        id: z.string().describe("The effect id, for example \"transitions/glitch-wipe\"."),
+      },
+    },
+    async ({ id }) => {
+      const effects = loadEffects(config.skillsDir);
+      const found = getEffect(effects, id);
+      if (!found) {
+        return fail(`No effect with id "${id}". The ids are the category and the name.`);
+      }
+      return ok({
+        effect: found,
+        note: `Open ${found.path} — the effect is the code there, with its options and its palette.`,
       });
     },
   );
@@ -384,12 +908,14 @@ export function registerTools(server: McpServer, config: Config): void {
         height: z.number().int().positive().optional(),
         duration_seconds: z.number().positive().optional(),
         style: z.enum(["premium", "calm", "energetic", "snappy"]).optional(),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
     async (args) => {
       if (!args.brief && !args.storyboard) {
         return fail("Give the tool either a brief or a storyboard to build from.");
       }
+      const resolvedKit = tokensFor(args.brand_kit);
 
       let storyboard: Storyboard;
       if (args.storyboard) {
@@ -416,7 +942,7 @@ export function registerTools(server: McpServer, config: Config): void {
         );
       }
 
-      const composition = buildComposition(storyboard, tokens(), {
+      const composition = buildComposition(storyboard, resolvedKit.tokens, {
         id: args.id,
         filename: args.filename,
       });
@@ -425,6 +951,8 @@ export function registerTools(server: McpServer, config: Config): void {
         ...composition,
         storyboard,
         tokensSource: tokenSource(config.tokensPath),
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
       });
     },
   );
@@ -588,7 +1116,7 @@ export function registerTools(server: McpServer, config: Config): void {
             duration: z
               .object({ seconds: z.number().optional(), frames: z.number().optional() })
               .optional(),
-            doctrine: z.record(z.any()).optional(),
+            doctrine: z.record(z.string(), z.any()).optional(),
             beats: z
               .array(
                 z.object({
@@ -631,7 +1159,7 @@ export function registerTools(server: McpServer, config: Config): void {
                       clamped: z.boolean().optional(),
                     })
                     .optional(),
-                  transition: z.record(z.any()).optional(),
+                  transition: z.record(z.string(), z.any()).optional(),
                   notes: z.array(z.string()).optional(),
                 }),
               )
@@ -639,13 +1167,14 @@ export function registerTools(server: McpServer, config: Config): void {
           })
           .describe("A storyboard. Get one from plan_video first."),
         project_name: z.string().optional().describe("Directory name for the project (default 'composition')."),
+        brand_kit: BRAND_KIT_SCHEMA,
         include_gsap: z
           .boolean()
           .optional()
           .describe("Include the GSAP source so the project is self-contained (default true)."),
       },
     },
-    async ({ storyboard, project_name, include_gsap }) => {
+    async ({ storyboard, project_name, include_gsap, brand_kit }) => {
       let board: Storyboard;
       try {
         board = normalizeStoryboard(storyboard as Partial<Storyboard>);
@@ -654,7 +1183,8 @@ export function registerTools(server: McpServer, config: Config): void {
           hint: "Call plan_video first and pass the storyboard it returns.",
         });
       }
-      const tokenFile = tokens();
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens;
       let gsapSource = "";
       if (include_gsap !== false) {
         gsapSource = readGsap(config.repoRoot);
@@ -665,6 +1195,8 @@ export function registerTools(server: McpServer, config: Config): void {
       });
       return ok({
         generator: "hyperframes 0.8.186 (Apache-2.0)",
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         storyboard: board,
         composition: result.composition,
         files: result.files.map((f) => ({
@@ -955,9 +1487,10 @@ export function registerTools(server: McpServer, config: Config): void {
           .string()
           .optional()
           .describe("If given, the block is also filled from this brief and the filled values are returned."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ block, brief }) => {
+    async ({ block, brief, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
       const found = file.blocks.find((b) => b.id === block);
       if (!found) {
@@ -993,7 +1526,8 @@ export function registerTools(server: McpServer, config: Config): void {
         },
       };
       if (brief) {
-        const tokenFile = tokens() as unknown as TokenShape;
+        const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
         payload.filled = fillBlock(found, {
           brief,
           tokens: tokenFile,
@@ -1064,18 +1598,21 @@ server.registerTool(
         block: z.string().optional().describe("The block id. Omit to let the matcher choose one."),
         tag: z.string().optional().describe("Prefer blocks with this tag."),
         values: z
-          .record(z.any())
+          .record(z.string(), z.any())
           .optional()
           .describe("Explicit values by variable id. These always win."),
         headline: z.string().optional().describe("Override the headline."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ brief, block, tag, values, headline }) => {
+    async ({ brief, block, tag, values, headline, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
 
       let chosen: MotionBlock | undefined;
       let matched: { block: MotionBlock; score: number; matchedTags: string[] }[] = [];
+      const known = loadVerdicts(config.repoRoot);
       if (block) {
         chosen = file.blocks.find((b) => b.id === block);
         if (!chosen) {
@@ -1083,8 +1620,24 @@ server.registerTool(
             hint: "Call list_motion_blocks to find one.",
           });
         }
+        /*
+         * Asking for a block by name does not make it safe. The gate has
+         * measured it and found it broken, so it is refused here too — with
+         * the reason, so the caller can pick something else and know why.
+         */
+        const verdict = known[chosen.id];
+        if (verdict && !verdict.ok) {
+          return fail(`The gate rejected "${chosen.id}": ${verdict.reasons[0] ?? "it did not pass."}`, {
+            hint: "Call list_motion_blocks for the blocks that passed.",
+            block: chosen.id,
+          });
+        }
       } else {
-        matched = matchBlocks(file, `${brief} ${tag ?? ""}`, { limit: 5, requireVariables: true });
+        matched = matchBlocks(file, `${brief} ${tag ?? ""}`, {
+          limit: 5,
+          requireVariables: true,
+          verdicts: known,
+        });
         chosen = matched[0]?.block;
         if (!chosen) {
           return fail("No block matched that brief.", {
@@ -1245,11 +1798,20 @@ server.registerTool(
           .boolean()
           .optional()
           .describe("Wait for the render and return the finished file. For a terminal, not a chat."),
+        brand_kit: BRAND_KIT_SCHEMA,
+        target: z
+          .enum(["local", "remote"])
+          .optional()
+          .describe(
+            "Where the render runs: here, or on another Motion Master instance. Remote needs " +
+              "MOTION_MASTER_RENDER_REMOTE_URL on the server.",
+          ),
       },
     },
-    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput }) => {
+    async ({ brief, shots, tags, title, fps, build_only, wait, sound, kit: kitInput, brand_kit, target }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
 
       const known = loadVerdicts(config.repoRoot);
       const plan = planFilm(brief, {
@@ -1257,6 +1819,8 @@ server.registerTool(
         tokens: tokenFile,
         count: shots ?? 3,
         tags,
+        verdicts: known,
+        roles: loadBlockRoles(config.blockRolesPath),
         exclude: Object.entries(known)
           .filter(([, verdict]) => !verdict.ok)
           .map(([id]) => id),
@@ -1268,8 +1832,34 @@ server.registerTool(
         });
       }
 
-      const id = filmSlug(title ?? plan.headline);
+      /* The job is keyed by a hash of the request. The same request lands in
+         the same directory, so asking for the same film twice returns the
+         film that already exists instead of rendering it again. */
+      const requestKey = queueKey({
+        brief,
+        brandKit: brand_kit,
+        title: title ?? plan.headline,
+        tags,
+        count: shots ?? 3,
+        fps: fps ?? 30,
+      });
+      const id = queueDirectoryName(filmSlug(title ?? plan.headline), requestKey);
       const directory = join(filmsDir(config.repoRoot), id);
+
+      const already = cachedFilm(config.repoRoot, id);
+      if (already && !build_only) {
+        return ok({
+          id,
+          title: title ?? plan.headline,
+          brief,
+          directory,
+          status: "ready",
+          cached: true,
+          requestKey,
+          video: { name: "film.mp4", bytes: already.bytes },
+          note: "This exact request has already been rendered. The file is the one below.",
+        });
+      }
 
       let kit: KitTake[] = [];
 
@@ -1353,6 +1943,8 @@ server.registerTool(
           title: title ?? plan.headline,
           brief,
           directory,
+          brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+          kitProblems: resolvedKit.problems,
           headline: plan.headline,
           durationSeconds: built.plan.total,
           shotList: built.plan.shots.map((s) => ({
@@ -1387,6 +1979,51 @@ server.registerTool(
 
       const run = async (): Promise<void> => {
         let plan = built.plan;
+
+        /* The remote target. The heavy work goes to another instance, which
+           runs its own queue and its own gate. The file lands there. */
+        const where = target ?? config.renderTarget;
+        if (where === "remote") {
+          const remoteUrl = config.renderRemoteUrl;
+          if (!remoteUrl) {
+            job.status = "failed";
+            job.finishedAt = new Date().toISOString();
+            job.error =
+              "A remote render needs MOTION_MASTER_RENDER_REMOTE_URL set on the server. There is no remote instance configured.";
+            writeJob(config.repoRoot, job);
+            return;
+          }
+          const remote = await renderRemotely({
+            remoteUrl,
+            request: { brief, shots: shots ?? 3, tags, title: title ?? plan.headline, sound: sound !== false },
+          });
+          if (!remote.ok) {
+            job.status = "failed";
+            job.finishedAt = new Date().toISOString();
+            job.error = remote.error;
+            writeJob(config.repoRoot, job);
+            return;
+          }
+          job.remote = {
+            url: remoteUrl,
+            id: remote.id,
+            statusUrl: remote.statusUrl,
+            videoUrl: remote.videoUrl,
+          };
+          job.status = "ready";
+          job.finishedAt = new Date().toISOString();
+          job.shots = plan.shots.map((s) => ({ id: s.id, title: s.title, duration: s.duration }));
+          writeJob(config.repoRoot, job);
+          writeFilmMeta(directory, {
+            id,
+            title: title ?? plan.headline,
+            brief,
+            createdAt: new Date().toISOString(),
+            remote: job.remote,
+          });
+          return;
+        }
+
         let result = await renderProject(config.repoRoot, directory, { fps: fps ?? 30 });
         const dropped: { id: string; reasons: string[] }[] = [];
 
@@ -1450,7 +2087,23 @@ server.registerTool(
         writeJob(config.repoRoot, job);
       };
 
-      const running = run().catch((error: unknown) => {
+      /*
+       * The queue.
+       *
+       * A render takes minutes and it wants the whole machine: a browser, a
+       * Node render server and ffmpeg. Agents fire renders at once, so the
+       * renders take a slot from the queue and wait their turn. One at a
+       * time by default, because the default machine has two cores.
+       */
+      const limit = Math.max(1, config.renderConcurrency);
+      const running = (async () => {
+        await acquireSlot(limit);
+        try {
+          await run();
+        } finally {
+          releaseSlot();
+        }
+      })().catch((error: unknown) => {
         job.status = "failed";
         job.finishedAt = new Date().toISOString();
         job.error = error instanceof Error ? error.message : String(error);
@@ -1491,7 +2144,16 @@ server.registerTool(
         brief,
         headline: plan.headline,
         directory,
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         status: "rendering",
+        requestKey,
+        target: target ?? config.renderTarget,
+        queue: queueState(config.repoRoot, {
+          concurrency: Math.max(1, config.renderConcurrency),
+          target: config.renderTarget,
+          remoteUrl: config.renderRemoteUrl,
+        }),
         kit: kit.map((take) => ({
           id: take.id,
           title: take.title,
@@ -1601,12 +2263,14 @@ server.registerTool(
         brief: z.string().describe("What the film is about."),
         count: z.number().int().positive().max(8).optional().describe("How many blocks (default 3)."),
         tags: z.array(z.string()).optional().describe("Require these tags."),
-        values: z.record(z.any()).optional().describe("Explicit values by variable id."),
+        values: z.record(z.string(), z.any()).optional().describe("Explicit values by variable id."),
+        brand_kit: BRAND_KIT_SCHEMA,
       },
     },
-    async ({ brief, count, tags, values }) => {
+    async ({ brief, count, tags, values, brand_kit }) => {
       const file = loadBlocks(config.blocksPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
       const want = count ?? 3;
 
       const matched = matchBlocks(file, brief, {
@@ -1660,6 +2324,8 @@ server.registerTool(
         source: config.blocksPath,
         brief,
         headline,
+        brandKit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
         shotCount: shots.length,
         estimatedDurationSeconds: total,
         shots,
@@ -1696,11 +2362,37 @@ server.registerTool(
           .optional()
           .describe("Extra constraint lines to append verbatim."),
         alternatives: z.number().int().positive().max(6).optional().describe("Alternative styles to offer."),
+        brand_kit: BRAND_KIT_SCHEMA,
+        plan_shots: z
+          .boolean()
+          .optional()
+          .describe("Plan the shots from the shot cards first, and write that plan into the brief."),
+        max_shots: z.number().int().positive().max(10).optional().describe("How many shots to plan (default 6)."),
       },
     },
     async (args) => {
       const catalogue = loadCatalogue(config.libraryPath);
-      const tokenFile = tokens() as unknown as TokenShape;
+      const resolvedKit = tokensFor(args.brand_kit);
+      const tokenFile = resolvedKit.tokens as unknown as TokenShape;
+
+      // A brief that already has a shape should not be given a second one.
+      let shotPlan: ReturnType<typeof planShots>["shots"] | undefined;
+      let shotSource: unknown;
+      if (args.plan_shots) {
+        const shots = loadShots(config.skillsDir);
+        if (shots.length === 0) {
+          return fail(
+            `No shot cards were found under ${config.skillsDir}. The shotcraft skill may be missing.`,
+          );
+        }
+        const plan = planShots(shots, args.prompt, {
+          durationSeconds: args.duration_seconds,
+          maxShots: args.max_shots,
+        });
+        shotPlan = plan.shots;
+        shotSource = { plan: plan.shots, unresolved: plan.unresolved, source: plan.source };
+      }
+
       const result = enhance(args.prompt, catalogue, tokenFile, {
         durationSeconds: args.duration_seconds,
         aspect: args.aspect,
@@ -1710,6 +2402,15 @@ server.registerTool(
         styleCollection: args.style_collection,
         extraConstraints: args.extra_constraints,
         alternatives: args.alternatives,
+        shotPlan: shotPlan?.map((s) => ({
+          id: s.id,
+          role: s.role,
+          summary: s.summary,
+          duration: s.duration,
+          durationSeconds: s.durationSeconds,
+          energy: s.energy,
+          reason: s.reason,
+        })),
       });
       const suggestion = args.provider === "hunyuan"
         ? await requestHunyuanVisual(args.prompt)
@@ -1717,6 +2418,9 @@ server.registerTool(
       return ok({
         source: config.libraryPath,
         tokens: config.tokensPath,
+        kit: resolvedKit.kit ? { id: resolvedKit.kit.id, name: resolvedKit.kit.name } : undefined,
+        kitProblems: resolvedKit.problems,
+        ...(shotSource ? { shotPlan: shotSource } : {}),
         ...result,
         enhanced: suggestion?.visual
           ? result.enhanced + "\n\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\n" + suggestion.visual
@@ -1887,5 +2591,411 @@ server.registerTool(
         ],
       });
     },
+  );
+
+  /* ------------------------------------------------------------- the ads */
+
+  server.registerTool(
+    "list_meta_placements",
+    {
+      title: "List Meta's placements",
+      description:
+        "Meta's placements with the real numbers: the aspect ratio, the master size, the safe zone, the " +
+        "aspect-ratio tolerance and the character limits on the primary text and the headline. Read this " +
+        "before making an ad — the numbers come from Meta, they are not guessed, and they change. " +
+        "The safe zone on a full-screen vertical placement covers roughly half the frame, and Facebook " +
+        "Reels accepts zero per cent aspect-ratio tolerance.",
+      inputSchema: {},
+    },
+    async () => {
+      return ok({
+        placements: PLACEMENTS.map((p) => ({
+          id: p.id,
+          name: p.name,
+          aspect: p.aspect,
+          master: { width: p.width, height: p.height },
+          where: p.placements,
+          aspectTolerance: `${p.aspectTolerance * 100}%`,
+          safeZone: safeZoneFractions(p),
+          safeArea: safeAreaOf(p),
+          text: p.text,
+          duration: p.duration,
+          minWidth: p.minWidth,
+          encoding: p.encoding,
+          maxFileBytes: p.maxFileBytes,
+          source: p.source,
+          readOn: p.readOn,
+          cropLoss: cropLoss(p),
+        })),
+        note:
+          "The words live in the platform, not in the picture. The creative carries the brand; the primary " +
+          "text and the headline are fields in the ad's JSON.",
+        source: "Meta Ads Guide, read 2026-11-13",
+      });
+    },
+  );
+
+  server.registerTool(
+    "check_ad_copy",
+    {
+      title: "Check an ad's copy",
+      description:
+        "Check a primary text and a headline against a placement's character limits. Both fields live in " +
+        "the platform rather than in the creative, and both are bounded: a primary text of forty to a " +
+        "hundred and fifty characters, a headline of twenty-seven on Feed or fifty-five on Reels. A copy " +
+        "that is too short is as wrong as one that is too long.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        description: z.string().default("").describe("The description field, if there is one."),
+        label: z.string().default("").describe("The label field, if there is one."),
+      },
+    },
+    async ({ placement: placementId, primaryText, headline, description, label }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({
+          ok: false,
+          error: `There is no placement called "${placementId}".`,
+          placements: PLACEMENTS.map((x) => x.id),
+        });
+      }
+      const problems = checkCopy({ primaryText, headline, description, label }, p);
+      return ok({
+        ok: problems.length === 0,
+        placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+        measured: {
+          primaryText: { length: primaryText.length, min: p.text.primaryMin, max: p.text.primaryMax },
+          headline: { length: headline.length, max: p.text.headlineMax },
+        },
+        problems,
+        note: problems.length === 0 ? "The copy fits the placement." : "The copy does not fit the placement.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "plan_meta_ad",
+    {
+      title: "Plan a Meta ad",
+      description:
+        "Plan an ad for a placement: what the frame is, where the safe area is, where every piece of type " +
+        "goes, what the copy says, and what the alternative would have cost. This is the plan, not the " +
+        "build — it is the thing a person reads before the pixels exist.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        claim: z.string().describe("The claim, in the creator's words. One line, and true."),
+        eyebrow: z.string().optional().describe("A short label above the claim. Optional, and short."),
+        brand: z.string().describe("The brand mark shown on the frame."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        durationSeconds: z.number().int().positive().max(60).optional(),
+      },
+    },
+    async ({ placement: placementId, claim, eyebrow, brand, primaryText, headline, durationSeconds }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const safe = safeAreaOf(p);
+      const loss = cropLoss(p);
+      const problems = checkCopy({ primaryText, headline, description: "", label: "" }, p);
+      return ok({
+        ok: true,
+        placement: {
+          id: p.id,
+          name: p.name,
+          aspect: p.aspect,
+          master: { width: p.width, height: p.height },
+          where: p.placements,
+        },
+        frame: {
+          safeArea: safe,
+          safeZone: safeZoneFractions(p),
+          typeFloorPx: Math.round(Math.min(p.width, p.height) * 0.026),
+        },
+        content: { claim, eyebrow: eyebrow ?? null, brand, primaryText, headline },
+        durationSeconds: durationSeconds ?? 6,
+        copyProblems: problems,
+        theAlternative: {
+          note: "What a sixteen-by-nine scene cropped to this placement would have kept.",
+          cropLoss: loss,
+        },
+        nextSteps: [
+          `build_meta_ad with the same placement and the same words`,
+          "gate the composition with npx hyperframes check",
+          "render with bash generator/render.sh <dir> <dir>/ad.mp4",
+          `preflight_ad with the placement and the rendered file`,
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "build_meta_ad",
+    {
+      title: "Build a Meta ad",
+      description:
+        "Build the ad: a HyperFrames composition authored at the placement's own size, with the type stack " +
+        "inside the safe area by construction, plus the ad's JSON holding the copy and the measurements. " +
+        "This writes files; it does not render. The gate and the render are separate steps.",
+      inputSchema: {
+        placement: z.string().describe("The placement id: feed-4x5, reels-9x16, square-1x1 or feed-16x9."),
+        claim: z.string().describe("The claim on the frame. One line, and true."),
+        eyebrow: z.string().optional().describe("A short label above the claim."),
+        brand: z.string().describe("The brand mark on the frame."),
+        primaryText: z.string().default("").describe("The primary text, in the platform."),
+        headline: z.string().default("").describe("The headline, in the platform."),
+        accent: z.string().optional().describe("The accent, as a hex. One accent, never a surface."),
+        out: z.string().optional().describe("Where to write the build. Defaults to studio/ads/build."),
+        durationSeconds: z.number().int().positive().max(60).optional(),
+      },
+    },
+    async ({ placement: placementId, claim, eyebrow, brand, primaryText, headline, accent, out, durationSeconds }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const repoRoot = config.repoRoot;
+      const outDir = out ?? join(repoRoot, "studio", "ads", "build");
+      const args = [
+        join(repoRoot, "scripts", "build-meta-ad.mjs"),
+        "--placement", p.id,
+        "--claim", claim,
+        "--brand", brand,
+        "--out", outDir,
+        "--primary-text", primaryText,
+        "--headline", headline,
+        "--duration", String(durationSeconds ?? 6),
+      ];
+      if (eyebrow) args.push("--eyebrow", eyebrow);
+      if (accent) args.push("--accent", accent);
+      let stdout = "";
+      let failed = false;
+      try {
+        stdout = execFileSync("node", args, { cwd: repoRoot, encoding: "utf8" });
+      } catch (error) {
+        failed = true;
+        stdout = String((error as { stdout?: string; stderr?: string }).stdout ?? "") +
+          String((error as { stderr?: string }).stderr ?? "");
+      }
+      const adJson = join(outDir, "ad.json");
+      return ok({
+        ok: !failed,
+        placement: { id: p.id, name: p.name, aspect: p.aspect, master: { width: p.width, height: p.height } },
+        outDir,
+        adJson: existsSync(adJson) ? adJson : null,
+        report: stdout.trim().split("\n").slice(-20).join("\n"),
+        nextSteps: [
+          `npx hyperframes check ${outDir}`,
+          `bash generator/render.sh ${outDir} ${outDir}/ad.mp4`,
+          `preflight_ad with the placement and the rendered file`,
+        ],
+      });
+    },
+  );
+
+  server.registerTool(
+    "preflight_ad",
+    {
+      title: "Preflight a rendered ad",
+      description:
+        "Measure a rendered file against its placement and report what Meta will crop or reject: the aspect " +
+        "ratio and its tolerance, the minimum width, the duration, the encoding and the file size. Every " +
+        "number is measured out of the file with ffprobe, not assumed.",
+      inputSchema: {
+        placement: z.string().describe("The placement id."),
+        file: z.string().describe("The rendered file to check."),
+      },
+    },
+    async ({ placement: placementId, file }) => {
+      const p = placement(placementId);
+      if (!p) {
+        return ok({ ok: false, error: `There is no placement called "${placementId}".`, placements: PLACEMENTS.map((x) => x.id) });
+      }
+      const path = file.startsWith("/") ? file : join(config.repoRoot, file);
+      if (!existsSync(path)) {
+        return ok({ ok: false, error: `There is no file at ${file}.` });
+      }
+      const raw = execFileSync(
+        "ffprobe",
+        ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate:format=duration,size", "-of", "json", path],
+        { encoding: "utf8" },
+      );
+      const probed = JSON.parse(raw) as {
+        streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number; r_frame_rate?: string }[];
+        format?: { duration?: string; size?: string };
+      };
+      const video = (probed.streams ?? []).find((s) => s.codec_type === "video");
+      const audio = (probed.streams ?? []).find((s) => s.codec_type === "audio");
+      if (!video) return ok({ ok: false, error: "That file has no video stream." });
+      const [num, den] = String(video.r_frame_rate ?? "0/1").split("/").map(Number);
+      const result = preflight(placementId as PlacementId, {
+        file,
+        width: video.width,
+        height: video.height,
+        durationSeconds: probed.format?.duration ? Number(probed.format.duration) : undefined,
+        bytes: statSync(path).size,
+        codec: video.codec_name,
+        audioCodec: audio?.codec_name,
+        fps: den ? num / den : undefined,
+        hasAudio: Boolean(audio),
+      });
+      return ok(result);
+    },
+  );
+
+  /* --------------------------------------------------------- the loop -- */
+
+  server.registerTool(
+    "run_supervisor",
+    {
+      title: "Run the studio loop",
+      description:
+        "Run the studio's loop: it takes the oldest queued job, checks it, repairs what the gate can " +
+        "repair, renders it, and publishes it — or says clearly why it could not. A gate failure is a " +
+        "finding, not a crash: the loop repairs it and re-gates, inside a budget of three rounds. When " +
+        "the budget is spent the job fails with the findings that survived, and the loop does not spin. " +
+        "One tick runs one job. Call it repeatedly to drain the queue.",
+      inputSchema: {
+        ticks: z.number().int().positive().max(50).optional().describe("How many jobs to attempt. One by default."),
+        dryRun: z.boolean().optional().describe("Do everything except publish. For a rehearsal."),
+        budget: z.number().int().positive().max(10).optional().describe("Gate rounds per job before it escalates."),
+      },
+    },
+    async ({ ticks, dryRun, budget }) => {
+      const supervisor = new Supervisor({
+        repoRoot: config.repoRoot,
+        budget: budget ?? 3,
+        dryRun: dryRun ?? false,
+      });
+      const results = [];
+      for (let i = 0; i < (ticks ?? 1); i += 1) {
+        const result = await supervisor.tick();
+        results.push({
+          action: result.action,
+          jobId: result.jobId,
+          state: result.state,
+          ok: result.outcome?.ok,
+          error: result.outcome?.error,
+          findings: result.outcome?.findings,
+          artifact: result.outcome?.artifact,
+          rounds: result.outcome?.rounds,
+        });
+        if (result.action === "idle") break;
+      }
+      return ok({
+        ran: results.length,
+        ledger: defaultLedgerPath(config.repoRoot),
+        results,
+        note:
+          "A job that ends in `failed` carries the findings that survived the budget. A finding with no " +
+          "repair rule needs a person — that is a decision, not a gap.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "supervisor_status",
+    {
+      title: "What the loop is doing",
+      description:
+        "The state of the queue: the jobs waiting, the job that was interrupted, and the last lines of " +
+        "the ledger. The ledger is append-only and it is the studio's memory — without it there is no " +
+        "answer to 'why did this fail'.",
+      inputSchema: {
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ limit }) => {
+      const supervisor = new Supervisor({ repoRoot: config.repoRoot });
+      const ledgerPath = defaultLedgerPath(config.repoRoot);
+      const ledger = readLedger(ledgerPath);
+      return ok({
+        ledgerPath,
+        totalEvents: ledger.length,
+        events: ledger.slice(-(limit ?? 20)),
+        byEvent: ledger.reduce<Record<string, number>>((counts, entry) => {
+          counts[entry.event] = (counts[entry.event] ?? 0) + 1;
+          return counts;
+        }, {}),
+        queued: supervisor.queuedJobs().map((job) => ({
+          jobId: job.id,
+          projectId: job.projectId,
+          revision: job.revision,
+          createdAt: job.createdAt,
+        })),
+        interrupted: supervisor.interruptedJobs().map((job) => ({
+          jobId: job.id,
+          projectId: job.projectId,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "start_supervisor",
+    {
+      title: "Start the loop on a clock",
+      description:
+        "Start the supervisor as a long-running process that ticks on a clock until it is stopped. This " +
+        "is the persistent mode: once it is running, work is picked up without anybody asking. It runs " +
+        "one job per tick, oldest first.",
+      inputSchema: {
+        tickSeconds: z.number().int().positive().max(3600).optional().describe("Seconds between ticks. Thirty by default."),
+        dryRun: z.boolean().optional().describe("Do everything except publish."),
+      },
+    },
+    async ({ tickSeconds, dryRun }) => {
+      await supervisorMain({
+        repoRoot: config.repoRoot,
+        tickMs: (tickSeconds ?? 30) * 1000,
+        dryRun: dryRun ?? false,
+      });
+      return ok({ stopped: true });
+    },
+  );
+
+  server.registerTool(
+    "submit_brief",
+    {
+      title: "Put a brief in the inbox",
+      description:
+        "Put a brief in the studio's inbox. The loop takes it on its next tick: it plans the shots, " +
+        "builds the composition, gates it, repairs what the gate can repair, renders it, and publishes " +
+        "it — or says clearly why it could not. This is how work arrives without anybody waiting for it. " +
+        "The brief is plain text that goes into the planner; it cannot carry a file path, a script or a " +
+        "URL.",
+      inputSchema: {
+        title: z.string().describe("What the film is called."),
+        brief: z.string().describe("The brief. What the film is for, and what it has to say."),
+        name: z.string().optional().describe("The file name to use. Derived from the title if omitted."),
+      },
+    },
+    async ({ title, brief, name }) => {
+      const path = submitBrief(config.repoRoot, { title, brief }, name);
+      return ok({
+        path,
+        inbox: inboxDir(config.repoRoot),
+        note:
+          "The brief is queued. Run the loop with run_supervisor to work it, or let the supervisor tick " +
+          "on its own.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "loop_metrics",
+    {
+      title: "How the loop is doing",
+      description:
+        "The loop's counters, counted from the ledger: jobs by state, what the gate is failing on, what " +
+        "the remediation table fixed, and the findings that survived the budget. Every number traces back " +
+        "to a line in the ledger, so none of them can drift. Three consecutive failures with the same " +
+        "finding is reported as `repeatedFailure` — that is a broken repair rule, not a bad brief.",
+      inputSchema: {},
+    },
+    async () => ok(readMetrics(config.repoRoot)),
   );
 }

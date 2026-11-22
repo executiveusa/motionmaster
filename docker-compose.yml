@@ -1,0 +1,56 @@
+# Motion Master — the studio, in two processes.
+#
+# The API serves the tools and the HTTP surface. The worker runs the loop on
+# a clock. They share the data directory, and the data directory is a volume,
+# so a redeploy replaces the containers and leaves the work alone.
+#
+#   docker compose up --build
+#   docker compose exec worker node scripts/alert-loop.mjs
+#
+# There is no database and no message broker. The ledger is a file, the queue
+# is a directory of job records, and the lock is the claim the worker writes
+# before it starts. That is enough for one studio, and it is honest about
+# being one studio.
+
+services:
+  api:
+    build: .
+    command: ["node", "mcp/dist/index.js"]
+    ports:
+      - "8787:8787"
+    environment:
+      MOTION_MASTER_HOST: 0.0.0.0
+      MOTION_MASTER_MCP_PORT: "8787"
+      MOTION_MASTER_DATA_DIR: /data
+      # A key, if you want one. Without it the API is open, which is right
+      # on a laptop and wrong anywhere else.
+      MOTION_MASTER_API_KEY: ${MOTION_MASTER_API_KEY:-}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["node", "mcp/dist/supervisor-cli.js"]
+    environment:
+      MOTION_MASTER_MCP_PORT: "8787"
+      MOTION_MASTER_DATA_DIR: /data
+      MOTION_MASTER_SUPERVISOR_TICK_MS: "${MOTION_MASTER_SUPERVISOR_TICK_MS:-30000}"
+    volumes:
+      - ./data:/data
+    # One worker. Two workers on one directory would race for the same jobs;
+    # the claim makes that safe, but there is no reason to take the risk.
+    deploy:
+      replicas: 1
+    restart: unless-stopped
+
+  # The alert. It exits non-zero when the loop has failed the same way three
+  # times in a row, which is a broken repair rule rather than a bad brief.
+  alert:
+    build: .
+    command: ["node", "scripts/alert-loop.mjs"]
+    environment:
+      MOTION_MASTER_DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    profiles: ["monitoring"]

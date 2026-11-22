@@ -18,9 +18,12 @@ export type SkillGroup =
   | "production"
   | "web"
   | "catalogue"
+  | "shots"
   | "gsap"
   | "remotion"
-  | "hyperframes";
+  | "hyperframes"
+  | "editing"
+  | "diagrams";
 
 export interface SkillSummary {
   /** The skill's identity in this plugin: its directory name. Always unique. */
@@ -171,11 +174,42 @@ const GROUP_BY_NAME: Record<string, SkillGroup> = {
   "claude-motion-web-sims": "web",
   // A technique catalogue to look things up in.
   "awesome-ai-motion": "catalogue",
+  // The shot vocabulary: what a shot is, when to reach for it, what it costs.
+  "shotcraft": "shots",
+  // The effect shelf: small reusable pieces of craft, each one a file of code.
+  "pixelfx": "styles",
+  // The analog layer: the stepped clock, the posterised colour and the paper.
+  "analog-motion": "web",
+  // The editorial map: camera, route, pin, callout, vignette.
+  "vector-map": "web",
+  // A talking-head recording turned into a finished vertical reel.
+  "talking-head-reels": "production",
   // The HTML-to-video generator: render pipeline, block registry, media.
   "hyperframes": "hyperframes",
   "hyperframes-cli": "hyperframes",
   "hyperframes-registry": "hyperframes",
   "media-use": "hyperframes",
+  // A second HyperFrames doctrine, and a richer one: nine palettes, the
+  // house style, the transition catalogue, captions, audio-reactive visuals.
+  "hyperframes-doctrine": "hyperframes",
+  // Cutting what was recorded: the one thing this repo had no answer for.
+  "cut-mistakes": "editing",
+  "cut-silences": "editing",
+  "edit-video": "editing",
+  "short-form-edit": "editing",
+  // The production route from a brief to a finished film.
+  "make-a-video": "production",
+  "motion-showreel": "production",
+  "short-form-video": "production",
+  "video-storytelling": "production",
+  "style-library": "production",
+  // The seven-stage studio process and the creative muscle behind it.
+  "saas-motion-video": "production",
+  // Technical diagrams that draw themselves, with a camera rig and a
+  // voiceover mode that fires every beat on its cue.
+  "animated-diagrams": "diagrams",
+  // A website captured and turned into a video.
+  "website-to-hyperframes": "production",
 };
 
 function groupFor(name: string): SkillGroup {
@@ -190,10 +224,13 @@ const UPSTREAM: Record<string, string> = {
   remotion: "Remotion official skills (MIT)",
   craft: "motionmaxxing (Apache-2.0)",
   styles: "lemo-opuscar (MIT + CC BY 4.0), huashu-art-motion (MIT)",
-  production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT)",
-  web: "oil-motion (MIT), animate (MIT), claude-motion (MIT)",
+  production: "product-launch-motion (MIT), guizang-product-video (MIT), jacky-motion (MIT), talking-head-reels (founder-supplied)",
+  web: "oil-motion (MIT), animate (MIT), claude-motion (MIT), analog-motion (MIT), vector-map (MIT)",
   catalogue: "awesome-ai-motion (MIT)",
-  hyperframes: "HyperFrames by HeyGen (Apache-2.0)",
+  shots: "video-shotcraft (Apache-2.0)",
+  hyperframes: "HyperFrames by HeyGen (Apache-2.0), herk-edit-kit (MIT)",
+  editing: "herk-edit-kit by nateherkai (MIT)",
+  diagrams: "animated-diagrams-skill by omkamal (Apache-2.0)",
 };
 
 function upstreamFor(group: SkillGroup): string | null {

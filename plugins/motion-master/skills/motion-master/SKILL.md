@@ -20,9 +20,10 @@ metadata:
 **Describe the video. Get the file.**
 
 Motion Master is **not on sale**. It is the founder's own motion-design agent,
-used in-house. The paid terms it would ship under are recorded in `licence.json` —
-$99 Solo, $399 Studio, one payment, no subscription — so that a launch is a single
-change rather than a rebuild, but nothing may be published as purchasable.
+used in-house. The terms it would ship under are recorded in `licence.json` at the
+repo root — read that file if you need them — so that a launch is a single change
+rather than a rebuild. Nothing may be published as purchasable, and no price may
+appear in any file you write.
 
 Motion Master teaches an agent to write motion design in code — Remotion, GSAP,
 HyperFrames, ffmpeg — and hand back a finished video. The agent plans the shot list,
@@ -141,6 +142,28 @@ before filling one.
 
 In this repository, `generator/render.sh <dir> <out.mp4>` wraps the render and finds
 the browser. The sample composition is `generator/compositions/library-map`.
+
+### Stage 4a — The analog layer
+
+Two filters and one clock make a clean digital animation read as printed and
+shot. `analog-motion` has all three: the 12fps stepped clock for the graphic
+layer, the posterised colour, and the paper — grain, halftone, vignette — with
+the boiling paper that keeps it from sitting still.
+
+`vector-map` is the editorial map: a camera over the land, a route that draws
+itself, a pin that drops, a callout that arrows in, and a vignette that says
+*here*. The projection is self-contained, so it needs no install.
+
+### Stage 5a — The shot plan
+
+Before any composition is written, the film needs a shape: where it opens, what
+the shots are, how it ends. MCP `plan_shots` builds that from the 124 shot
+cards in `shotcraft` — an opening that spends little energy, the shots the
+brief asks for, a transition, an outro — and returns the card each shot came
+from. Read the card; it carries the parameters and the traps.
+
+`enhance_prompt` with `plan_shots: true` does both in one call, and writes the
+plan into the brief so the enhancer stops guessing a shape of its own.
 
 ### Stage 6 — Review
 
@@ -294,8 +317,7 @@ The upstream skills keep their own licences and attribution — MIT, MIT + CC BY
 Apache-2.0 for `motionmaxxing` — and each carries its licence file and an `UPSTREAM.md`
 saying where it came from. The Motion Master layer — this router, the token files, the
 prompt library and the MCP server — is the product. It is **not on sale**; the terms it
-would ship under are recorded in `licence.json` (**$99 Solo, $399 Studio,
-one-time**.
+would ship under are recorded in `licence.json` at the repo root.
 
 ### How to route
 
@@ -308,7 +330,13 @@ one-time**.
 | "render it to a file" | `remotion-create`, `remotion-markup`, `remotion-render` — or `hyperframes` if the composition is simpler as HTML |
 | "I want to see the technique" | `awesome-ai-motion` |
 | "I want a look / a style / a named visual" | MCP `browse_library` with `kind=style`, or `lemo-opuscar/styles/` |
-| "here is a one-line brief, make it good" | MCP `enhance_prompt` first, then plan the video |
+| "here is a one-line brief, make it good" | MCP `enhance_prompt` with `plan_shots: true` — it plans the shots from the cards and writes the plan into the brief |
+| "what shots does this need?" | MCP `plan_shots` — 124 authored shot cards; it returns the order, the length and the card each shot came from |
+| "show me the shot vocabulary" | `shotcraft` — the cards, by role |
+| "a wipe / a dissolve / a counter that ticks" | MCP `list_motion_effects` — 244 effects, each one a file of code |
+| "make it look filmic / printed / shot" | `analog-motion` — the stepped clock, the posterised colour and the paper |
+| "a map / a route / a callout / highlight a region" | `vector-map` — the camera, the route, the pin, the callout and the vignette |
+| "cut this talking-head recording into a reel" | `talking-head-reels` — the pause cuts, the transcript, the EDL and the render |
 | "give me a ready-made motion piece" | MCP `list_motion_blocks` — 448 installable blocks, each with tags and dimensions |
 | "check this composition before it renders" | MCP `check_hyperframes`, or `motion-master-api` for the same thing over HTTP |
 | "call this from a script, not from the agent" | `motion-master-api` — the HTTP API at `/api/v1` |

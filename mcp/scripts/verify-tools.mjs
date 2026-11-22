@@ -14,7 +14,7 @@
  */
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -96,6 +96,13 @@ const main = async () => {
       console.log(`- ${tool.name}: ${tool.description.slice(0, 90)}…`);
     }
     const REQUIRED_TOOLS = [
+      "list_brand_kits",
+      "get_brand_kit",
+      "save_brand_kit",
+      "queue_status",
+      "list_house_templates",
+      "get_house_template",
+      "plan_house_template",
       "list_skills", "get_motion_tokens", "list_clips", "get_clip_prompt",
       "plan_video", "build_composition", "build_hyperframes_composition",
       "mix_footage",
@@ -106,6 +113,10 @@ const main = async () => {
       "list_sfx_kinds", "browse_sfx", "search_sfx", "get_sfx", "plan_sound",
       "enhance_prompt",
       "board_sync_check", "board_sync_start", "board_sync_status", "board_sync_cancel",
+      "list_meta_placements", "check_ad_copy", "plan_meta_ad", "build_meta_ad", "preflight_ad",
+      "run_supervisor", "supervisor_status", "start_supervisor", "submit_brief", "loop_metrics",
+      "list_shots", "get_shot", "plan_shots",
+      "list_motion_effects", "get_motion_effect",
     ];
     check(
       "every tool is advertised",
@@ -117,6 +128,37 @@ const main = async () => {
       "the tool names are unique",
       new Set(tools.map((tool) => tool.name)).size === tools.length,
       `${new Set(tools.map((tool) => tool.name)).size} unique names`,
+    );
+
+    /*
+     * The startup banner lists the tool names for the operator. It used to
+     * fall behind the server — eleven tools were registered but never named,
+     * so the banner said 24 while the server exposed 35. The banner is now
+     * checked against the same list the live server is checked against, so
+     * the two cannot drift apart again.
+     */
+    const serverSource = await readFile(
+      new URL("../src/index.ts", import.meta.url),
+      "utf8",
+    );
+    const bannerMatch = serverSource.match(/const TOOL_NAMES = \[([\s\S]*?)\]/);
+    const bannerNames = bannerMatch
+      ? [...bannerMatch[1].matchAll(/"([a-z_0-9]+)"/g)].map((match) => match[1])
+      : [];
+    const missingFromBanner = REQUIRED_TOOLS.filter(
+      (name) => !bannerNames.includes(name),
+    );
+    const extraInBanner = bannerNames.filter(
+      (name) => !REQUIRED_TOOLS.includes(name),
+    );
+    check(
+      "the startup banner names every tool",
+      bannerNames.length === REQUIRED_TOOLS.length &&
+        missingFromBanner.length === 0 &&
+        extraInBanner.length === 0,
+      missingFromBanner.length || extraInBanner.length
+        ? `missing: ${missingFromBanner.join(", ")}; unknown: ${extraInBanner.join(", ")}`
+        : `${bannerNames.length} names`,
     );
 
     section("list_skills");

@@ -12,15 +12,15 @@
     "local": {
       "available": true,
       "tier": "solo",
-      "note": "Compositions render on the buyer's own machine with Remotion; there is no per-minute fee."
+      "note": "Compositions render locally with Remotion. There is no per-minute fee and nothing leaves the owner's machine."
     },
     "hosted": {
-      "available": true,
+      "available": false,
       "tier": "studio",
       "allowance": null,
-      "allowanceNote": "The size of the hosted render allowance has not been decided, so no number is published anywhere. It is confirmed in the checkout receipt.",
-      "billingNote": "Nothing is ever charged automatically. If the buyer wants more than the allowance, they choose it and they pay for it.",
-      "note": "Studio can render on our machines. The MCP server never renders anything itself."
+      "allowanceNote": "Motion Master is not on sale, so no hosted rendering is offered and no allowance is published. The recorded terms live in licence.json.",
+      "billingNote": "Nothing is ever charged automatically. If you want more than the allowance, you choose it and you pay for it.",
+      "note": "Compositions render locally. The MCP server never renders anything itself."
     }
   }
 }

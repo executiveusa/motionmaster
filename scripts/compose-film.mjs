@@ -56,7 +56,17 @@ const tokens = JSON.parse(
 
 /* ---------------------------------------------------------------- the shots */
 
-const matched = matchBlocks(blocksFile, brief, { limit: shotCount * 5, requireVariables: true });
+/* The gate's verdicts: a rejected block is never offered, and a measured one
+   is preferred over one nobody has measured. */
+const verdictsFile = join(ROOT, 'library', 'block-verdicts.json');
+const verdicts = existsSync(verdictsFile)
+  ? (JSON.parse(readFileSync(verdictsFile, 'utf8')).verdicts ?? {})
+  : {};
+const matched = matchBlocks(blocksFile, brief, {
+  limit: shotCount * 5,
+  requireVariables: true,
+  verdicts,
+});
 if (!matched.length) {
   console.error('No block matched that brief. Try naming a look: title card, kinetic type, transition, product demo, data.');
   process.exit(1);

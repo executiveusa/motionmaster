@@ -5,6 +5,7 @@ import { KineticType } from "./KineticType";
 import { ProductLoop } from "./ProductLoop";
 import { FootageTitle } from "./FootageTitle";
 import { SourceClip } from "./SourceClip";
+import { VoxPromo } from "./vox/VoxPromo";
 
 /**
  * The compositions are authored in a 1920x1080 design space and rendered at 1280x720.
@@ -40,9 +41,27 @@ const ProductLoopScaled = scaled(ProductLoop);
 const FootageTitleScaled = scaled(FootageTitle);
 const SourceClipScaled = scaled(SourceClip);
 
+/**
+ * The Vox promo is a full-length piece, not a gallery clip, so it is not
+ * scaled down with the others: it renders at its own size and frame rate.
+ */
+const VoxPromoFull: React.FC = () => (
+  <AbsoluteFill style={{ backgroundColor: "#F4F4F2", overflow: "hidden" }}>
+    <VoxPromo />
+  </AbsoluteFill>
+);
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="VoxPromo"
+        component={VoxPromoFull}
+        durationInFrames={480}
+        fps={24}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="LaunchTitle"
         component={LaunchTitleScaled}

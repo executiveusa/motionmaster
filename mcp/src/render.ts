@@ -7,6 +7,7 @@
  * a file or it did not.
  */
 import { execFileSync, spawn } from "node:child_process";
+import { houseSeverity } from "./verdicts.js";
 import { constants, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -26,6 +27,16 @@ export interface GateFinding {
   message: string;
   /** The file the finding came from, relative to the project. */
   sourceFile?: string;
+  /**
+   * The finding as the gate wrote it.
+   *
+   * This was thrown away, and it cost the remediation table everything it
+   * needed. A contrast failure carries the foreground, the background, the
+   * measured ratio, the required ratio and a suggested colour; keep only the
+   * code and the message and none of that survives. The rule that repairs a
+   * contrast failure cannot be written without it.
+   */
+  raw?: Record<string, unknown>;
 }
 
 export interface GateResult {
@@ -55,6 +66,13 @@ export interface FilmRecord {
   gate?: GateResult;
   /** The last render's log tail. */
   log?: string;
+  /** When the render ran on another instance. */
+  remote?: {
+    url: string;
+    id: string;
+    statusUrl: string;
+    videoUrl: string;
+  };
 }
 
 /** The directory every rendered film lives in. */
@@ -220,12 +238,23 @@ export function readGateFindings(projectDir: string): GateFinding[] {
           message?: string;
           sourceFile?: string;
         };
-        if (f.severity !== "error") continue;
+        /*
+         * The house's severity, not the gate's.
+         *
+         * The gate rates a finding "error" or "warning". The house is
+         * stricter on the things it cares about — the type floor, the
+         * contrast, the claim on frame zero — and a warning that says the
+         * text is 14 px on a phone is not a warning, it is a film nobody
+         * can read. The policy lives in one place, verdicts.ts.
+         */
+        const severity = houseSeverity(f);
+        if (severity !== "error") continue;
         findings.push({
           code: f.code ?? "unknown",
           severity: "error",
           message: f.message ?? "",
           sourceFile: f.sourceFile,
+          raw: f as unknown as Record<string, unknown>,
         });
       }
     }
@@ -448,6 +477,13 @@ export interface RenderJob {
   /** The shots that made it into the film. */
   shots?: { id: string; title: string; duration: number }[];
   seconds?: number;
+  /** When the render ran on another instance. */
+  remote?: {
+    url: string;
+    id: string;
+    statusUrl: string;
+    videoUrl: string;
+  };
 }
 
 /** Where a film's job state lives. */

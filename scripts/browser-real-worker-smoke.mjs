@@ -25,8 +25,34 @@ mkdirSync(downloads);
 const port = 4175;
 const base = 'http://127.0.0.1:' + port + '/';
 const fixtureKey = 'mm-isolated-browser-render-key';
-const chrome = [process.env.CHROME_BIN, 'google-chrome', 'chromium', 'chromium-browser']
-  .filter(Boolean).find((name) => spawnSync('which', [name], { encoding: 'utf8' }).status === 0);
+/**
+ * Find a browser.
+ *
+ * `which` only searches PATH, so an absolute path in CHROME_BIN was
+ * rejected — and CHROME_BIN is how every CI runner points at its Chrome.
+ */
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_BIN,
+    process.env.HYPERFRAMES_BROWSER_PATH,
+    "/workspace/.home/chrome/chrome-headless-shell-linux64/chrome-headless-shell",
+    "/usr/local/bin/chrome-headless-shell",
+    "google-chrome",
+    "chromium",
+    "chromium-browser",
+    "chrome-headless-shell",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (candidate.includes("/")) {
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
+    const found = spawnSync("which", [candidate], { encoding: "utf8" }).stdout?.trim();
+    if (found) return found;
+  }
+  return null;
+}
+const chrome = findChrome();
 assert.ok(chrome, 'Chromium is required for real-worker browser acceptance');
 for (const name of ['site', 'library', 'plugins']) {
   symlinkSync(join(root, name), join(isolated, name), 'dir');
@@ -184,7 +210,9 @@ try {
     return true;
   })()`);
   await evaluate(`(() => {
-    document.querySelector("[data-shot-variable]").value = "Ana Ruiz";
+    /* The on-screen text field, not just the first field: a block may put a
+       colour variable first, and a colour input cannot hold a name. */
+    document.querySelector('[data-shot-variable][type="text"]').value = "Ana Ruiz";
     document.querySelector("[data-shot-duration]").value = "3";
     document.querySelector("[data-project-render]").click();
     return true;
@@ -201,8 +229,11 @@ try {
   report.checks.push('Chromium continues monitoring a long render after 80 status polls');
   await until('["editorComplete", "editorFailed"].includes(document.querySelector("[data-project-status]")?.dataset.i18n)',
     'default-worker MP4 render', 200000);
-  assert.equal(await evaluate('document.querySelector("[data-project-status]").dataset.i18n'),
-    'editorComplete', 'Default worker failed or did not publish the browser render');
+  const finalState = await evaluate('document.querySelector("[data-project-status]")?.dataset.i18n');
+  assert.equal(finalState, 'editorComplete',
+    'Default worker failed or did not publish the browser render' +
+    ' | job error: ' + JSON.stringify((await api('projects/' + projectId + '/jobs'))[0]?.error ?? null) +
+    ' | server: ' + serverTail.join('').slice(-1200));
   const jobs = await api('projects/' + projectId + '/jobs');
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].status, 'ready');

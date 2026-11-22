@@ -205,7 +205,7 @@
     if (briefP > 0) {
       writeText('A 21 second product loop.', 120, 190, 74, briefP, 'Caveat', BLACK);
       const p2 = seg(t, 3.4, 6.0);
-      if (p2 > 0) writeText('Four shots. One file.', 120, 288, 74, p2, 'Caveat', RED);
+      if (p2 > 0) writeText('Shot by shot.', 120, 288, 74, p2, 'Caveat', RED);
     }
 
     // ── 2. the shot list ─────────────────────────────────────────────────────
@@ -335,7 +335,7 @@
         return { x: a.x, y: a.y, angle: 0.46 + Math.sin(t * 5) * 0.05 };
       }
       const p = seg(t, 3.4, 6.0);
-      const a = penAt('Four shots. One file.', 120, 288, 74, p, 'Caveat');
+      const a = penAt('Shot by shot.', 120, 288, 74, p, 'Caveat');
       return { x: a.x, y: a.y, angle: 0.46 + Math.sin(t * 5) * 0.05 };
     }
     // 2. drawing the boxes

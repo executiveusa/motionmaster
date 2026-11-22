@@ -7,10 +7,11 @@
  * test about both.
  */
 import test from "node:test";
+import { isQualified } from "../dist/verdicts.js";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
-import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -151,6 +152,48 @@ test("filling without a brief is a 400, not a crash", async () => {
   assert.match(body.error, /brief/i);
 });
 
+/*
+ * The gate is the same gate whether you name a block or ask for one.
+ *
+ * Naming a block used to take the name at face value, so a block the house
+ * had disqualified could be filled and handed to a render that would then
+ * refuse it — the editor said "the render stopped" and the person had no
+ * way forward.
+ */
+test("naming a block the house gate rejected is refused, with the reason", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  const rejected = Object.entries(verdicts).find(([, v]) => !isQualified(v) && v.reasons?.length);
+  assert.ok(rejected, "the pool has no rejected block to test with");
+  const [id, verdict] = rejected;
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "anything", block: id });
+  assert.equal(status, 400);
+  assert.match(body.error, /did not pass the house gate/i);
+  assert.ok(JSON.stringify(body.reasons ?? body.detail ?? "").includes(verdict.reasons[0].split(":")[0]),
+    "the refusal does not say what the gate found");
+});
+
+test("naming a block that passed the house gate still works", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  /* Qualified the house's way, not merely "the gate found no errors". */
+  const passed = Object.entries(verdicts).find(([, v]) => isQualified(v));
+  assert.ok(passed, "the pool has no qualified block to test with");
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "a clean lower third", block: passed[0] });
+  assert.equal(status, 200);
+  assert.equal(body.block.id, passed[0]);
+});
+
+test("the matcher only ever offers blocks that passed the gate", async () => {
+  const verdicts = JSON.parse(readFileSync(join(repoRoot, "library", "block-verdicts.json"), "utf8")).verdicts ?? {};
+  const rejected = new Set(Object.entries(verdicts).filter(([, v]) => !isQualified(v)).map(([id]) => id));
+  const { status, body } = await post("/api/v1/blocks/fill", { brief: "a bold kinetic type title card" });
+  assert.equal(status, 200);
+  const offered = [body.block?.id, ...(body.matched ?? []).map((m) => m.id)].filter(Boolean);
+  assert.ok(offered.length > 0, "the matcher offered nothing");
+  for (const id of offered) {
+    assert.ok(!rejected.has(id), `the matcher offered ${id}, which the house gate rejected`);
+  }
+});
+
 test("the sound shelf answers with its vocabulary", async () => {
   const { status, body } = await get("/api/v1/sfx/kinds");
   assert.equal(status, 200);
@@ -198,6 +241,73 @@ test("the public liveness endpoint is minimal and the MCP route remains separate
   assert.notEqual(mcp.status, 404, "MCP route must not fall through to the API 404");
 });
 
+test("the shot vocabulary answers over HTTP", async () => {
+  const { status, body } = await get("/api/v1/shots?limit=5");
+  assert.equal(status, 200);
+  assert.ok(body.shots.length > 0, "no shots came back");
+  assert.ok(body.total > 100, `expected the full card set, got ${body.total}`);
+  assert.equal(body.licence, "Apache-2.0");
+  for (const shot of body.shots) {
+    assert.ok(shot.id.includes("/"), "a shot has no role");
+    assert.ok(shot.summary, "a shot has no summary");
+  }
+});
+
+test("one shot comes back in full", async () => {
+  const list = await get("/api/v1/shots?limit=1");
+  const id = list.body.shots[0].id;
+  const { status, body } = await get(`/api/v1/shots/${encodeURIComponent(id)}`);
+  assert.equal(status, 200);
+  assert.equal(body.id, id);
+  assert.ok(body.path, "the shot has no path to read");
+});
+
+test("a shot that does not exist is a 404, not a crash", async () => {
+  const { status } = await get("/api/v1/shots/not-a-real-shot");
+  assert.equal(status, 404);
+});
+
+test("planning shots over HTTP returns a plan with cards behind it", async () => {
+  const { status, body } = await post("/api/v1/shots/plan", {
+    brief: "a launch film for a developer tool dashboard",
+    durationSeconds: 20,
+  });
+  assert.equal(status, 200);
+  assert.ok(body.shots.length >= 3, "the plan is too short to be a film");
+  assert.equal(body.shots[0].role, "opening");
+  assert.equal(body.shots[body.shots.length - 1].role, "outro");
+  for (const shot of body.shots) {
+    assert.ok(shot.path, `${shot.id} has no path`);
+    assert.ok(shot.reason, `${shot.id} has no reason`);
+  }
+});
+
+test("planning shots without a brief is a 400, not a crash", async () => {
+  const { status } = await post("/api/v1/shots/plan", {});
+  assert.equal(status, 400);
+});
+
+test("the effect shelf answers over HTTP", async () => {
+  const { status, body } = await get("/api/v1/effects?limit=5");
+  assert.equal(status, 200);
+  assert.equal(body.total, 244);
+  assert.equal(body.licence, "MIT");
+  assert.ok(body.categories.length >= 20, "the categories are missing");
+});
+
+test("one effect comes back with the path to its source", async () => {
+  const list = await get("/api/v1/effects?limit=1");
+  const id = list.body.effects[0].id;
+  const { status, body } = await get(`/api/v1/effects/${encodeURIComponent(id)}`);
+  assert.equal(status, 200);
+  assert.equal(body.id, id);
+  assert.ok(body.path, "the effect has no path to its source");
+});
+
+test("an effect that does not exist is a 404, not a crash", async () => {
+  const { status } = await get("/api/v1/effects/not/a-real-effect");
+  assert.equal(status, 404);
+});
 
 test("prompt enhancement is preview-only and preserves the owner's ACME brief", async () => {
   const original = "ACME coffee title, 15 seconds, white background, orange accent, no logo";

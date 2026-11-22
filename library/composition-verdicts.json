@@ -1,0 +1,656 @@
+{
+  "generated": "scripts/qualify-compositions.mjs",
+  "verdicts": {
+    "motion-library/bar-chart-grow": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 11 text elements stay under it for 0.5 s or more, the smallest \"0\" at 20 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "bar-chart-grow",
+      "file": "studio/compositions/motion-library/bar-chart-grow/index.html"
+    },
+    "motion-library/before-after-stat": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"before-after-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "before-after-stat",
+      "file": "studio/compositions/motion-library/before-after-stat/index.html"
+    },
+    "motion-library/big-number-card": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"big-number-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "line_unread: The film's last line \"同样的选题流程，AI 参与后从整理资料到产出初稿明显提速。\" (18 words) is on screen 3.70 s (±0.01 s), under the 4.42 s a closing line needs: hold it about 0.5 s + 0.3 s a word and at least 2 s before the film ends; see references/motion.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "big-number-card",
+      "file": "studio/compositions/motion-library/big-number-card/index.html"
+    },
+    "motion-library/cause-chain": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "gsap_non_transform_motion: GSAP tween on \".head\" uses motion that snaps to integer device pixels: left. Layout and text-reflow properties snap during browser layout; roundProps rounds the tween value. Slow motion or an ease-out tail then stutters under the seek-by-frame capture engine. Animate transforms (x/y/scale/opacity) instead.",
+        "nested_structure_needs_subcomposition: <section id=\"cause-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "cause-chain",
+      "file": "studio/compositions/motion-library/cause-chain/index.html"
+    },
+    "motion-library/chapter-title": {
+      "ok": false,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"chapter-title-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "text_box_overflow: Text extends outside its nearest visual/container box."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "chapter-title",
+      "file": "studio/compositions/motion-library/chapter-title/index.html"
+    },
+    "motion-library/checklist-pop": {
+      "ok": false,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"checklist-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "text_not_painted: Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "checklist-pop",
+      "file": "studio/compositions/motion-library/checklist-pop/index.html"
+    },
+    "motion-library/compact-number-callout": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"compact-number-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "compact-number-callout",
+      "file": "studio/compositions/motion-library/compact-number-callout/index.html"
+    },
+    "motion-library/concept-spotlight": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"concept-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"核心概念\" renders at 26 px for 4.50 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "concept-spotlight",
+      "file": "studio/compositions/motion-library/concept-spotlight/index.html"
+    },
+    "motion-library/donut-progress": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"donut-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "donut-progress",
+      "file": "studio/compositions/motion-library/donut-progress/index.html"
+    },
+    "motion-library/horizontal-bar-compare": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"bar-compare-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "horizontal-bar-compare",
+      "file": "studio/compositions/motion-library/horizontal-bar-compare/index.html"
+    },
+    "motion-library/iteration-loop": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"iteration-loop-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "iteration-loop",
+      "file": "studio/compositions/motion-library/iteration-loop/index.html"
+    },
+    "motion-library/key-point-marker": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"marker-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"记住这一点\" renders at 24 px for 4.00 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "key-point-marker",
+      "file": "studio/compositions/motion-library/key-point-marker/index.html"
+    },
+    "motion-library/keyword-blast": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"keyword-blast-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "keyword-blast",
+      "file": "studio/compositions/motion-library/keyword-blast/index.html"
+    },
+    "motion-library/line-chart-draw": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 18 text elements stay under it for 0.5 s or more, the smallest \"0\" at 20 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "line-chart-draw",
+      "file": "studio/compositions/motion-library/line-chart-draw/index.html"
+    },
+    "motion-library/metric-pulse": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "metric-pulse",
+      "file": "studio/compositions/motion-library/metric-pulse/index.html"
+    },
+    "motion-library/mode-choice-compare": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"mode-choice-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "mode-choice-compare",
+      "file": "studio/compositions/motion-library/mode-choice-compare/index.html"
+    },
+    "motion-library/myth-fact-swap": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"myth-fact-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "myth-fact-swap",
+      "file": "studio/compositions/motion-library/myth-fact-swap/index.html"
+    },
+    "motion-library/number-counter": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "number-counter",
+      "file": "studio/compositions/motion-library/number-counter/index.html"
+    },
+    "motion-library/number-impact": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"number-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "number-impact",
+      "file": "studio/compositions/motion-library/number-impact/index.html"
+    },
+    "motion-library/quote-card": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"quote-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"书里的一句话\" renders at 26 px for 4.25 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei",
+        "Georgia",
+        "Times New Roman"
+      ],
+      "set": "motion-library",
+      "block": "quote-card",
+      "file": "studio/compositions/motion-library/quote-card/index.html"
+    },
+    "motion-library/source-citation-card": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"source-citation-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 3 text elements stay under it for 0.5 s or more, the smallest \"数据来源：项目复盘记录\" at 24 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "source-citation-card",
+      "file": "studio/compositions/motion-library/source-citation-card/index.html"
+    },
+    "motion-library/stat-duel": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"comparison-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "stat-duel",
+      "file": "studio/compositions/motion-library/stat-duel/index.html"
+    },
+    "motion-library/status-split": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"status-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "status-split",
+      "file": "studio/compositions/motion-library/status-split/index.html"
+    },
+    "motion-library/three-step-flow": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"flow-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "three-step-flow",
+      "file": "studio/compositions/motion-library/three-step-flow/index.html"
+    },
+    "motion-library/timeline-scan": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"timeline-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "timeline-scan",
+      "file": "studio/compositions/motion-library/timeline-scan/index.html"
+    },
+    "motion-library/top-rank-list": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"rank-list-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "top-rank-list",
+      "file": "studio/compositions/motion-library/top-rank-list/index.html"
+    },
+    "motion-library/turning-point-line": {
+      "ok": true,
+      "errors": 0,
+      "reasons": [
+        "nested_structure_needs_subcomposition: <section id=\"turning-point-scene\"> is a timeline element that contains nested <div>. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "line_unread: \"拐点出现后，内容生产从单次项目变成可复用系统。\" (15 words) is on screen 3.37 s (±0.01 s), under its 3.75 s floor: hold it about 0.5 s + 0.3 s a word (5.00 s here) before it leaves or changes; see references/motion.md."
+      ],
+      "declaredFonts": [
+        "PingFang SC",
+        "Source Han Sans SC",
+        "Noto Sans CJK SC",
+        "Microsoft YaHei"
+      ],
+      "set": "motion-library",
+      "block": "turning-point-line",
+      "file": "studio/compositions/motion-library/turning-point-line/index.html"
+    },
+    "reelforge/bar": {
+      "ok": false,
+      "errors": 2,
+      "reasons": [
+        "invalid_parent_traversal_in_asset_path: Found 1 asset path(s) traversing above the project root with \"../\" (../../vendor/), resolved from the folder of the file that holds them. Render and preview clamp them to the project root or resolve them outside it, so they load a different file than written, or none.",
+        "composition_file_too_large: This HTML composition file has 417 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "subcomposition_root_styled_by_class: Root element has class=\"bar-rootbox\" and is styled by 1 rule(s) keyed off that class (e.g. .bar-rootbox). At render, every sub-composition rule is scoped to [data-composition-id=\"bar\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "bar",
+      "file": "studio/compositions/reelforge/bar/block.html"
+    },
+    "reelforge/compare": {
+      "ok": false,
+      "errors": 0,
+      "reasons": [
+        "composition_file_too_large: This HTML composition file has 489 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.9:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.9:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.9:1; WCAG AA requires 3:1.",
+        "first_frame_empty: Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 7 text elements stay under it for 0.5 s or more, the smallest \"VS\" at 23 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "Pretendard Variable",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "compare",
+      "file": "studio/compositions/reelforge/compare/block.html"
+    },
+    "reelforge/line": {
+      "ok": false,
+      "errors": 0,
+      "reasons": [
+        "composition_file_too_large: This HTML composition file has 496 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "sweep_static: Nothing on screen moved under seek.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 4.5:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 3:1.",
+        "contrast_aa_failure: Contrast is 1.09:1; WCAG AA requires 4.5:1.",
+        "text_below_floor: Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 2 text elements stay under it for 0.5 s or more, the smallest \"표시할 수치가 준비되면 추세선으로 전환됩니다\" at 22 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "Pretendard Variable",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "line",
+      "file": "studio/compositions/reelforge/line/block.html"
+    },
+    "reelforge/list": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "subcomposition_root_styled_by_class: Root element has class=\"list-rootbox\" and is styled by 12 rule(s) keyed off that class (e.g. .list-rootbox, .list-rootbox[data-variant=\"rail\"] .list-signal, .list-rootbox[data-variant=\"ledger\"] .list-signal). At render, every sub-composition rule is scoped to [data-composition-id=\"list\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "Pretendard Variable",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "list",
+      "file": "studio/compositions/reelforge/list/block.html"
+    },
+    "reelforge/numbered": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "composition_file_too_large: This HTML composition file has 324 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "subcomposition_root_styled_by_class: Root element has class=\"numbered-block\" and is styled by 13 rule(s) keyed off that class (e.g. .numbered-block, .numbered-block[data-variant=\"ghost-numeral\"] .numbered-rail-progress, .numbered-block[data-variant=\"progress-rail\"] .numbered-body). At render, every sub-composition rule is scoped to [data-composition-id=\"numbered\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "Pretendard Variable",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "numbered",
+      "file": "studio/compositions/reelforge/numbered/block.html"
+    },
+    "reelforge/pie": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "composition_file_too_large: This HTML composition file has 444 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "subcomposition_root_styled_by_class: Root element has class=\"pie-block\" and is styled by 1 rule(s) keyed off that class (e.g. .pie-block). At render, every sub-composition rule is scoped to [data-composition-id=\"pie\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "pie",
+      "file": "studio/compositions/reelforge/pie/block.html"
+    },
+    "reelforge/quote": {
+      "ok": false,
+      "errors": 2,
+      "reasons": [
+        "invalid_parent_traversal_in_asset_path: Found 1 asset path(s) traversing above the project root with \"../\" (../../vendor/), resolved from the folder of the file that holds them. Render and preview clamp them to the project root or resolve them outside it, so they load a different file than written, or none.",
+        "subcomposition_root_styled_by_class: Root element has class=\"quote-rootbox\" and is styled by 13 rule(s) keyed off that class (e.g. .quote-rootbox, .quote-rootbox[data-has-attribution=\"false\"] .quote-attribution, .quote-rootbox[data-variant=\"center-impact\"] .quote-stage). At render, every sub-composition rule is scoped to [data-composition-id=\"quote\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "Pretendard Variable",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "Georgia",
+        "Times New Roman",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "quote",
+      "file": "studio/compositions/reelforge/quote/block.html"
+    },
+    "reelforge/statistic": {
+      "ok": false,
+      "errors": 1,
+      "reasons": [
+        "composition_file_too_large: This HTML composition file has 441 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "subcomposition_root_styled_by_class: Root element has class=\"stat-rootbox\" and is styled by 4 rule(s) keyed off that class (e.g. .stat-rootbox, .stat-rootbox[data-has-unit=\"false\"] .stat-unit, .stat-rootbox[data-has-supplemental=\"false\"] .stat-supplemental). At render, every sub-composition rule is scoped to [data-composition-id=\"statistic\"] <selector>, so a selector whose leftmost part is the ROOT's own class becomes a descendant selector that cannot match the scoped element itself. Since #1886 the producer preserves the authored root as an inner wrapper, so this no longer renders the scene unstyled, but #root is the shape the scoper special-cases and the registry blocks model. Use it so preview, render, and Studio agree."
+      ],
+      "declaredFonts": [
+        "Pretendard",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Consolas"
+      ],
+      "set": "reelforge",
+      "block": "statistic",
+      "file": "studio/compositions/reelforge/statistic/block.html"
+    }
+  }
+}

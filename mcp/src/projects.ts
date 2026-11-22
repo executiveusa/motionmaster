@@ -16,6 +16,7 @@ import {
   renameSync, rmSync, writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { dataDir } from './datadir.js';
 
 export const PROJECT_SCHEMA_VERSION = 1 as const;
 const SAFE_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/;
@@ -61,8 +62,15 @@ export interface ProjectJob {
   attempts?: number;
 }
 
-export function projectsRoot(repoRoot: string): string {
-  return resolve(repoRoot, 'workspace', 'projects');
+/**
+ * Where the projects live.
+ *
+ * The data directory is outside the repository when one is configured, so a
+ * redeploy does not take the work with it. Inside the repository by default,
+ * which is what development wants.
+ */
+export function projectsRoot(repoRoot: string, tenantId?: string): string {
+  return resolve(dataDir(repoRoot, tenantId), 'projects');
 }
 
 function assertId(id: string): void {
@@ -71,14 +79,22 @@ function assertId(id: string): void {
   }
 }
 
-function projectDir(repoRoot: string, id: string): string {
+/**
+ * A project's directory.
+ *
+ * Exported because the supervisor has to put the finished film somewhere the
+ * job record can name. The job contract is strict on purpose: the artifact
+ * has to be a project-local `artifacts/<name>.mp4`, and ffprobe has to
+ * confirm it holds a real video stream. A non-empty file is not a film.
+ */
+export function projectDir(repoRoot: string, id: string, tenantId?: string): string {
   assertId(id);
-  return join(projectsRoot(repoRoot), id);
+  return join(projectsRoot(repoRoot, tenantId), id);
 }
 
-function revisionPath(repoRoot: string, id: string, number: number): string {
+function revisionPath(repoRoot: string, id: string, number: number, tenantId?: string): string {
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid revision.');
-  return join(projectDir(repoRoot, id), 'revisions', `${number}.json`);
+  return join(projectDir(repoRoot, id, tenantId), 'revisions', `${number}.json`);
 }
 
 function readJson(path: string): unknown {
@@ -147,13 +163,14 @@ function asRevision(data: unknown, id: string, number: number): ProjectRevision 
 export function createProject(
   repoRoot: string,
   input: { id?: string; title: string; brief: string; shots?: ProjectRevision['shots']; sourceFilmId?: string },
+  tenantId?: string,
 ): { project: ProjectRecord; revision: ProjectRevision } {
   const id = input.id ?? `p_${randomUUID()}`;
   assertId(id);
   if (!validCopy(input.title, input.brief) || !validShots(input.shots ?? [])) throw new Error('Invalid project content.');
   if (input.sourceFilmId) assertId(input.sourceFilmId);
-  const dir = projectDir(repoRoot, id);
-  mkdirSync(projectsRoot(repoRoot), { recursive: true });
+  const dir = projectDir(repoRoot, id, tenantId);
+  mkdirSync(projectsRoot(repoRoot, tenantId), { recursive: true });
   // Exclusive directory creation: duplicate IDs cannot overwrite a project.
   mkdirSync(dir);
   const now = new Date().toISOString();
@@ -171,21 +188,21 @@ export function createProject(
   return { project, revision };
 }
 
-export function readProject(repoRoot: string, id: string): { project: ProjectRecord; revision: ProjectRevision } | undefined {
-  const dir = projectDir(repoRoot, id);
+export function readProject(repoRoot: string, id: string, tenantId?: string): { project: ProjectRecord; revision: ProjectRevision } | undefined {
+  const dir = projectDir(repoRoot, id, tenantId);
   const path = join(dir, 'project.json');
   if (!existsSync(path)) return undefined;
   const project = asProject(readJson(path), id);
-  const revision = asRevision(readJson(revisionPath(repoRoot, id, project.currentRevision)), id, project.currentRevision);
+  const revision = asRevision(readJson(revisionPath(repoRoot, id, project.currentRevision, tenantId)), id, project.currentRevision);
   return { project, revision };
 }
 
-export function listProjects(repoRoot: string): ProjectRecord[] {
-  const root = projectsRoot(repoRoot);
+export function listProjects(repoRoot: string, tenantId?: string): ProjectRecord[] {
+  const root = projectsRoot(repoRoot, tenantId);
   if (!existsSync(root)) return [];
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && SAFE_ID.test(entry.name))
-    .map((entry) => readProject(repoRoot, entry.name)?.project)
+    .map((entry) => readProject(repoRoot, entry.name, tenantId)?.project)
     .filter((project): project is ProjectRecord => project !== undefined)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
@@ -219,28 +236,28 @@ export function saveRevision(
   return { project, revision };
 }
 
-export function readRevision(repoRoot: string, id: string, number: number): ProjectRevision | undefined {
-  const path = revisionPath(repoRoot, id, number);
+export function readRevision(repoRoot: string, id: string, number: number, tenantId?: string): ProjectRevision | undefined {
+  const path = revisionPath(repoRoot, id, number, tenantId);
   return existsSync(path) ? asRevision(readJson(path), id, number) : undefined;
 }
 
-export function createProjectJob(repoRoot: string, projectId: string, revision: number): ProjectJob {
-  const project = readProject(repoRoot, projectId);
-  if (!project || !readRevision(repoRoot, projectId, revision)) throw new Error('Project revision not found.');
+export function createProjectJob(repoRoot: string, projectId: string, revision: number, tenantId?: string): ProjectJob {
+  const project = readProject(repoRoot, projectId, tenantId);
+  if (!project || !readRevision(repoRoot, projectId, revision, tenantId)) throw new Error('Project revision not found.');
   const now = new Date().toISOString();
   const job: ProjectJob = {
     schemaVersion: 1, id: `j_${randomUUID()}`, projectId, revision,
     status: 'queued', createdAt: now, updatedAt: now,
   };
-  const path = join(projectDir(repoRoot, projectId), 'jobs', `${job.id}.json`);
+  const path = join(projectDir(repoRoot, projectId, tenantId), 'jobs', `${job.id}.json`);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(job, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
   return job;
 }
 
-export function readProjectJob(repoRoot: string, projectId: string, jobId: string): ProjectJob | undefined {
+export function readProjectJob(repoRoot: string, projectId: string, jobId: string, tenantId?: string): ProjectJob | undefined {
   assertId(jobId);
-  const path = join(projectDir(repoRoot, projectId), 'jobs', `${jobId}.json`);
+  const path = join(projectDir(repoRoot, projectId, tenantId), 'jobs', `${jobId}.json`);
   if (!existsSync(path)) return undefined;
   const job = readJson(path) as Partial<ProjectJob> | null;
   if (!job || job.schemaVersion !== 1 || job.id !== jobId || job.projectId !== projectId ||
@@ -257,12 +274,12 @@ export function readProjectJob(repoRoot: string, projectId: string, jobId: strin
  */
 export type JobEvent = 'start' | 'complete' | 'fail' | 'cancel' | 'retry';
 
-export function listProjectJobs(repoRoot: string, projectId: string): ProjectJob[] {
-  const dir = join(projectDir(repoRoot, projectId), 'jobs');
+export function listProjectJobs(repoRoot: string, projectId: string, tenantId?: string): ProjectJob[] {
+  const dir = join(projectDir(repoRoot, projectId, tenantId), 'jobs');
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^j_[a-zA-Z0-9_-]+\.json$/.test(entry.name))
-    .map((entry) => readProjectJob(repoRoot, projectId, entry.name.slice(0, -5))!)
+    .map((entry) => readProjectJob(repoRoot, projectId, entry.name.slice(0, -5), tenantId)!)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -272,8 +289,9 @@ export function transitionProjectJob(
   jobId: string,
   event: JobEvent,
   options: { artifact?: string; error?: string } = {},
+  tenantId?: string,
 ): ProjectJob {
-  const current = readProjectJob(repoRoot, projectId, jobId);
+  const current = readProjectJob(repoRoot, projectId, jobId, tenantId);
   if (!current) throw new Error('Project job not found.');
   const target: Record<JobEvent, JobState> = {
     start: 'rendering', complete: 'ready', fail: 'failed',
@@ -297,7 +315,7 @@ export function transitionProjectJob(
     if (!artifact || !/^artifacts\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\.mp4$/.test(artifact)) {
       throw new Error('A project-local MP4 artifact is required.');
     }
-    const path = join(projectDir(repoRoot, projectId), artifact);
+    const path = join(projectDir(repoRoot, projectId, tenantId), artifact);
     if (!existsSync(path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() ||
         lstatSync(path).size === 0) {
       throw new Error('The render artifact is missing or invalid.');
@@ -336,7 +354,7 @@ export function transitionProjectJob(
     delete next.error;
     delete next.artifact;
   }
-  atomicJson(join(projectDir(repoRoot, projectId), 'jobs', `${jobId}.json`), next);
+  atomicJson(join(projectDir(repoRoot, projectId, tenantId), 'jobs', `${jobId}.json`), next);
   return next;
 }
 

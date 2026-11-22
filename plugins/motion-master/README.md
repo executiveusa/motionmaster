@@ -2,23 +2,21 @@
 
 **Describe the video. Get the file.**
 
-Motion Master is a **paid, one-time licence** product. It teaches an AI agent —
-ChatGPT, Codex, Claude, Cursor and a dozen more hosts — to storyboard, choreograph and
-render motion design **in code**, and to hand a non-technical creator a finished
-video, the project, and the source.
+<!-- mm:offer:start -->
+**Not on sale.** Motion Master is the founder's own motion-design studio, used
+in-house. The terms it would ship under are recorded in `licence.json` at the
+repo root; they are not published and nothing is purchasable today.
 
-| Tier | Price | What you get |
-| --- | --- | --- |
-| **Solo** | **$99 one-time** | The plugin, 33 upstream motion skills, the MCP server (planner, tokens, clip library, composition generator). Every future update. |
-| **Studio** | **$399 one-time** | Everything in Solo, plus footage mixing against your own Montage instance (`mix_footage`), priority support and the studio onboarding walkthrough. |
+Motion Master does not run a hosted render service. Compositions render locally, and real footage is mixed by a Montage instance the owner runs themselves.
+<!-- mm:offer:end -->
 
-**One payment. No subscription. No per-render billing.** The licence key is delivered
-by email after checkout; it activates the paid tier of the plugin.
+Motion Master teaches an AI agent — ChatGPT, Codex, Claude, Cursor and a dozen more
+hosts — to storyboard, choreograph and render motion design **in code**, and to hand
+a non-technical creator a finished video, the project, and the source.
 
-**There is hosted rendering on Studio, with an allowance in your licence.** Motion Master never renders your video in the
-cloud and never pretends to. Compositions are rendered on *your* machine with Remotion
-(`npx remotion render …`), and real footage is mixed by a Montage instance *you* run.
-What you get is the source, and the output is yours.
+Compositions are rendered on *your* machine with Remotion (`npx remotion render …`),
+and real footage is mixed by a Montage instance *you* run. What you get is the source,
+and the output is yours.
 
 ---
 
@@ -53,10 +51,10 @@ plugins/motion-master/
 
 ## Install
 
-The plugin is **paid**: buy the licence first ($99 Solo, $399 Studio, one-time). The
-licence key arrives by email; the commands below install the package the key activates.
-The plugin ships a marketplace catalog for each host. Clone the repository, then add
-the marketplace directory as a source.
+Motion Master is not on sale, so there is nothing to buy and no licence key to
+activate. The commands below install the package. The plugin ships a marketplace
+catalog for each host. Clone the repository, then add the marketplace directory as a
+source.
 
 ### Claude Code
 
@@ -159,9 +157,8 @@ add one until DNS points at the site.
 
 ## Licence
 
-This package is proprietary and sold as a paid, one-time licence, **except** the
-bundled upstream skills, which stay under their original MIT licences with their
-attribution intact. See `LICENSE.md`.
+This package is proprietary, **except** the bundled upstream skills, which stay under
+their original MIT licences with their attribution intact. See `LICENSE.md`.
 
 The Montage bridge is not part of this package: it lives in `bridge/` under
 **AGPL-3.0-only**, isolated on purpose, and this plugin neither contains nor imports

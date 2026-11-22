@@ -12,6 +12,10 @@ build/
 # Local review artefacts
 .review/
 site/screenshots/
+# The build moves the previous output aside when a preview server still holds
+# it open. Those leftovers are not source.
+site/.dist-old-*/
+shots/
 
 # The hero film's intermediate frame sequences: 118 MB of PNGs that are
 # regenerated from site/public/clips by hero/render.mjs. The finished MP4 is
@@ -19,6 +23,8 @@ site/screenshots/
 hero/frames/
 hero/stills/
 hero/.chrome-profile/
+hero/chunks/
+hero/.score-mix.wav
 
 # Plan and prompt working files
 .mavis/
@@ -31,6 +37,10 @@ hero/.chrome-profile/
 # HyperFrames check artefacts: lint reports, snapshots and layout probes.
 # The composition and the finished MP4 are committed; the reports are not.
 .hyperframes/
+# The block-qualification work tree: one installed block per block, rebuilt on
+# every run. Never committed — it is a few hundred megabytes of scratch.
+generator/qualify/
+
 generator/compositions/*/.hyperframes/
 
 # The sample film is committed; its frame sequences are not.
@@ -59,3 +69,9 @@ __pycache__/
 
 # Transient completion-loop validation evidence
 .completion-proof/
+generator/qualify-compositions
+studio/ads/build/
+studio/ads/render/
+backups/
+data/
+docker-compose.override.yml

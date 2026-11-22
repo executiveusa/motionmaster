@@ -1,0 +1,227 @@
+'use client';
+
+import {
+  type ComponentPropsWithoutRef,
+  createElement,
+  type ElementType,
+  type ForwardedRef,
+  forwardRef,
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { TegakiEngine } from '../core/engine.ts';
+import type { TegakiEngineOptions } from '../core/types.ts';
+import type { Coercible } from '../lib/utils.ts';
+import { coerceToString } from '../lib/utils.ts';
+
+/** Imperative handle exposed via the `ref` prop. */
+export interface TegakiRendererHandle {
+  /** The underlying engine instance. `null` before mount and after unmount. */
+  readonly engine: TegakiEngine | null;
+  /** The container DOM element. */
+  readonly element: HTMLElement | null;
+}
+
+interface TegakiRendererBaseProps extends TegakiEngineOptions {
+  /** Children coerced to string. Strings and numbers are kept; everything else is ignored. */
+  children?: Coercible;
+
+  /** When true, the rendered text is editable via contentEditable. */
+  editable?: boolean;
+
+  /** Called when the user edits the text (only when `editable` is true). */
+  onTextChange?: (text: string) => void;
+}
+
+export type TegakiRendererProps<C extends ElementType = 'div'> = {
+  as?: C;
+} & TegakiRendererBaseProps &
+  Omit<ComponentPropsWithoutRef<C>, keyof TegakiRendererBaseProps | 'as'>;
+
+// `useLayoutEffect` warns during SSR on React 18; the caret only exists in the browser anyway.
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/** The caret's offset in `el`'s text, or `null` when the selection isn't a caret inside it. */
+function caretOffset(el: HTMLElement): number | null {
+  const sel = el.ownerDocument.getSelection();
+  if (!sel?.isCollapsed || !sel.focusNode || !el.contains(sel.focusNode)) return null;
+  const range = el.ownerDocument.createRange();
+  range.setStart(el, 0);
+  range.setEnd(sel.focusNode, sel.focusOffset);
+  return range.toString().length;
+}
+
+/** Put the caret `offset` characters into `el`'s text. */
+function placeCaret(el: HTMLElement, offset: number): void {
+  const sel = el.ownerDocument.getSelection();
+  if (!sel) return;
+  const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let remaining = offset;
+  let last: Text | null = null;
+  for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+    if (remaining <= node.length) {
+      sel.collapse(node, remaining);
+      return;
+    }
+    remaining -= node.length;
+    last = node;
+  }
+  if (last) sel.collapse(last, last.length);
+}
+
+function reactCreateElement(tag: string, props: Record<string, any>, ...children: (ReactNode | string)[]): ReactNode {
+  return createElement(tag, { ...props, key: props['data-tegaki'] }, ...children);
+}
+
+/**
+ * Framework-agnostic handwriting renderer for React. Accepts a `ref` exposing
+ * the imperative {@link TegakiRendererHandle} (engine + container element).
+ *
+ * Implemented with `forwardRef` (not React 19's ref-as-prop) so the handle works
+ * on React 18 as well as 19 — the declared `react: >=18` peer. The render
+ * function is inlined into `forwardRef` (so lint recognizes it as a component),
+ * and the `as` cast on the export restores the generic `C` parameter that
+ * `forwardRef` erases (the standard generic-forwardRef workaround).
+ */
+export const TegakiRenderer = forwardRef(function TegakiRendererInner(
+  props: TegakiRendererProps<ElementType>,
+  forwardedRef: ForwardedRef<TegakiRendererHandle>,
+) {
+  const {
+    as: Tag = 'div' as ElementType,
+    font,
+    text,
+    children,
+    time: timeProp,
+    reducedMotion,
+    onComplete,
+    onChangeTimeline,
+    pressure,
+    quality,
+    plugins,
+    seed,
+    timing,
+    showOverlay,
+    direction,
+    shaper,
+    fallbackFont,
+    editable,
+    onTextChange,
+    ...elementProps
+  } = props as TegakiRendererProps<ElementType>;
+
+  const containerRef = useRef<HTMLElement>(null);
+  const engineRef = useRef<TegakiEngine | null>(null);
+  const resolvedText = text ?? coerceToString(children);
+
+  // --- Editable: internal text state that resets when controlled text changes ---
+  const [internalText, setInternalText] = useState(resolvedText);
+  const [prevResolvedText, setPrevResolvedText] = useState(resolvedText);
+  if (prevResolvedText !== resolvedText) {
+    setPrevResolvedText(resolvedText);
+    setInternalText(resolvedText);
+  }
+
+  const displayText = editable ? internalText : resolvedText;
+
+  // Render the element tree via the engine's static method (SSR-safe)
+  const engineOptions: TegakiEngineOptions = {
+    text: displayText,
+    font,
+    time: timeProp,
+    reducedMotion,
+    pressure,
+    quality,
+    plugins,
+    seed,
+    timing,
+    showOverlay,
+    direction,
+    shaper,
+    fallbackFont,
+    onComplete,
+    onChangeTimeline,
+  };
+  const { rootProps, content } = TegakiEngine.renderElements(engineOptions, reactCreateElement);
+  const { style: rootStyle, ...rootAttrs } = rootProps;
+
+  // Create engine on mount, adopting the pre-rendered elements
+  useEffect(() => {
+    const engine = new TegakiEngine(containerRef.current!, { adopt: true });
+    engineRef.current = engine;
+    return () => {
+      engine.destroy();
+      engineRef.current = null;
+    };
+  }, []);
+
+  // Update engine with current props every render
+  useEffect(() => {
+    engineRef.current?.update(engineOptions);
+  });
+
+  // --- Editable: contentEditable + input handling ---
+  const onTextChangeRef = useRef(onTextChange);
+  onTextChangeRef.current = onTextChange;
+  // Re-rendering the edited text rewrites the overlay's text node, which drops
+  // the caret to the start (typing would come out backwards). Note where it
+  // was on each input and put it back once React has committed.
+  const caretRef = useRef<number | null>(null);
+
+  useClientLayoutEffect(() => {
+    const offset = caretRef.current;
+    if (offset === null) return;
+    caretRef.current = null;
+    const overlay = containerRef.current?.querySelector<HTMLElement>('[data-tegaki="overlay"]');
+    if (overlay && caretOffset(overlay) !== offset) placeCaret(overlay, offset);
+  });
+
+  useEffect(() => {
+    if (!editable) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const overlay = container.querySelector<HTMLElement>('[data-tegaki="overlay"]');
+    if (!overlay) return;
+
+    overlay.contentEditable = 'plaintext-only';
+    overlay.style.caretColor = 'auto';
+
+    const handleInput = () => {
+      caretRef.current = caretOffset(overlay);
+      const newText = overlay.textContent ?? '';
+      setInternalText(newText);
+      onTextChangeRef.current?.(newText);
+    };
+
+    overlay.addEventListener('input', handleInput);
+    return () => {
+      overlay.removeEventListener('input', handleInput);
+      overlay.contentEditable = 'inherit';
+      overlay.style.caretColor = '';
+    };
+  }, [editable]);
+
+  // Imperative handle
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      get engine() {
+        return engineRef.current;
+      },
+      get element() {
+        return containerRef.current;
+      },
+    }),
+    [],
+  );
+
+  // Merge engine root styles with user-provided styles
+  const mergedStyle = { ...rootStyle, ...elementProps.style };
+
+  return createElement(Tag, { ...rootAttrs, ...elementProps, ref: containerRef, style: mergedStyle } as any, content);
+}) as <const C extends ElementType = 'div'>(props: TegakiRendererProps<C> & { ref?: Ref<TegakiRendererHandle> }) => ReactNode;

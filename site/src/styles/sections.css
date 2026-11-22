@@ -404,7 +404,8 @@
   margin-top: 12px;
 }
 .library__copy {
-  height: 34px;
+  /* A touch target is 44px, on every screen. */
+  height: 44px;
   padding: 0 14px;
   font: inherit;
   font-size: 13px;
@@ -437,7 +438,7 @@
 .library__more {
   align-self: flex-start;
   margin-top: 20px;
-  height: 40px;
+  height: 44px;
   padding: 0 16px;
   font: inherit;
   font-size: 14px;
@@ -518,6 +519,8 @@
   margin-top: 16px;
 }
 .sfx__kind-button {
+  /* A touch target is 44px, on every screen. */
+  min-height: 44px;
   padding: 7px 12px;
   border: 1px solid var(--hairline);
   border-radius: 2px;
@@ -576,8 +579,9 @@
 }
 .sfx__play {
   flex: none;
-  width: 34px;
-  height: 34px;
+  /* A touch target is 44px, on every screen. */
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   background: transparent;
@@ -628,6 +632,8 @@
 .sfx__copy {
   flex: none;
   align-self: flex-start;
+  /* A touch target is 44px, on every screen. */
+  min-height: 44px;
   padding: 4px 9px;
   border: 1px solid var(--hairline);
   border-radius: 2px;
@@ -1006,7 +1012,9 @@
   margin-right: 6px;
 }
 .console__starter {
-  height: 32px;
+  /* A touch target is 44px, on every screen — the house rule, the same one
+     the film controls follow. */
+  height: 44px;
   padding: 0 13px;
   font: inherit;
   font-size: 13px;

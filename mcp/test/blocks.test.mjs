@@ -198,3 +198,47 @@ test("the brand fills a wordmark", { skip }, () => {
   const wordmark = filled.variables.find((v) => /wordmark|brand|logo/i.test(v.id));
   assert.equal(wordmark.value, "ACME");
 });
+
+/*
+ * The gate's verdicts cut above the wording.
+ *
+ * A block the gate has rejected is never offered, whatever the brief says.
+ * A block it has passed is preferred over one nobody has measured, because
+ * the gate finds the failures that matter — text clipped by its own box, a
+ * label under the contrast floor, an occluded line — and a film built on one
+ * of those is a broken film.
+ */
+test("a block the gate rejected is never offered", { skip }, () => {
+  const rejected = file.blocks.find((b) => b.variables.length > 0);
+  assert.ok(rejected, "the registry has no block with variables");
+  const hits = matchBlocks(file, "a kinetic typography title card", {
+    limit: 10,
+    requireVariables: true,
+    verdicts: { [rejected.id]: { ok: false, errors: 1, reasons: ["test"], checkedAt: "now" } },
+  });
+  assert.ok(
+    !hits.some((h) => h.block.id === rejected.id),
+    `${rejected.id} was rejected by the gate but was still offered`,
+  );
+});
+
+test("a block the gate passed is preferred over one nobody measured", { skip }, () => {
+  const brief = "a kinetic typography title card";
+  const unmeasured = matchBlocks(file, brief, { limit: 10, requireVariables: true });
+  assert.ok(unmeasured.length >= 2, "not enough blocks to compare");
+  const measuredId = unmeasured[unmeasured.length - 1].block.id;
+  const verdicts = {
+    [measuredId]: { ok: true, errors: 0, reasons: [], checkedAt: "now" },
+  };
+  const hits = matchBlocks(file, brief, { limit: 10, requireVariables: true, verdicts });
+  assert.equal(hits[0].block.id, measuredId, "the measured block was not preferred");
+});
+
+test("the pool still answers a brief when nothing has been measured", { skip }, () => {
+  const hits = matchBlocks(file, "a calm title card for a coffee brand", {
+    limit: 3,
+    requireVariables: true,
+    verdicts: {},
+  });
+  assert.ok(hits.length > 0, "an unmeasured pool answered nothing");
+});

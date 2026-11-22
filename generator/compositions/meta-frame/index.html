@@ -1,0 +1,138 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"srcWidth","type":"number","label":"Source width","default":1920},
+    {"id":"srcHeight","type":"number","label":"Source height","default":1080},
+    {"id":"focalX","type":"number","label":"Focal point x","default":0.5},
+    {"id":"focalY","type":"number","label":"Focal point y","default":0.5},
+    {"id":"safeTop","type":"number","label":"Safe top","default":0},
+    {"id":"safeBottom","type":"number","label":"Safe bottom","default":0},
+    {"id":"safeLeft","type":"number","label":"Safe left","default":0},
+    {"id":"safeRight","type":"number","label":"Safe right","default":0},
+    {"id":"background","type":"color","label":"Background","default":"#0E0E10"},
+    {"id":"showGuide","type":"boolean","label":"Show the safe-zone guide","default":false},
+    {"id":"duration","type":"number","label":"Duration in seconds","default":6}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" width="1920" height="1080" />
+    <script src="./gsap-3.14.2.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; overflow: hidden; background: #0E0E10; }
+      #root { position: relative; overflow: hidden; }
+      .stage { position: absolute; inset: 0; overflow: hidden; }
+      .art {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform-origin: 0 0;
+        will-change: transform;
+      }
+      /* The art is scaled to cover the placement, so it is larger than the
+         frame on purpose. The overflow is the design, not an accident. */
+      .art[data-layout-allow-overflow] { overflow: visible; }
+      .guide { position: absolute; pointer-events: none; display: none; }
+      .guide__area { position: absolute; border: 2px dashed rgba(255, 74, 28, 0.85); }
+      .guide__label {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        font: 600 22px/1 "IBM Plex Sans", system-ui, sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 74, 28, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="6" data-width="1920" data-height="1080">
+      <div class="stage">
+        <div class="art" id="art"></div>
+        <div class="guide" id="guide">
+          <div class="guide__area" id="guide-area"></div>
+          <div class="guide__label" id="guide-label">Safe area</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      /*
+       * The reframe.
+       *
+       * The art is sixteen by nine. The placement is not. Rather than crop the
+       * middle out of the frame and hope, the art is scaled to cover the
+       * placement and then moved so that the focal point — the product, the
+       * face, the number — lands in the middle of the safe area, which is the
+       * only part of a full-screen vertical placement nobody's interface
+       * covers.
+       *
+       * The safe zone is drawn only for the review render. The delivery has
+       * no guide on it.
+       */
+      (function () {
+        var values = {};
+        var host = document.getElementById("root");
+        try {
+          values = JSON.parse(host.getAttribute("data-variable-values") || "{}");
+        } catch (e) {
+          values = {};
+        }
+        var v = function (id, fallback) {
+          var value = values[id];
+          return value === undefined || value === null ? fallback : value;
+        };
+
+        var srcW = Number(v("srcWidth", 1920));
+        var srcH = Number(v("srcHeight", 1080));
+        var focalX = Number(v("focalX", 0.5));
+        var focalY = Number(v("focalY", 0.5));
+        var safeTop = Number(v("safeTop", 0));
+        var safeBottom = Number(v("safeBottom", 0));
+        var safeLeft = Number(v("safeLeft", 0));
+        var safeRight = Number(v("safeRight", 0));
+
+        var targetW = Number(host.getAttribute("data-width"));
+        var targetH = Number(host.getAttribute("data-height"));
+        var duration = Number(v("duration", Number(host.getAttribute("data-duration")) || 6));
+
+        /* The safe area, in pixels. */
+        var safeX = Math.round(targetW * safeLeft);
+        var safeY = Math.round(targetH * safeTop);
+        var safeW = Math.round(targetW * (1 - safeLeft - safeRight));
+        var safeH = Math.round(targetH * (1 - safeTop - safeBottom));
+
+        /* Cover the frame: the art is scaled by whichever axis overflows. */
+        var scale = Math.max(targetW / srcW, targetH / srcH);
+
+        /* Put the focal point in the middle of the safe area. */
+        var centreX = safeX + safeW / 2;
+        var centreY = safeY + safeH / 2;
+        var tx = centreX - focalX * srcW * scale;
+        var ty = centreY - focalY * srcH * scale;
+
+        var art = document.getElementById("art");
+        art.style.width = srcW + "px";
+        art.style.height = srcH + "px";
+        art.style.transform = "translate(" + tx + "px, " + ty + "px) scale(" + scale + ")";
+
+        var guide = document.getElementById("guide");
+        if (v("showGuide", false)) {
+          guide.style.display = "block";
+          var area = document.getElementById("guide-area");
+          area.style.left = safeX + "px";
+          area.style.top = safeY + "px";
+          area.style.width = safeW + "px";
+          area.style.height = safeH + "px";
+        }
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+        tl.to({}, { duration: duration });
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

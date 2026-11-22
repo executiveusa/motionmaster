@@ -11,10 +11,11 @@ design **in code**, and hands back a finished video, the project, and the source
 
 Remotion · GSAP · HyperFrames · ffmpeg. You own the output.
 
-**It is not on sale.** The founder is using it in-house. The terms it would ship
-under are recorded in `licence.json` — $99 Solo, $399 Studio, one payment, no
-subscription — so a launch is one edit rather than a rebuild. Nothing in this
-repository may present a purchase as available.
+<!-- mm:offer:start -->
+**It is not on sale.** The founder is using it in-house. The terms it would
+ship under are recorded in `licence.json` — so a launch is one edit rather than
+a rebuild. Nothing in this repository may present a purchase as available.
+<!-- mm:offer:end -->
 
 ---
 

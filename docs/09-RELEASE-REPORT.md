@@ -2,8 +2,36 @@
 
 **MOTION MASTER — what exists, what is proven, what is still open.**
 
-Date: 2026-10-21, updated 2026-10-24. Repository: **`executiveusa/motionmaster`** —
-the final home. The full history is pushed there: 29 commits, 2,874 files.
+Date: 2026-10-21, updated 2026-11-11. Repository: **`executiveusa/motionmaster`** —
+the final home. The history on disk is 335 commits and 3,691 files.
+
+> **Updated 2026-11-11 — the blind gauntlet is closed, and we won it.**
+> `motionvideo.xyz` resolves from the sandbox now, so the visual half of the
+> gauntlet ran for the first time. Two fresh critics, blind, judged our page
+> against theirs with the brand hidden and the file names randomised. Round one
+> went to the bar; every finding it made about our page was true and was fixed;
+> **round two picked ours.** See
+> [`docs/24-THE-BLIND-GAUNTLET.md`](24-THE-BLIND-GAUNTLET.md) and
+> [`docs/26-THE-ROUND-TWO-VERDICT.md`](26-THE-ROUND-TWO-VERDICT.md).
+>
+> **The hero film is now 55.4 seconds** and has a score. See
+> [`docs/25-THE-HERO-FILM.md`](25-THE-HERO-FILM.md).
+>
+> **Updated 2026-11-12 — the in-house studio.** The founder's three
+> decisions set the shape: house library first, renders local or remote, and
+> the taste gate hard on every render. Four layers were built — a generated
+> contract, brand kits, a 75-scene house library and a render queue. The
+> plugin had been advertising a paid product with a hosted render allowance
+> while `licence.json` said it was not on sale; that is fixed at the source
+> and a gate now keeps it fixed. See
+> [`docs/27-THE-IN-HOUSE-STUDIO.md`](27-THE-IN-HOUSE-STUDIO.md).
+>
+> **Updated 2026-11-13 — ten repos, nine of them taken.** A video named ten
+> HyperFrames repositories; every one was checked here before anything went
+> in. Thirteen skills, thirty-five compositions and one engine came out of
+> it. The compositions went through our own gate: **24 of 27 passed**, and
+> the house library went from 75 scenes to 99 — the `data` role from 5 to 20.
+> See [`docs/28-THE-TEN-REPOS.md`](28-THE-TEN-REPOS.md).
 
 > **Updated 2026-10-24 — it is live.** The repository was pushed to
 > `executiveusa/motionmaster` on 2026-10-24, replacing the single README commit that
@@ -27,7 +55,7 @@ the final home. The full history is pushed there: 29 commits, 2,874 files.
 | | | state |
 |---|---|---|
 | **Landing page** | `site/` | Vite + vanilla TS, **zero runtime dependencies**. A 104-second hero film, then 4 real rendered clips with their exact prompts, 3 demo films, a browsable catalogue of 3,988 library items, mechanism, contents, objections, pricing, FAQ. 0 external requests, 36.9 kB of JavaScript. |
-| **Hero film** | `hero/` | 104 seconds, 1920×1080, rendered frame by frame. The brief, the shot list, the code beside the footage it produced, the renders, the file. |
+| **Hero film** | `hero/` | **55.4 seconds**, 1920×1080, 30 fps, rendered frame by frame, with a score. The brief, the shot list, the code beside the footage it produced, the renders, the file. The 104-second cut is still one command away. |
 | **Agent plugin** | `plugins/motion-master/` | 38 upstream motion skills + the Motion Master router, packaged for ChatGPT, Codex, Claude, Cursor and 12 more hosts. 3 marketplace catalogs, all validated. |
  the skill and clip tools (`list_skills`, `get_motion_tokens`, `list_clips`, `get_clip_prompt`, `plan_video`, `build_composition`, `build_hyperframes_composition`, `mix_footage`), the library tools (`list_library_collections`, `list_library_categories`, `browse_library`, `get_library_item`, `list_motion_blocks`, `enhance_prompt`), the **sound tools** (`list_sfx_kinds`, `browse_sfx`, `search_sfx`, `get_sfx`, `plan_sound`) and the **render tools** (`render_film`, `film_status`, `list_films`). 65/65 tests, 44/44 tool-policy checks. |
 | **Console** | `site/src/modules/chat.ts` | A chat on the front page that talks to our own MCP server. The agent's artifacts are built by the **server from the real tool result**, so the console can never show a description of something that did not happen. Model by OpenRouter, BYO via PKCE — the key never sits on our server. 12/12 browser checks against the deployed page. |
@@ -176,18 +204,26 @@ with a real bridge and a real MCP, they are a free catalogue with a $29 skill fi
 
 `docs/08-GAUNTLET-RESULT.md` has the full result. The short version:
 
-- **Measurable half: won.** 0 high-severity signals for both; we have 1 medium
-  finding, they have 2; 25 headings against 37; 26 links against 93.
-- **Visual half: UNVERIFIED.** motionvideo.xyz does not resolve from this sandbox —
-  the TLS handshake fails and every fetch times out. Their site is open source, so
-  their *copy and structure* were audited from source and the reconstruction is
-  reproducible via `scripts/build-bar-reconstruction.mjs`. Their *pixels* were never
-  seen. A blind critic with fresh context is supposed to put the two screenshots side
-  by side and pick a winner. **That did not happen.**
-- `scripts/gauntlet.sh` performs that capture the moment the domain is reachable.
+**This half is now closed. It ran on 2026-11-11.**
 
-Claiming a win we did not measure is the exact failure the gauntlet exists to prevent,
-so the exit condition is unchanged: a blind critic picks ours.
+- **Measurable half: won.** 0 high-severity signals for both sides; we have 1 medium
+  finding, they have 4. `scripts/gauntlet.sh` re-runs it, and the bar is fetched
+  live — the reconstruction script was not needed.
+- **Visual half: run, twice, and won.** `motionvideo.xyz` resolves from this sandbox
+  now. `scripts/blind-capture.mjs` captures both pages at 1440 and 390 with the brand
+  hidden on both and the file names assigned at random, and a **fresh agent session**
+  with no history of this project judges them.
+  - **Round one: the bar won.** Three of its findings were true of our page — title
+    cards cut mid-word in the hero, a phone hero that was a shrunk desktop with a
+    card cutting the headline, and cards cropping the footage they held.
+  - All three were fixed, along with a **two-stylesheets-own-the-hero** bug that had
+    been silently shipping the wrong design.
+  - **Round two: ours won**, at medium confidence — on hierarchy, on craft and
+    taste, and on the phone being its own composition.
+
+Claiming a win we did not measure is the exact failure the gauntlet exists to
+prevent, so the exit condition stayed unchanged until a blind critic actually
+picked ours. It took two rounds, and the first one was lost.
 
 ---
 

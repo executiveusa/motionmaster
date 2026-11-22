@@ -1,0 +1,150 @@
+/* ============================================================
+   THE FILM — the work, mounted like a print on the page.
+
+   One frame, not a grid of cards. The film is the widest thing
+   on the page and it is the only thing in this section, so the
+   eye has somewhere to land before the examples begin.
+
+   The class names are `showcase__` and not `film__`: the console
+   already owns `.film__*` for the film it renders, and the two
+   must not meet.
+   ============================================================ */
+
+.section--film {
+  background: var(--canvas);
+}
+
+.showcase__head {
+  max-width: 720px;
+  margin-bottom: clamp(28px, 3.4vw, 48px);
+}
+
+/* The mount. A wide paper margin around the frame, the way a print
+   is mounted — so the film reads as an object on the page rather than
+   as a panel of the interface. */
+.showcase {
+  margin: 0;
+}
+
+.showcase__frame {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  padding: clamp(10px, 1.3vw, 20px);
+}
+
+.showcase__video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+/* The film's own caption line runs along the bottom of the frame, so
+   the stock control bar would sit on top of it. The only control here
+   is the sound, in the corner, out of the picture's way. */
+.showcase__sound {
+  position: absolute;
+  top: clamp(18px, 2vw, 30px);
+  right: clamp(18px, 2vw, 30px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* A touch target is 44px, on every screen. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  background: rgba(17, 17, 19, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-control);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+}
+
+.showcase__sound:hover,
+.showcase__sound:focus-visible {
+  background: rgba(17, 17, 19, 0.95);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.showcase__sound-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.45;
+}
+
+.showcase__sound[aria-pressed='true'] .showcase__sound-dot {
+  opacity: 1;
+}
+
+/* The caption is a spec line, so it is set in the mono — values only. */
+.showcase__caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.showcase__made {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.showcase__tools,
+.showcase__values {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: var(--ink-muted);
+}
+
+.showcase__values {
+  margin-left: auto;
+  color: var(--ink);
+}
+
+@media (max-width: 767px) {
+  .showcase__values {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .showcase__caption {
+    gap: 4px 16px;
+  }
+}
+
+/* The long film. A quiet link under the frame, not a player bolted to it.
+   The underline is a text decoration rather than a border, so the padding
+   that gives the link a 44px target does not detach it from the words. */
+.showcase__more {
+  margin-top: 4px;
+}
+
+.showcase__more a {
+  display: inline-block;
+  padding: 13px 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-ink);
+  text-underline-offset: 4px;
+}
+
+.showcase__more a:hover,
+.showcase__more a:focus-visible {
+  color: var(--accent-ink);
+}

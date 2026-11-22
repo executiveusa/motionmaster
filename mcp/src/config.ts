@@ -73,8 +73,27 @@ export interface Config {
   libraryPath: string;
   /** The HyperFrames block library. */
   blocksPath: string;
+  /** Which shot roles each gate-passing block can serve. */
+  blockRolesPath: string;
   /** The sound library: one index of every sound in the house. */
   sfxPath: string;
+  /** The brand kits: per-project overrides of the canonical tokens. */
+  brandKitsPath: string;
+  /**
+   * Where the work in progress lives: the projects, the jobs, the briefs and
+   * the ledger.
+   *
+   * It defaults to inside the repository, which is right for development and
+   * wrong for production, because a redeploy replaces the tree. Point it
+   * somewhere durable and the studio survives being replaced.
+   */
+  dataDir: string;
+  /** How many renders may run at once. One, unless the machine can take more. */
+  renderConcurrency: number;
+  /** Where a render runs: here, or on another instance. */
+  renderTarget: "local" | "remote";
+  /** The instance a remote render is posted to. */
+  renderRemoteUrl?: string;
   montage: MontageConfig;
 }
 
@@ -108,8 +127,17 @@ export function loadConfig(): Config {
       env("MOTION_MASTER_LIBRARY_PATH") ?? join(repoRoot, "library", "catalogue.json"),
     blocksPath:
       env("MOTION_MASTER_BLOCKS_PATH") ?? join(repoRoot, "library", "blocks.json"),
+    blockRolesPath:
+      env("MOTION_MASTER_BLOCK_ROLES_PATH") ?? join(repoRoot, "library", "block-roles.json"),
     sfxPath:
       env("MOTION_MASTER_SFX_PATH") ?? join(repoRoot, "library", "sfx.json"),
+    brandKitsPath:
+      env("MOTION_MASTER_BRAND_KITS_PATH") ?? join(repoRoot, "studio", "kits"),
+    dataDir:
+      env("MOTION_MASTER_DATA_DIR") ?? join(repoRoot, "workspace"),
+    renderConcurrency: intEnv("MOTION_MASTER_RENDER_CONCURRENCY", 1),
+    renderTarget: (env("MOTION_MASTER_RENDER_TARGET") ?? "local") === "remote" ? "remote" : "local",
+    renderRemoteUrl: env("MOTION_MASTER_RENDER_REMOTE_URL"),
     montage: {
       baseUrl: montageBase,
       token: env("MOTION_MASTER_MONTAGE_TOKEN"),
