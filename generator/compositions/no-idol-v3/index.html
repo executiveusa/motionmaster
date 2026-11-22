@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:IT;src:url(./fonts/InterTight.ttf);font-weight:100 900}
+html,body{margin:0;background:#000}
+#root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:IT,sans-serif}
+#cone{position:absolute;left:90px;top:-200px;width:900px;height:1900px;opacity:0;
+ background:radial-gradient(ellipse 45% 80% at 50% 0%,rgba(255,200,100,.8) 0%,rgba(214,150,52,.32) 38%,rgba(0,0,0,0) 75%);filter:blur(10px)}
+#pool{position:absolute;left:190px;top:1180px;width:700px;height:160px;opacity:0;
+ background:radial-gradient(ellipse at center,rgba(255,200,110,.45) 0%,rgba(0,0,0,0) 70%)}
+.dust{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(255,226,170,.8)}
+.t{position:absolute;left:0;width:1080px;text-align:center;text-transform:uppercase;font-weight:800;letter-spacing:.32em;text-indent:.32em}
+#a{top:820px;font-size:92px;color:#f2ede4}
+#b{top:950px;font-size:92px;color:#e0b25a}
+#line{position:absolute;left:390px;top:1100px;width:300px;height:3px;background:#e0b25a;transform-origin:center}
+</style></head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="2.6" data-width="1080" data-height="1920">
+  <div id="cone"></div><div id="pool"></div>
+  <div id="dustbox"></div>
+  <div id="a" class="t">No Idol.</div>
+  <div id="b" class="t">No Rival.</div>
+  <div id="line"></div>
+  <audio id="sw" src="./assets/switch.mp3" data-start="0.3" data-duration="1"></audio>
+  <audio id="dp" src="./assets/deep.mp3" data-start="0.3" data-duration="2.3"></audio>
+</div>
+<script src="./gsap-3.14.2.min.js"></script>
+<script>
+const box=document.getElementById('dustbox');let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+for(let i=0;i<40;i++){const d=document.createElement('div');d.className='dust';d.id='d'+i;d.style.left=(300+rnd()*480)+'px';d.style.top=(100+rnd()*1100)+'px';d.style.opacity=0;d.style.transform='scale('+(0.5+rnd()*1.5)+')';box.appendChild(d);}
+const tl=gsap.timeline({paused:true});
+tl.set(["#a","#b"],{opacity:0},0).set("#line",{scaleX:0},0);
+tl.set(".dust",{opacity:0.05},0);
+tl.to("#cone",{opacity:1,duration:.06},.3).to("#cone",{opacity:.85,duration:.12},.36).to("#cone",{opacity:1,duration:.1},.48);
+tl.to("#pool",{opacity:1,duration:.06},.3);
+tl.to(".dust",{opacity:()=>0.3+rnd()*0.6,duration:.3},.3);
+tl.to(".dust",{y:()=>40+rnd()*120,x:()=>-20+rnd()*40,duration:2.3,ease:"none"},.3);
+tl.fromTo("#a",{opacity:0,y:30,filter:"blur(12px)"},{opacity:1,y:0,filter:"blur(0px)",duration:.5,ease:"power3.out"},.75);
+tl.fromTo("#b",{opacity:0,y:30,filter:"blur(12px)"},{opacity:1,y:0,filter:"blur(0px)",duration:.5,ease:"power3.out"},1.4);
+tl.to("#line",{scaleX:1,duration:.6,ease:"power3.inOut"},1.6);
+tl.to(["#a","#b","#line"],{opacity:0,duration:.25},2.35);
+window.__timelines=window.__timelines||{};window.__timelines["main"]=tl;tl.seek(0);
+</script></body></html>

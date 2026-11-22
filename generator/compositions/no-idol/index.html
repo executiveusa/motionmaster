@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Anton;src:url(./fonts/Anton-Regular.ttf)}
+html,body{margin:0;background:#000}
+#root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:Anton,sans-serif}
+.w{position:absolute;left:0;width:1080px;text-align:center;line-height:.9;letter-spacing:4px;text-transform:uppercase}
+.big{font-size:250px}
+#l1{top:560px;color:#fff}
+#l1r{top:560px;color:#ff1e3c;mix-blend-mode:screen}
+#l1c{top:560px;color:#00e5ff;mix-blend-mode:screen}
+#l2{top:860px;color:#f5c518}
+#l2r{top:860px;color:#ff1e3c;mix-blend-mode:screen}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+#bar{position:absolute;left:140px;width:800px;height:16px;top:1120px;background:#f5c518;transform-origin:left center}
+#vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 50%,rgba(0,0,0,.85) 100%)}
+</style></head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="1.6" data-width="1080" data-height="1920">
+  <div id="l1r" class="w big">No Idol.</div>
+  <div id="l1c" class="w big">No Idol.</div>
+  <div id="l1" class="w big">No Idol.</div>
+  <div id="l2r" class="w big">No Rival.</div>
+  <div id="l2" class="w big">No Rival.</div>
+  <div id="bar"></div>
+  <div id="vig"></div>
+  <div id="flash"></div>
+  <audio id="hit" src="./assets/hit.mp3" data-start="0" data-duration="1.6"></audio>
+</div>
+<script src="./gsap-3.14.2.min.js"></script>
+<script>
+const tl=gsap.timeline({paused:true});
+tl.set(["#l2","#l2r"],{opacity:0},0).set("#bar",{scaleX:0},0);
+tl.fromTo("#l1",{scale:1.35},{scale:1,duration:.22,ease:"power4.out"},0);
+tl.fromTo("#l1r",{scale:1.35,x:-30},{scale:1,x:-10,duration:.22,ease:"power4.out"},0);
+tl.fromTo("#l1c",{scale:1.35,x:30},{scale:1,x:10,duration:.22,ease:"power4.out"},0);
+tl.to(["#l1r","#l1c"],{x:0,duration:.25},.22);
+tl.fromTo("#root",{y:0},{y:14,duration:.04,yoyo:true,repeat:5,ease:"none"},0);
+tl.to("#flash",{opacity:1,duration:.02},.6).to("#flash",{opacity:0,duration:.1},.67);
+tl.set(["#l2","#l2r"],{opacity:1},.62);
+tl.fromTo("#l2",{scale:1.5},{scale:1,duration:.2,ease:"power4.out"},.62);
+tl.fromTo("#l2r",{scale:1.5,x:24},{scale:1,x:0,duration:.3,ease:"power4.out"},.62);
+tl.fromTo("#root",{x:0},{x:12,duration:.035,yoyo:true,repeat:5,ease:"none"},.62);
+tl.to("#bar",{scaleX:1,duration:.35,ease:"power3.out"},.85);
+tl.to(["#l1","#l2"],{scale:1.04,duration:.7,ease:"none"},.9);
+tl.to("#flash",{opacity:1,duration:.03},1.52);
+window.__timelines=window.__timelines||{};window.__timelines["main"]=tl;tl.seek(0);
+</script></body></html>
