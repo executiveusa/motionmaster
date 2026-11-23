@@ -308,3 +308,35 @@ test("an effect that does not exist is a 404, not a crash", async () => {
   const { status } = await get("/api/v1/effects/not/a-real-effect");
   assert.equal(status, 404);
 });
+
+test("prompt enhancement is preview-only and preserves the owner's ACME brief", async () => {
+  const original = "ACME coffee title, 15 seconds, white background, orange accent, no logo";
+  const { status, body } = await post("/api/v1/prompts/enhance", { prompt: original });
+  assert.equal(status, 200);
+  assert.equal(body.original, original);
+  assert.ok(body.enhanced.includes(original));
+  assert.ok(body.enhanced.length > original.length);
+  assert.equal(body.applied, false);
+  assert.equal(body.provider, "motion-master");
+  assert.ok(Array.isArray(body.assumptions));
+  // This preview does not create a project or start an inference/render job.
+  const index = await get("/api/v1");
+  assert.ok(index.body.endpoints.includes("POST /prompts/enhance"));
+});
+
+test("prompt enhancer rejects empty and oversized prompts without rendering", async () => {
+  for (const payload of [{}, { prompt: "" }, { prompt: 12 }, { prompt: "x".repeat(6001) }]) {
+    const { status } = await post("/api/v1/prompts/enhance", payload);
+    assert.equal(status, 400);
+  }
+});
+
+test("requesting disabled Hunyuan uses the existing deterministic enhancer, not a fake model", async () => {
+  const original = "NOVA 8 second launch title";
+  const { status, body } = await post("/api/v1/prompts/enhance", { prompt: original, provider: "hunyuan" });
+  assert.equal(status, 200);
+  assert.equal(body.provider, "motion-master");
+  assert.match(body.warning, /not enabled/i);
+  assert.equal(body.applied, false);
+  assert.ok(body.enhanced.includes(original));
+});

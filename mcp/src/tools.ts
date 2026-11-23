@@ -29,6 +29,7 @@ import {
   loadCatalogue,
 } from "./library.js";
 import { enhance, type TokenShape } from "./enhancer.js";
+import { requestHunyuanVisual } from "./hunyuan-prompt.js";
 import {
   PLACEMENTS,
   placement,
@@ -2349,6 +2350,7 @@ server.registerTool(
         "would otherwise return something generic.",
       inputSchema: {
         prompt: z.string().describe("The prompt to strengthen."),
+        provider: z.enum(["motion-master", "hunyuan"]).optional().describe("Default is deterministic Motion Master; Hunyuan is optional and requires a licensed local worker."),
         duration_seconds: z.number().positive().optional().describe("Target duration in seconds (default 8)."),
         aspect: z.string().optional().describe("Aspect ratio (default 16:9)."),
         resolution: z.string().optional().describe("Pixel size (default 1920x1080)."),
@@ -2410,6 +2412,9 @@ server.registerTool(
           reason: s.reason,
         })),
       });
+      const suggestion = args.provider === "hunyuan"
+        ? await requestHunyuanVisual(args.prompt)
+        : null;
       return ok({
         source: config.libraryPath,
         tokens: config.tokensPath,
@@ -2417,6 +2422,12 @@ server.registerTool(
         kitProblems: resolvedKit.problems,
         ...(shotSource ? { shotPlan: shotSource } : {}),
         ...result,
+        enhanced: suggestion?.visual
+          ? result.enhanced + "\n\nOPTIONAL VISUAL DIRECTION (HUNYUAN — REVIEW BEFORE USE)\n" + suggestion.visual
+          : result.enhanced,
+        provider: suggestion?.visual ? "hunyuan + motion-master" : "motion-master",
+        applied: false,
+        ...(suggestion?.warning ? { warning: suggestion.warning } : {}),
       });
     },
   );
